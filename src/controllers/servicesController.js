@@ -24,9 +24,10 @@ const servicesController = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
+
   async createService(req, res) {
     try {
-      const { username, serviceName, client, earnings, date } = req.body; // Remove 'time' from destructuring
+      const { username, serviceName, client, earnings, date } = req.body;
 
       if (!username || !serviceName || !earnings) {
         return res.status(400).json({
@@ -34,10 +35,18 @@ const servicesController = {
         });
       }
 
-      // Auto-generate time in format "HH:MM AM/PM"
+      // Auto-generate time in Dominican Republic timezone (UTC-4)
       const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
+
+      // Convert to Dominican Republic time (UTC-4)
+      const dominicanTime = new Date(
+        now.toLocaleString("en-US", {
+          timeZone: "America/Santo_Domingo",
+        })
+      );
+
+      const hours = dominicanTime.getHours();
+      const minutes = dominicanTime.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
       const displayHours = hours % 12 || 12;
       const displayMinutes = minutes.toString().padStart(2, "0");
@@ -61,7 +70,7 @@ const servicesController = {
           employeeByColumn.id,
           serviceName,
           client || null,
-          autoTime, // Use auto-generated time
+          autoTime,
           parseFloat(earnings),
           date || null
         );
@@ -79,7 +88,7 @@ const servicesController = {
         employee.id,
         serviceName,
         client || null,
-        autoTime, // Use auto-generated time
+        autoTime,
         parseFloat(earnings),
         date || null
       );
