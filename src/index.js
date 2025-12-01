@@ -67,69 +67,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// Temporary endpoint to create all users - REMOVE AFTER USE
-app.post("/setup/create-users", async (req, res) => {
-  try {
-    const bcrypt = require("bcryptjs");
-    const pool = require("./config/database");
-
-    const users = [
-      {
-        username: "hengi",
-        password: "hg2024",
-        role: "employee",
-        dataColumn: "Hengi",
-      },
-      {
-        username: "marleni",
-        password: "ml2024",
-        role: "employee",
-        dataColumn: "Marleni",
-      },
-      {
-        username: "israel",
-        password: "is2024",
-        role: "employee",
-        dataColumn: "Israel",
-      },
-      {
-        username: "thaicar",
-        password: "tc2024",
-        role: "employee",
-        dataColumn: "Thaicar",
-      },
-    ];
-
-    const created = [];
-
-    for (const user of users) {
-      const hashedPassword = await bcrypt.hash(user.password, 10);
-
-      const result = await pool.query(
-        "INSERT INTO users (username, password_hash, role, data_column) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING RETURNING id, username, role, data_column",
-        [user.username, hashedPassword, user.role, user.dataColumn]
-      );
-
-      if (result.rows.length > 0) {
-        created.push({
-          username: user.username,
-          password: user.password,
-          role: user.role,
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      message: `${created.length} users created`,
-      users: created,
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
