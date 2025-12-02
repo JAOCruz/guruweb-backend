@@ -10,7 +10,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "init-db": "node src/config/initDb.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "migrate": "node scripts/run-migration.js"
   },
   "keywords": [
     "api",
