@@ -3,13 +3,18 @@ const fs = require('fs');
 const path = require('path');
 
 // Database configuration from environment or defaults
+const dbHost = process.env.DB_HOST || 'localhost';
+const isProduction = process.env.NODE_ENV === 'production' ||
+                     dbHost.includes('railway.app') ||
+                     process.env.DATABASE_URL;
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
+  host: dbHost,
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'guruweb',
   user: process.env.DB_USER || 'admin',
   password: process.env.DB_PASSWORD || 'secure_password_change_me',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false // Railway uses SSL
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
 async function runMigration(migrationFile) {
