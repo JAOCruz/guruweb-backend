@@ -153,6 +153,25 @@ const servicesController = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
+
+  async updateComment(req, res) {
+    try {
+      const { id } = req.params;
+      const { comment } = req.body;
+      const userId = req.user.id;
+
+      const updatedService = await Service.updateComment(id, userId, comment);
+
+      if (!updatedService) {
+        return res.status(404).json({ error: "Service not found or unauthorized" });
+      }
+
+      res.json(updatedService);
+    } catch (error) {
+      console.error("Update comment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
 };
 
 module.exports = servicesController;

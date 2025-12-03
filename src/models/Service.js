@@ -4,7 +4,7 @@ const pool = require("../config/database");
 const Service = {
   async getAll(startDate, endDate) {
     let query = `
-      SELECT 
+      SELECT
         s.id,
         s.user_id,
         s.service_name,
@@ -12,6 +12,7 @@ const Service = {
         s.time,
         s.earnings,
         s.date,
+        s.comment,
         s.created_at,
         u.username,
         u.data_column
@@ -44,7 +45,7 @@ const Service = {
 
   async getByUserId(userId, startDate, endDate) {
     let query = `
-      SELECT 
+      SELECT
         s.id,
         s.user_id,
         s.service_name,
@@ -52,6 +53,7 @@ const Service = {
         s.time,
         s.earnings,
         s.date,
+        s.comment,
         s.created_at,
         u.username,
         u.data_column
@@ -149,6 +151,17 @@ const Service = {
     query += " RETURNING *";
 
     const result = await pool.query(query, params);
+    return result.rows[0];
+  },
+
+  async updateComment(id, userId, comment) {
+    const result = await pool.query(
+      `UPDATE services
+       SET comment = $1
+       WHERE id = $2 AND user_id = $3
+       RETURNING *`,
+      [comment, id, userId]
+    );
     return result.rows[0];
   },
 };

@@ -21,4 +21,7 @@ router.get('/stats/admin', isAdmin, servicesController.getAdminStats);
 // Delete service
 router.delete('/:id', servicesController.deleteService);
 
+// Update comment (employees can update their own service comments)
+router.patch('/:id/comment', servicesController.updateComment);
+
 module.exports = router;
