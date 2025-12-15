@@ -3,19 +3,38 @@ const fs = require('fs');
 const path = require('path');
 
 // Database configuration from environment or defaults
-const dbHost = process.env.DB_HOST || 'localhost';
-const isProduction = process.env.NODE_ENV === 'production' ||
-                     dbHost.includes('railway.app') ||
-                     process.env.DATABASE_URL;
+// Use DATABASE_URL if available (Railway provides this)
+let poolConfig;
 
-const pool = new Pool({
-  host: dbHost,
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'guruweb',
-  user: process.env.DB_USER || 'admin',
-  password: process.env.DB_PASSWORD || 'secure_password_change_me',
-  ssl: isProduction ? { rejectUnauthorized: false } : false
-});
+if (process.env.DATABASE_URL) {
+  // Parse DATABASE_URL for Railway
+  const url = new URL(process.env.DATABASE_URL);
+
+  // Replace internal hostname with public hostname if needed
+  const publicHost = process.env.DB_HOST || url.hostname;
+  const useSSL = !url.hostname.includes('localhost') && !url.hostname.includes('127.0.0.1');
+
+  poolConfig = {
+    host: publicHost,
+    port: parseInt(url.port) || 5432,
+    database: url.pathname.slice(1),
+    user: url.username,
+    password: url.password,
+    ssl: useSSL ? { rejectUnauthorized: false } : false
+  };
+} else {
+  // Use individual environment variables (local development)
+  poolConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'guruweb',
+    user: process.env.DB_USER || 'admin',
+    password: process.env.DB_PASSWORD || 'secure_password_change_me',
+    ssl: false
+  };
+}
+
+const pool = new Pool(poolConfig);
 
 async function runMigration(migrationFile) {
   const client = await pool.connect();

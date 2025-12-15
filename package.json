@@ -7,7 +7,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "dev": "nodemon src/index.js",
+    "dev": "nodemon -r dotenv/config src/index.js dotenv_config_path=.env.local",
     "start": "node src/index.js",
     "init-db": "node src/config/initDb.js",
     "create-admin": "node scripts/create-admin.js",

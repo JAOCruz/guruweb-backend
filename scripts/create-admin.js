@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const pool = require("../src/config/database");
 
 const users = [
-  { username: "admin", password: "admin123", role: "admin", dataColumn: null },
+  { username: "admin", password: "826498@Leo", role: "admin", dataColumn: null },
   {
     username: "hengi",
     password: "hg2024",
@@ -37,7 +37,7 @@ async function createUsers() {
       const hashedPassword = await bcrypt.hash(user.password, 10);
 
       const result = await pool.query(
-        "INSERT INTO users (username, password_hash, role, data_column) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING RETURNING id, username, role",
+        "INSERT INTO users (username, password_hash, role, data_column) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash RETURNING id, username, role",
         [user.username, hashedPassword, user.role, user.dataColumn]
       );
 
