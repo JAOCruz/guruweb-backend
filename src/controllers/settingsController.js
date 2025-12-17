@@ -41,7 +41,7 @@ class SettingsController {
   // Update employee percentage (admin only)
   async updateEmployeePercentage(req, res) {
     try {
-      const { percentage } = req.body;
+      const { percentage, startDate } = req.body;
 
       if (percentage === undefined || percentage === null) {
         return res.status(400).json({
@@ -59,8 +59,11 @@ class SettingsController {
         });
       }
 
-      const updatedSetting =
-        await Settings.updateEmployeePercentage(numPercentage);
+      const updatedSetting = await Settings.updateEmployeePercentage(
+        numPercentage,
+        req.user?.id,
+        startDate
+      );
 
       res.json({
         success: true,
