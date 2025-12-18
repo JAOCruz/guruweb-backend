@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const pool = require("../src/config/database");
 
 const users = [
-  { username: "admin", password: "826498@Leo", role: "admin", dataColumn: null },
+  { username: "admin", password: "826497@Leo", role: "admin", dataColumn: null },
   {
     username: "hengi",
     password: "hg2024",
