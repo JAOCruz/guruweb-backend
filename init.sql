@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS services (
     client VARCHAR(255),
     time VARCHAR(50),
     earnings DECIMAL(10, 2) NOT NULL,
+    comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     date DATE DEFAULT CURRENT_DATE
 );
