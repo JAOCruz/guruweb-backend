@@ -4,10 +4,9 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
-const settingsRoutes = require("./routes/settings");
 
 const app = express();
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = process.env.PORT || 3000;
 
 // CORS Middleware - Permite múltiples puertos en desarrollo
 const allowedOrigins = [
@@ -49,7 +48,6 @@ app.use((req, res, next) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
-app.use("/api/settings", settingsRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

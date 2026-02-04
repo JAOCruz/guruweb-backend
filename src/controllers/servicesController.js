@@ -24,10 +24,9 @@ const servicesController = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
-
   async createService(req, res) {
     try {
-      const { username, serviceName, client, earnings, date } = req.body;
+      const { username, serviceName, client, earnings, date } = req.body; // Remove 'time' from destructuring
 
       if (!username || !serviceName || !earnings) {
         return res.status(400).json({
@@ -35,18 +34,10 @@ const servicesController = {
         });
       }
 
-      // Auto-generate time in Dominican Republic timezone (UTC-4)
+      // Auto-generate time in format "HH:MM AM/PM"
       const now = new Date();
-
-      // Convert to Dominican Republic time (UTC-4)
-      const dominicanTime = new Date(
-        now.toLocaleString("en-US", {
-          timeZone: "America/Santo_Domingo",
-        })
-      );
-
-      const hours = dominicanTime.getHours();
-      const minutes = dominicanTime.getMinutes();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
       const displayHours = hours % 12 || 12;
       const displayMinutes = minutes.toString().padStart(2, "0");
@@ -59,7 +50,7 @@ const servicesController = {
         // Try to find by data_column if username not found
         const allEmployees = await User.getAllEmployees();
         const employeeByColumn = allEmployees.find(
-          (emp) => emp.data_column?.toUpperCase() === username.toUpperCase()
+          (emp) => emp.data_column?.toUpperCase() === username.toUpperCase(),
         );
 
         if (!employeeByColumn) {
@@ -70,9 +61,9 @@ const servicesController = {
           employeeByColumn.id,
           serviceName,
           client || null,
-          autoTime,
+          autoTime, // Use auto-generated time
           parseFloat(earnings),
-          date || null
+          date || null,
         );
 
         return res.status(201).json(service);
@@ -88,9 +79,9 @@ const servicesController = {
         employee.id,
         serviceName,
         client || null,
-        autoTime,
+        autoTime, // Use auto-generated time
         parseFloat(earnings),
-        date || null
+        date || null,
       );
 
       res.status(201).json(service);
@@ -158,12 +149,11 @@ const servicesController = {
     try {
       const { id } = req.params;
       const { comment } = req.body;
-      const userId = req.user.id;
 
-      const updatedService = await Service.updateComment(id, userId, comment);
+      const updatedService = await Service.updateComment(id, comment);
 
       if (!updatedService) {
-        return res.status(404).json({ error: "Service not found or unauthorized" });
+        return res.status(404).json({ error: "Service not found" });
       }
 
       res.json(updatedService);
