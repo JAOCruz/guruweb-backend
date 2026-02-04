@@ -34,14 +34,15 @@ const servicesController = {
         });
       }
 
-      // Auto-generate time in format "HH:MM AM/PM"
+      // Auto-generate time in Santo Domingo timezone (Dominican Republic)
       const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHours = hours % 12 || 12;
-      const displayMinutes = minutes.toString().padStart(2, "0");
-      const autoTime = `${displayHours}:${displayMinutes} ${ampm}`;
+      const options = {
+        timeZone: "America/Santo_Domingo",
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      };
+      const autoTime = new Intl.DateTimeFormat("en-US", options).format(now);
 
       // Find employee by username (case insensitive)
       const employee = await User.findByUsername(username.toLowerCase());
