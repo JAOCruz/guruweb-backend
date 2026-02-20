@@ -42,6 +42,17 @@ class User {
     );
     return result.rows;
   }
+
+  static async findByUsernameOrColumn(identifier) {
+    const result = await pool.query(
+      `SELECT * FROM users 
+       WHERE LOWER(username) = LOWER($1) 
+          OR UPPER(data_column) = UPPER($1)
+       LIMIT 1`,
+      [identifier]
+    );
+    return result.rows[0];
+  }
 }
 
 module.exports = User;

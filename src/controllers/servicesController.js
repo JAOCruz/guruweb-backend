@@ -44,30 +44,11 @@ const servicesController = {
       };
       const autoTime = new Intl.DateTimeFormat("en-US", options).format(now);
 
-      // Find employee by username (case insensitive)
-      const employee = await User.findByUsername(username.toLowerCase());
+      // Find employee by username or data_column (single query, case insensitive)
+      const employee = await User.findByUsernameOrColumn(username);
 
       if (!employee) {
-        // Try to find by data_column if username not found
-        const allEmployees = await User.getAllEmployees();
-        const employeeByColumn = allEmployees.find(
-          (emp) => emp.data_column?.toUpperCase() === username.toUpperCase(),
-        );
-
-        if (!employeeByColumn) {
-          return res.status(404).json({ error: "Employee not found" });
-        }
-
-        const service = await Service.create(
-          employeeByColumn.id,
-          serviceName,
-          client || null,
-          autoTime, // Use auto-generated time
-          parseFloat(earnings),
-          date || null,
-        );
-
-        return res.status(201).json(service);
+        return res.status(404).json({ error: "Employee not found" });
       }
 
       if (employee.role !== "employee") {
@@ -80,7 +61,7 @@ const servicesController = {
         employee.id,
         serviceName,
         client || null,
-        autoTime, // Use auto-generated time
+        autoTime,
         parseFloat(earnings),
         date || null,
       );
