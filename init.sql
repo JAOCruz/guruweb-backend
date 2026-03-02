@@ -25,3 +25,20 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id);
 CREATE INDEX IF NOT EXISTS idx_services_date ON services(date);
 CREATE INDEX IF NOT EXISTS idx_services_created_at ON services(created_at);
+
+-- Create settings table
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    employee_percentage DECIMAL(5, 2) NOT NULL CHECK (employee_percentage >= 0 AND employee_percentage <= 100),
+    effective_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index on effective_date for efficient queries
+CREATE INDEX IF NOT EXISTS idx_settings_effective_date ON settings(effective_date DESC);
+
+-- Insert default 50/50 split
+INSERT INTO settings (employee_percentage, effective_date)
+SELECT 50.00, CURRENT_DATE
+WHERE NOT EXISTS (SELECT 1 FROM settings);
