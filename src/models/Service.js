@@ -70,13 +70,21 @@ class Service {
 
   static async getUserStats(userId) {
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_services,
-        SUM(earnings) as total_earnings,
-        SUM(earnings) * 0.5 as user_share,
-        SUM(earnings) * 0.5 as admin_share
-       FROM services 
-       WHERE user_id = $1`,
+        SUM(s.earnings) as total_earnings,
+        SUM(s.earnings * pct.val / 100.0) as user_share,
+        SUM(s.earnings * (1 - pct.val / 100.0)) as admin_share
+       FROM services s
+       CROSS JOIN LATERAL (
+         SELECT COALESCE(
+           (SELECT employee_percentage FROM settings
+            WHERE effective_date <= s.date
+            ORDER BY effective_date DESC, id DESC LIMIT 1),
+           50.0
+         ) as val
+       ) pct
+       WHERE s.user_id = $1`,
       [userId],
     );
     return result.rows[0];
@@ -84,16 +92,24 @@ class Service {
 
   static async getAllUsersStats() {
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         u.id,
         u.username,
         u.data_column,
         COUNT(s.id) as total_services,
         COALESCE(SUM(s.earnings), 0) as total_earnings,
-        COALESCE(SUM(s.earnings) * 0.5, 0) as user_share,
-        COALESCE(SUM(s.earnings) * 0.5, 0) as admin_share
+        COALESCE(SUM(s.earnings * pct.val / 100.0), 0) as user_share,
+        COALESCE(SUM(s.earnings * (1 - pct.val / 100.0)), 0) as admin_share
        FROM users u
        LEFT JOIN services s ON u.id = s.user_id
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(
+           (SELECT employee_percentage FROM settings
+            WHERE effective_date <= s.date
+            ORDER BY effective_date DESC, id DESC LIMIT 1),
+           50.0
+         ) as val
+       ) pct ON s.id IS NOT NULL
        WHERE u.role = 'employee'
        GROUP BY u.id, u.username, u.data_column
        ORDER BY u.username`,
@@ -103,11 +119,19 @@ class Service {
 
   static async getAdminTotalEarnings() {
     const result = await pool.query(
-      `SELECT 
-        SUM(earnings) * 0.5 as total_admin_earnings,
+      `SELECT
+        SUM(s.earnings * (1 - pct.val / 100.0)) as total_admin_earnings,
         COUNT(*) as total_services,
-        COUNT(DISTINCT user_id) as active_employees
-       FROM services`,
+        COUNT(DISTINCT s.user_id) as active_employees
+       FROM services s
+       CROSS JOIN LATERAL (
+         SELECT COALESCE(
+           (SELECT employee_percentage FROM settings
+            WHERE effective_date <= s.date
+            ORDER BY effective_date DESC, id DESC LIMIT 1),
+           50.0
+         ) as val
+       ) pct`,
     );
     return result.rows[0];
   }
