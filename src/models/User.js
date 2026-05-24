@@ -87,6 +87,21 @@ const User = {
   async verifyPassword(plaintext, hash) {
     return bcrypt.compare(plaintext, hash);
   },
+
+  async findByUsernameOrColumn(identifier) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT * FROM users
+         WHERE LOWER(username) = LOWER($1)
+            OR UPPER(data_column) = UPPER($1)
+         LIMIT 1`,
+        [identifier]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      throw err;
+    }
+  },
 };
 
 module.exports = User;

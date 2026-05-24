@@ -1,4 +1,4 @@
-const Service = require("../models/Service");
+const EmployeeService = require("../models/EmployeeService");
 const User = require("../models/User");
 
 const servicesController = {
@@ -12,10 +12,10 @@ const servicesController = {
 
       if (isAdmin) {
         // Admin sees all services
-        services = await Service.getAll(startDate, endDate);
+        services = await EmployeeService.getAll(startDate, endDate);
       } else {
         // Employees only see their own services
-        services = await Service.getByUserId(userId, startDate, endDate);
+        services = await EmployeeService.getByUserId(userId, startDate, endDate);
       }
 
       res.json(services);
@@ -57,7 +57,7 @@ const servicesController = {
           .json({ error: "Can only add services for employees" });
       }
 
-      const service = await Service.create(
+      const service = await EmployeeService.create(
         employee.id,
         serviceName,
         client || null,
@@ -78,7 +78,7 @@ const servicesController = {
       const userId =
         req.user.role === "admin" ? parseInt(req.params.userId) : req.user.id;
 
-      const stats = await Service.getUserStats(userId);
+      const stats = await EmployeeService.getUserStats(userId);
       res.json(stats);
     } catch (error) {
       console.error("Get user stats error:", error);
@@ -92,8 +92,8 @@ const servicesController = {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const allUsersStats = await Service.getAllUsersStats();
-      const adminTotal = await Service.getAdminTotalEarnings();
+      const allUsersStats = await EmployeeService.getAllUsersStats();
+      const adminTotal = await EmployeeService.getAdminTotalEarnings();
 
       res.json({
         users: allUsersStats,
@@ -114,7 +114,7 @@ const servicesController = {
       const { id } = req.params;
       const userId = req.user.role === "admin" ? null : req.user.id;
 
-      const deletedService = await Service.delete(id, userId);
+      const deletedService = await EmployeeService.delete(id, userId);
 
       if (!deletedService) {
         return res.status(404).json({ error: "Service not found" });
@@ -132,7 +132,7 @@ const servicesController = {
       const { id } = req.params;
       const { comment } = req.body;
 
-      const updatedService = await Service.updateComment(id, comment);
+      const updatedService = await EmployeeService.updateComment(id, comment);
 
       if (!updatedService) {
         return res.status(404).json({ error: "Service not found" });
