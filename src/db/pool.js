@@ -1,10 +1,33 @@
 const { Pool } = require('pg');
-const config = require('../config');
 
-const pool = new Pool(config.db);
+// Support DATABASE_URL (Railway/Heroku) or individual env vars
+const isProduction = process.env.NODE_ENV === 'production';
+
+let poolConfig;
+if (process.env.DATABASE_URL) {
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
+  };
+} else {
+  poolConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME || 'guru_legal_bot',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+pool.on('connect', () => {
+  console.log('✅ DB connected');
+});
 
 pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
+  console.error('❌ Unexpected database pool error:', err);
 });
 
 module.exports = pool;
