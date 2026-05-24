@@ -48,4 +48,8 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticate, generateToken, requireRole };
+// Backward-compatible aliases for original production routes
+const authMiddleware = authenticate;
+const isAdmin = requireRole('admin');
+
+module.exports = { authenticate, generateToken, requireRole, authMiddleware, isAdmin };
