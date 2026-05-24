@@ -1,5 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
@@ -9,21 +11,41 @@ const settingsRoutes = require("./routes/settings");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS Middleware - Permite múltiples puertos en desarrollo
+// Security: hide server identity
+app.disable("x-powered-by");
+
+// Security: helmet headers
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          "https://generativelanguage.googleapis.com",
+          "https://api.minimaxi.chat",
+        ],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+// CORS Middleware
 const allowedOrigins = [
   "https://gurusoluciones.netlify.app",
   "https://gurusolucionesrd.com",
+  "https://www.gurusolucionesrd.com",
   "http://localhost:5173",
-  "http://localhost:5174", // Puerto alternativo de Vite
-  "http://localhost:5175", // Por si acaso
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://100.87.41.106:5174",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Permite requests sin origin (como Postman, curl, etc.)
       if (!origin) return callback(null, true);
-
       if (
         allowedOrigins.indexOf(origin) !== -1 ||
         process.env.NODE_ENV !== "production"
@@ -40,16 +62,74 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Security: global rate limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+app.use("/api/", globalLimiter);
+
 // Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// Routes
+// --- CORE ROUTES (original payroll + auth) ---
 app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/settings", settingsRoutes);
+
+// --- NEW ROUTES from bot dashboard merge ---
+const safeRoutes = [
+  { path: "/api/admin", module: "./routes/admin" },
+  { path: "/api/clients", module: "./routes/clients" },
+  { path: "/api/cases", module: "./routes/cases" },
+  { path: "/api/dashboard", module: "./routes/dashboard" },
+  { path: "/api/media", module: "./routes/media" },
+  { path: "/api/invoices", module: "./routes/invoices" },
+  { path: "/api/documents", module: "./routes/documents" },
+  { path: "/api/docgen", module: "./routes/docGen" },
+  { path: "/api/service-catalog", module: "./routes/serviceCatalog" },
+];
+
+for (const route of safeRoutes) {
+  try {
+    const handler = require(route.module);
+    app.use(route.path, handler);
+    console.log(`[Routes] Mounted ${route.path}`);
+  } catch (err) {
+    console.error(`[Routes] FAILED to mount ${route.path}:`, err.message);
+  }
+}
+
+// --- WHATSAPP-RELATED ROUTES (skip on Railway if Baileys missing) ---
+try {
+  const messageRoutes = require("./routes/messages");
+  app.use("/api/messages", messageRoutes);
+  console.log("[Routes] Mounted /api/messages");
+} catch (err) {
+  console.error("[Routes] Skipping /api/messages:", err.message);
+}
+
+try {
+  const broadcastRoutes = require("./routes/broadcasts");
+  app.use("/api/broadcasts", broadcastRoutes);
+  console.log("[Routes] Mounted /api/broadcasts");
+} catch (err) {
+  console.error("[Routes] Skipping /api/broadcasts:", err.message);
+}
+
+try {
+  const whatsappRoutes = require("./routes/whatsapp");
+  app.use("/api/whatsapp", whatsappRoutes);
+  console.log("[Routes] Mounted /api/whatsapp");
+} catch (err) {
+  console.error("[Routes] Skipping /api/whatsapp:", err.message);
+}
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -60,10 +140,16 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     message: "Guruweb API",
-    version: "1.0.0",
+    version: "2.0.0",
     endpoints: {
       auth: "/api/auth",
       services: "/api/services",
+      serviceCatalog: "/api/service-catalog",
+      clients: "/api/clients",
+      cases: "/api/cases",
+      dashboard: "/api/dashboard",
+      documents: "/api/documents",
+      settings: "/api/settings",
       health: "/health",
     },
   });
@@ -77,6 +163,9 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error("Error:", err);
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   res.status(500).json({
     error: "Internal server error",
     message: process.env.NODE_ENV === "development" ? err.message : undefined,
