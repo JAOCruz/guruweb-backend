@@ -73,13 +73,17 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = generateToken(user);
+    const token = generateToken({
+      ...user,
+      email: user.email || user.username,
+      name: user.name || user.username,
+    });
     res.json({
       user: {
         id: user.id,
         username: user.username || user.email,
-        email: user.email,
-        name: user.name,
+        email: user.email || user.username,
+        name: user.name || user.username,
         role: user.role,
         dataColumn: user.data_column,
       },
@@ -99,8 +103,8 @@ router.get('/me', authenticate, async (req, res) => {
       user: {
         id: user.id,
         username: user.username || user.email,
-        email: user.email,
-        name: user.name,
+        email: user.email || user.username,
+        name: user.name || user.username,
         role: user.role,
         dataColumn: user.data_column,
       },

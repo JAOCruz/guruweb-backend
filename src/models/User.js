@@ -16,11 +16,19 @@ const User = {
   },
 
   async findByEmail(email) {
-    const { rows } = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-    return rows[0] || null;
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      // Fallback for old schema (email column missing)
+      if (err.message && err.message.includes('email')) {
+        return null;
+      }
+      throw err;
+    }
   },
 
   async findByUsername(username) {
@@ -32,15 +40,30 @@ const User = {
   },
 
   async findByUsernameOrEmail(identifier) {
-    const { rows } = await pool.query(
-      `SELECT * FROM users
-       WHERE LOWER(username) = LOWER($1)
-          OR LOWER(email) = LOWER($1)
-          OR UPPER(data_column) = UPPER($1)
-       LIMIT 1`,
-      [identifier]
-    );
-    return rows[0] || null;
+    try {
+      const { rows } = await pool.query(
+        `SELECT * FROM users
+         WHERE LOWER(username) = LOWER($1)
+            OR LOWER(email) = LOWER($1)
+            OR UPPER(data_column) = UPPER($1)
+         LIMIT 1`,
+        [identifier]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      // Fallback for old schema (email column missing)
+      if (err.message && err.message.includes('email')) {
+        const { rows } = await pool.query(
+          `SELECT * FROM users
+           WHERE LOWER(username) = LOWER($1)
+              OR UPPER(data_column) = UPPER($1)
+           LIMIT 1`,
+          [identifier]
+        );
+        return rows[0] || null;
+      }
+      throw err;
+    }
   },
 
   async findById(id) {
