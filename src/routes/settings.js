@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const settingsController = require('../controllers/settingsController');
-const { authMiddleware, isAdmin } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 // All settings routes require authentication
-router.use(authMiddleware);
+router.use(authenticate);
 
 // Get current employee percentage (accessible to all authenticated users)
 router.get('/current', settingsController.getCurrentPercentage);
@@ -13,12 +13,12 @@ router.get('/current', settingsController.getCurrentPercentage);
 router.get('/percentage', settingsController.getPercentageForDate);
 
 // Get all settings history (admin only)
-router.get('/history', isAdmin, settingsController.getAllSettings);
+router.get('/history', requireRole('admin'), settingsController.getAllSettings);
 
 // Update employee percentage (admin only)
-router.post('/percentage', isAdmin, settingsController.updatePercentage);
+router.post('/percentage', requireRole('admin'), settingsController.updatePercentage);
 
 // Delete a setting (admin only)
-router.delete('/:id', isAdmin, settingsController.deleteSetting);
+router.delete('/:id', requireRole('admin'), settingsController.deleteSetting);
 
 module.exports = router;

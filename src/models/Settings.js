@@ -1,4 +1,4 @@
-const pool = require('../config/database');
+const pool = require('../db/pool');
 
 class Settings {
   // Get current employee percentage for a specific date
