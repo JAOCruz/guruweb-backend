@@ -43,7 +43,11 @@ app.use(helmet({
 // Security: restrict CORS to known origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5174', 'http://127.0.0.1:5174', 'http://100.87.41.106:5174'];
+  : [
+      'http://localhost:5174', 'http://127.0.0.1:5174', 'http://100.87.41.106:5174',
+      'https://gurusolucionesrd.com', 'https://www.gurusolucionesrd.com',
+      'https://gurusoluciones.netlify.app',
+    ];
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
@@ -113,8 +117,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: message });
 });
 
-// Security: bind to localhost only in production unless explicitly overridden
-const host = process.env.BIND_HOST || (config.nodeEnv === 'production' ? '127.0.0.1' : '0.0.0.0');
+// Railway (and most container platforms) require 0.0.0.0
+const host = process.env.BIND_HOST || '0.0.0.0';
 app.listen(config.port, host, () => {
   console.log(`Server running on http://${host}:${config.port} [${config.nodeEnv}]`);
 
