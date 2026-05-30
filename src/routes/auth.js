@@ -5,6 +5,16 @@ const { generateToken, authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Cookie options for cross-origin (Netlify frontend ↔ Railway backend)
+const isProduction = process.env.NODE_ENV === 'production';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: isProduction,           // Only send over HTTPS in production
+  sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin cookies
+  maxAge: 24 * 60 * 60 * 1000,    // 24 hours
+  path: '/',
+};
+
 // IPv6-safe key generator (use last 3 segments)
 const ipKeyGenerator = (req) => {
   const ip = req.ip || req.connection.remoteAddress || '';
@@ -78,6 +88,10 @@ router.post('/login', loginLimiter, async (req, res) => {
       email: user.email || user.username,
       name: user.name || user.username,
     });
+
+    // Set HttpOnly cookie (primary auth method — prevents XSS theft)
+    res.cookie('access_token', token, COOKIE_OPTIONS);
+
     res.json({
       user: {
         id: user.id,
@@ -87,7 +101,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         role: user.role,
         dataColumn: user.data_column,
       },
-      token,
+      token, // Kept for backward-compat during transition; frontend should ignore
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -118,6 +132,17 @@ router.get('/me', authenticate, async (req, res) => {
 // Keepalive ping
 router.post('/ping', authenticate, (req, res) => {
   res.json({ ok: true, userId: req.user.id });
+});
+
+// Logout — clear the HttpOnly cookie and invalidate session on client
+router.post('/logout', authenticate, (req, res) => {
+  res.clearCookie('access_token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  });
+  res.json({ ok: true, message: 'Logged out successfully' });
 });
 
 module.exports = router;

@@ -2,13 +2,30 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
+const Sentry = require("@sentry/node");
 require("dotenv").config();
+
+// Initialize Sentry if DSN is provided
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+  });
+  console.log("[Sentry] Initialized");
+}
 
 const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
 const settingsRoutes = require("./routes/settings");
 
 const app = express();
+
+// Sentry request handler (must be first middleware)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+}
 const PORT = process.env.PORT || 3000;
 
 // Security: hide server identity
@@ -61,6 +78,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Security: global rate limiting
 const globalLimiter = rateLimit({
@@ -160,16 +178,27 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-// Error handler
+// Sentry error handler (before our custom handler)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+
+// Global error handler — NEVER expose stack traces or internal details in production
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  console.error("[Error]", err);
   if (err.message === "Not allowed by CORS") {
     return res.status(403).json({ error: "Forbidden" });
   }
-  res.status(500).json({
-    error: "Internal server error",
-    message: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
+  const isDev = process.env.NODE_ENV === "development";
+  const statusCode = err.statusCode || err.status || 500;
+  const response = {
+    error: err.publicMessage || "Internal server error",
+  };
+  if (isDev) {
+    response.message = err.message;
+    response.stack = err.stack;
+  }
+  res.status(statusCode).json(response);
 });
 
 // Start server

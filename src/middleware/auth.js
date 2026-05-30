@@ -6,12 +6,18 @@ const pool = require('../db/pool');
 const lastSeenThrottle = new Map(); // userId → timestamp
 
 function authenticate(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required' });
+  // Prefer HttpOnly cookie (secure against XSS), fallback to Authorization header
+  let token = req.cookies?.access_token;
+  if (!token) {
+    const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+      token = header.slice(7);
+    }
   }
 
-  const token = header.slice(7);
+  if (!token) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
   try {
     const payload = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
     req.user = { id: payload.id, email: payload.email, username: payload.username, role: payload.role };
