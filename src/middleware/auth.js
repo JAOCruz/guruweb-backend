@@ -6,13 +6,16 @@ const pool = require('../db/pool');
 const lastSeenThrottle = new Map(); // userId → timestamp
 
 function authenticate(req, res, next) {
-  // Prefer HttpOnly cookie (secure against XSS), fallback to Authorization header
-  let token = req.cookies?.access_token;
+  // During transition: prefer Authorization header (localStorage fallback),
+  // then HttpOnly cookie. This prevents stale/invalid cookies from blocking
+  // valid tokens stored in localStorage.
+  let token = null;
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    token = header.slice(7);
+  }
   if (!token) {
-    const header = req.headers.authorization;
-    if (header && header.startsWith('Bearer ')) {
-      token = header.slice(7);
-    }
+    token = req.cookies?.access_token;
   }
 
   if (!token) {
