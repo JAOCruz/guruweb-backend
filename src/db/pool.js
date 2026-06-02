@@ -23,7 +23,9 @@ if (process.env.DATABASE_URL) {
 const pool = new Pool(poolConfig);
 
 pool.on('connect', () => {
-  console.log('✅ DB connected');
+  const url = process.env.DATABASE_URL || `${poolConfig.host}:${poolConfig.port}/${poolConfig.database}`;
+  const masked = url.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@');
+  console.log('✅ DB connected to', masked);
 });
 
 pool.on('error', (err) => {

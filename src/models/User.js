@@ -67,21 +67,26 @@ const User = {
   },
 
   async findById(id) {
-    const { rows } = await pool.query(
-      'SELECT id, email, name, role, username, data_column, created_at, updated_at FROM users WHERE id = $1',
-      [id]
-    );
-    return rows[0] || null;
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM users WHERE id = $1',
+        [id]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async getAllEmployees() {
-    const { rows } = await pool.query(
-      `SELECT id, username, email, name, role, data_column, created_at
-       FROM users
-       WHERE role = 'employee'
-       ORDER BY username`
-    );
-    return rows;
+    try {
+      const { rows } = await pool.query(
+        `SELECT * FROM users WHERE role = 'employee' ORDER BY username`
+      );
+      return rows;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async verifyPassword(plaintext, hash) {

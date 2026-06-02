@@ -124,6 +124,15 @@ for (const route of safeRoutes) {
   }
 }
 
+// --- AI ROUTE ---
+try {
+  const aiRoutes = require("./routes/ai");
+  app.use("/api/ai", aiRoutes);
+  console.log("[Routes] Mounted /api/ai");
+} catch (err) {
+  console.error("[Routes] Skipping /api/ai:", err.message);
+}
+
 // --- WHATSAPP-RELATED ROUTES (skip on Railway if Baileys missing) ---
 try {
   const messageRoutes = require("./routes/messages");

@@ -75,11 +75,13 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     const user = await User.findByUsernameOrEmail(identifier);
     if (!user) {
+      console.log('[login] User not found for identifier:', identifier);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const valid = await User.verifyPassword(password, user.password_hash);
     if (!valid) {
+      console.log('[login] Password mismatch for user:', user.username, 'hash starts with:', user.password_hash?.slice(0, 10));
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
