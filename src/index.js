@@ -133,6 +133,15 @@ try {
   console.error("[Routes] Skipping /api/ai:", err.message);
 }
 
+// --- BOT SIMULATOR (dashboard test chat without WhatsApp) ---
+try {
+  const botSimulatorRoutes = require("./routes/botSimulator");
+  app.use("/api/bot", botSimulatorRoutes);
+  console.log("[Routes] Mounted /api/bot");
+} catch (err) {
+  console.error("[Routes] Skipping /api/bot:", err.message);
+}
+
 // --- WHATSAPP-RELATED ROUTES (skip on Railway if Baileys missing) ---
 try {
   const messageRoutes = require("./routes/messages");
