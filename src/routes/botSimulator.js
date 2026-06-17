@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 const { routeMessage } = require('../conversation/router');
 const { withList } = require('../whatsapp/interactive');
 
@@ -14,7 +14,7 @@ const router = express.Router();
  *   - message: string (required) - the text the user sends
  *   - sessionId: string (optional) - unique test session id/phone. Defaults to the authenticated user's id.
  */
-router.post('/simulate', authenticate, async (req, res) => {
+router.post('/simulate', authenticate, requireRole('admin'), async (req, res) => {
   try {
     const { message, sessionId } = req.body;
 

@@ -140,6 +140,7 @@ try {
   console.log("[Routes] Mounted /api/bot");
 } catch (err) {
   console.error("[Routes] Skipping /api/bot:", err.message);
+  console.error("[Routes] /api/bot stack:", err.stack);
 }
 
 // --- WHATSAPP-RELATED ROUTES (skip on Railway if Baileys missing) ---
