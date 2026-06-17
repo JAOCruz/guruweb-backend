@@ -1,10 +1,15 @@
-const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
 
-// Use warn level so we can see important Baileys messages
-const logger = pino({ level: 'warn' });
+// pino is an optional dependency used only by Baileys.
+let logger = { level: 'silent' };
+try {
+  const pino = require('pino');
+  logger = pino({ level: 'warn' });
+} catch (err) {
+  console.warn('[WA] pino not installed — using silent logger');
+}
 
 // Baileys is an optional dependency. In production (Railway) we may not have
 // WhatsApp connected, but we still need to be able to load conversation flows
