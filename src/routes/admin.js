@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { resetCache, getSystemPrompt } = require('../llm/systemPrompt');
 const pool = require('../db/pool');
+const { runMigrations } = require('../db/runMigrations');
 
 const router = express.Router();
 router.use(authenticate);
@@ -105,6 +106,22 @@ router.get('/clients/unassigned', requireRole('admin'), async (req, res) => {
   } catch (err) {
     console.error('Unassigned clients error:', err);
     res.status(500).json({ error: 'Failed to list unassigned clients' });
+  }
+});
+
+// ── Admin-only: Run pending database migrations ──
+router.post('/run-migrations', requireRole('admin'), async (req, res) => {
+  try {
+    const result = await runMigrations();
+    res.json({
+      ok: true,
+      message: `${result.ran.length} migration(s) applied`,
+      ran: result.ran.map((r) => r.filename),
+      skipped: result.skipped,
+    });
+  } catch (err) {
+    console.error('Run migrations error:', err);
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 

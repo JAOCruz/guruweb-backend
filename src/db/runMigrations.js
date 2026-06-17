@@ -4,8 +4,8 @@ const pool = require('./pool');
 
 const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
 
-async function ensureMigrationsTable() {
-  await pool.query(`
+async function ensureMigrationsTable(client) {
+  await client.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id SERIAL PRIMARY KEY,
       filename VARCHAR(255) NOT NULL UNIQUE,
@@ -14,17 +14,16 @@ async function ensureMigrationsTable() {
   `);
 }
 
-async function getExecutedMigrations() {
-  const { rows } = await pool.query(
+async function getExecutedMigrations(client) {
+  const { rows } = await client.query(
     `SELECT filename FROM schema_migrations ORDER BY executed_at`
   );
   return new Set(rows.map((r) => r.filename));
 }
 
-async function runMigration(filename, sql) {
-  const client = await pool.connect();
+async function runMigration(client, filename, sql) {
+  await client.query('BEGIN');
   try {
-    await client.query('BEGIN');
     await client.query(sql);
     await client.query(
       `INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING`,
@@ -32,19 +31,19 @@ async function runMigration(filename, sql) {
     );
     await client.query('COMMIT');
     console.log(`✅ Migration executed: ${filename}`);
+    return { filename, status: 'executed' };
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(`❌ Migration failed: ${filename}`);
     throw err;
-  } finally {
-    client.release();
   }
 }
 
-async function main() {
+async function runMigrations() {
+  const client = await pool.connect();
   try {
-    await ensureMigrationsTable();
-    const executed = await getExecutedMigrations();
+    await ensureMigrationsTable(client);
+    const executed = await getExecutedMigrations(client);
 
     const files = fs
       .readdirSync(MIGRATIONS_DIR)
@@ -53,26 +52,38 @@ async function main() {
 
     if (files.length === 0) {
       console.log('No migration files found.');
-      return;
+      return { ran: [], skipped: [] };
     }
 
-    let ran = 0;
+    const ran = [];
+    const skipped = [];
     for (const file of files) {
       if (executed.has(file)) {
         console.log(`⏭️  Skipped (already executed): ${file}`);
+        skipped.push(file);
         continue;
       }
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8');
-      await runMigration(file, sql);
-      ran++;
+      const result = await runMigration(client, file, sql);
+      ran.push(result);
     }
 
-    if (ran === 0) {
+    if (ran.length === 0) {
       console.log('All migrations are already up to date.');
     } else {
-      console.log(`\n🎉 ${ran} migration(s) applied successfully.`);
+      console.log(`\n🎉 ${ran.length} migration(s) applied successfully.`);
     }
 
+    return { ran, skipped };
+  } finally {
+    client.release();
+  }
+}
+
+// CLI entry point
+async function main() {
+  try {
+    await runMigrations();
     process.exit(0);
   } catch (err) {
     console.error('\n💥 Migration runner failed:', err.message);
@@ -80,4 +91,8 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { runMigrations };
