@@ -1,4 +1,3 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
@@ -7,29 +6,47 @@ const config = require('../config');
 // Use warn level so we can see important Baileys messages
 const logger = pino({ level: 'warn' });
 
+// Baileys is an optional dependency. In production (Railway) we may not have
+// WhatsApp connected, but we still need to be able to load conversation flows
+// for the dashboard simulator and other non-WhatsApp features.
+let baileys = null;
+try {
+  baileys = require('@whiskeysockets/baileys');
+  console.log('[WA] Baileys loaded successfully');
+} catch (err) {
+  console.warn('[WA] Baileys not installed — WhatsApp connection features disabled');
+}
+
 const connections = new Map();
+const BAILEYS_MISSING_ERROR = 'WhatsApp/Baileys is not available in this environment';
+
+function ensureBaileys() {
+  if (!baileys) throw new Error(BAILEYS_MISSING_ERROR);
+}
 
 async function createConnection(sessionId, onQR, onConnected, onMessage) {
+  ensureBaileys();
+
   const sessionDir = path.join(config.wa.sessionDir, sessionId);
   fs.mkdirSync(sessionDir, { recursive: true });
 
   console.log(`[WA] Loading auth state from: ${sessionDir}`);
-  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+  const { state, saveCreds } = await baileys.useMultiFileAuthState(sessionDir);
   console.log(`[WA] Auth state loaded. Has creds: ${!!state.creds}, registered: ${state.creds?.registered || false}`);
 
   console.log(`[WA] Fetching latest WA version...`);
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  const { version, isLatest } = await baileys.fetchLatestBaileysVersion();
   console.log(`[WA] Using WA version: ${version} (latest: ${isLatest})`);
 
   console.log(`[WA] Creating socket for ${sessionId}...`);
-  const sock = makeWASocket({
+  const sock = baileys.default({
     version,
     auth: {
       creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
+      keys: baileys.makeCacheableSignalKeyStore(state.keys, logger),
     },
     logger,
-    browser: Browsers.ubuntu('Chrome'),
+    browser: baileys.Browsers.ubuntu('Chrome'),
     keepAliveIntervalMs: 30000,
     retryRequestDelayMs: 250,
   });
@@ -55,7 +72,7 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 405;
+      const shouldReconnect = statusCode !== baileys.DisconnectReason.loggedOut && statusCode !== 405;
 
       console.log(`[WA] Session ${sessionId} disconnected. Code: ${statusCode}`);
       connections.delete(sessionId);
@@ -90,12 +107,14 @@ function getConnection(sessionId) {
 }
 
 async function sendMessage(sessionId, jid, content) {
+  ensureBaileys();
   const sock = connections.get(sessionId);
   if (!sock) throw new Error(`No active session: ${sessionId}`);
   return sock.sendMessage(jid, content);
 }
 
 function disconnectSession(sessionId) {
+  if (!baileys) return;
   const sock = connections.get(sessionId);
   if (sock) {
     sock.end();
@@ -104,6 +123,11 @@ function disconnectSession(sessionId) {
 }
 
 async function reconnectSavedSessions(onMessage) {
+  if (!baileys) {
+    console.log('[WA] Skipping auto-reconnect — Baileys not available');
+    return;
+  }
+
   const sessionsDir = config.wa.sessionDir;
   if (!fs.existsSync(sessionsDir)) return;
 

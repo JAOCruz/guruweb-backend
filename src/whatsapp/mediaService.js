@@ -1,7 +1,14 @@
-const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
+
+// Baileys is optional — only needed when actually connected to WhatsApp.
+let downloadMediaMessage = null;
+try {
+  ({ downloadMediaMessage } = require('@whiskeysockets/baileys'));
+} catch (err) {
+  console.warn('[Media] Baileys not installed — media download disabled');
+}
 
 // Mime type to file extension mapping
 const MIME_EXTENSIONS = {
@@ -32,6 +39,10 @@ function getExtension(mimeType, fileName) {
  * Returns { filePath, fileName, savedName, mimeType, mediaType, fileSize } or null.
  */
 async function saveMediaFromMessage(msg, phone) {
+  if (!downloadMediaMessage) {
+    throw new Error('WhatsApp media download is not available in this environment');
+  }
+
   const mediaMessage = msg.message?.imageMessage
     || msg.message?.documentMessage
     || msg.message?.audioMessage
