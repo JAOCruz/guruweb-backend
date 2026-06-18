@@ -104,6 +104,7 @@ app.use("/api/settings", settingsRoutes);
 // --- NEW ROUTES from bot dashboard merge ---
 const safeRoutes = [
   { path: "/api/admin", module: "./routes/admin" },
+  { path: "/api/admin/simulator", module: "./routes/adminSimulator" },
   { path: "/api/clients", module: "./routes/clients" },
   { path: "/api/cases", module: "./routes/cases" },
   { path: "/api/dashboard", module: "./routes/dashboard" },

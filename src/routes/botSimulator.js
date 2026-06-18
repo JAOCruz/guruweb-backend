@@ -7,6 +7,8 @@ const { routeMessage } = require('../conversation/router');
 const { withList } = require('../whatsapp/interactive');
 const { analyzeDocument, transcribeAudio } = require('../llm/mediaAnalysis');
 const ClientMedia = require('../models/ClientMedia');
+const SimulatorConversation = require('../models/SimulatorConversation');
+const SimulatorMessage = require('../models/SimulatorMessage');
 const config = require('../config');
 
 const router = express.Router();
@@ -69,6 +71,9 @@ router.post('/simulate', authenticate, requireRole('admin'), upload.single('file
     console.log(`[BotSimulator] message from ${phone}: ${message?.substring(0, 80) || '[media only]'}`);
     console.log(`[BotSimulator] Gemini enabled: ${config.gemini.enabled}, key present: ${!!config.gemini.apiKey}`);
 
+    // Persist conversation for this simulator session
+    const conversation = await SimulatorConversation.findOrCreate(phone, req.user.id);
+
     let textMessage = message || '';
     let savedMedia = null;
 
@@ -114,6 +119,16 @@ router.post('/simulate', authenticate, requireRole('admin'), upload.single('file
       console.log(`[BotSimulator] ${mediaType} analysis: ${(analysis || '').substring(0, 100)}...`);
     }
 
+    // Save user message before routing
+    await SimulatorMessage.create({
+      conversationId: conversation.id,
+      role: 'user',
+      text: textMessage,
+      mediaType: savedMedia?.mediaType,
+      mediaOriginalName: savedMedia?.originalName,
+      mediaAnalysis: savedMedia?.analysis,
+    });
+
     // Route through the same logic used by the real WhatsApp bot.
     const response = await routeMessage(phone, textMessage, null, savedMedia);
 
@@ -125,10 +140,18 @@ router.post('/simulate', authenticate, requireRole('admin'), upload.single('file
       text = response.text || response.body || JSON.stringify(response);
     }
 
+    // Save bot response
+    const botMessage = await SimulatorMessage.create({
+      conversationId: conversation.id,
+      role: 'bot',
+      text,
+    });
+
     res.json({
       phone,
       message: textMessage,
       response: text,
+      botMessageId: botMessage.id,
       media: savedMedia
         ? {
             id: savedMedia.id,
@@ -175,6 +198,47 @@ router.get('/ai-status', authenticate, requireRole('admin'), (req, res) => {
     geminiKeyPrefix: config.gemini.apiKey ? `${config.gemini.apiKey.slice(0, 8)}...` : null,
     nodeEnv: config.nodeEnv,
   });
+});
+
+// Get conversation history for the current simulator session
+router.get('/simulate/conversation/:sessionId', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const conversation = await SimulatorConversation.findBySession(req.params.sessionId);
+    if (!conversation) return res.json({ conversation: null, messages: [] });
+    const messages = await SimulatorMessage.findByConversation(conversation.id);
+    res.json({ conversation, messages });
+  } catch (err) {
+    console.error('[BotSimulator] get conversation error:', err);
+    res.status(500).json({ error: 'Failed to load conversation' });
+  }
+});
+
+// Update simulator conversation notes/status/title
+router.put('/simulate/conversation/:sessionId', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const conversation = await SimulatorConversation.findBySession(req.params.sessionId);
+    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+    const { notes, status, title } = req.body;
+    const updated = await SimulatorConversation.updateNotes(conversation.id, { notes, status, title });
+    res.json({ conversation: updated });
+  } catch (err) {
+    console.error('[BotSimulator] update conversation error:', err);
+    res.status(500).json({ error: 'Failed to update conversation' });
+  }
+});
+
+// Add feedback to a bot message
+router.put('/simulate/feedback/:messageId', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const { feedback, rating } = req.body;
+    const updated = await SimulatorMessage.updateFeedback(req.params.messageId, { feedback, rating });
+    if (!updated) return res.status(404).json({ error: 'Message not found' });
+    res.json({ message: updated });
+  } catch (err) {
+    console.error('[BotSimulator] feedback error:', err);
+    res.status(500).json({ error: 'Failed to save feedback' });
+  }
 });
 
 module.exports = router;
