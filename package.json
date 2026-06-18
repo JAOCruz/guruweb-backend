@@ -32,6 +32,7 @@
     "express-validator": "^7.0.1",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
     "pg": "^8.11.3"
   },
   "devDependencies": {
