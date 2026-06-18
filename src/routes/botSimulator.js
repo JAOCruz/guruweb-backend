@@ -2,6 +2,7 @@ const express = require('express');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { routeMessage } = require('../conversation/router');
 const { withList } = require('../whatsapp/interactive');
+const config = require('../config');
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.post('/simulate', authenticate, requireRole('admin'), async (req, res) =>
     const phone = sessionId ? String(sessionId).trim() : `simulate_user_${req.user.id}`;
 
     console.log(`[BotSimulator] message from ${phone}: ${message.substring(0, 80)}`);
+    console.log(`[BotSimulator] Gemini enabled: ${config.gemini.enabled}, key present: ${!!config.gemini.apiKey}`);
 
     // Route through the same logic used by the real WhatsApp bot.
     const response = await routeMessage(phone, message, null, null);
@@ -48,6 +50,16 @@ router.post('/simulate', authenticate, requireRole('admin'), async (req, res) =>
     console.error('[BotSimulator] Error:', err.message);
     res.status(500).json({ error: 'Simulation failed', detail: err.message });
   }
+});
+
+// Diagnostic endpoint: check if Gemini is configured
+router.get('/ai-status', authenticate, requireRole('admin'), (req, res) => {
+  res.json({
+    geminiEnabled: config.gemini.enabled,
+    geminiKeyPresent: !!config.gemini.apiKey,
+    geminiKeyPrefix: config.gemini.apiKey ? `${config.gemini.apiKey.slice(0, 8)}...` : null,
+    nodeEnv: config.nodeEnv,
+  });
 });
 
 module.exports = router;

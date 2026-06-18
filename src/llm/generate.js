@@ -188,7 +188,10 @@ async function generateLegalResponse(query, additionalContext = '', conversation
       return chat.sendMessage(userMessage);
     });
 
-    if (!result) return null;
+    if (!result) {
+      console.log('[LLM] generateLegalResponse returned null (fallback will be used)');
+      return null;
+    }
     let response = result.response.text().trim();
 
     // Strip Gemini thinking model artifacts (internal reasoning that leaks into output)
