@@ -216,8 +216,10 @@ router.get('/simulate/conversation/:sessionId', authenticate, requireRole('admin
 // Update simulator conversation notes/status/title
 router.put('/simulate/conversation/:sessionId', authenticate, requireRole('admin'), async (req, res) => {
   try {
-    const conversation = await SimulatorConversation.findBySession(req.params.sessionId);
-    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+    let conversation = await SimulatorConversation.findBySession(req.params.sessionId);
+    if (!conversation) {
+      conversation = await SimulatorConversation.findOrCreate(req.params.sessionId, req.user.id);
+    }
 
     const { notes, status, title } = req.body;
     const updated = await SimulatorConversation.updateNotes(conversation.id, { notes, status, title });
