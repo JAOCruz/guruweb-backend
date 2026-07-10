@@ -4,7 +4,7 @@ const User = require('../models/User');
 const authController = {
   async login(req, res) {
     try {
-      const { username, password } = req.body;
+      const { username, password, rememberMe } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -20,6 +20,10 @@ const authController = {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      const expiresIn = rememberMe
+        ? process.env.JWT_REMEMBER_ME_EXPIRES_IN || '30d'
+        : process.env.JWT_EXPIRES_IN || '1d';
+
       const token = jwt.sign(
         { 
           id: user.id, 
@@ -28,7 +32,7 @@ const authController = {
           dataColumn: user.data_column
         },
         process.env.JWT_SECRET || 'your_jwt_secret_change_me',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        { expiresIn }
       );
 
       res.json({
