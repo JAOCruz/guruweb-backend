@@ -11,23 +11,20 @@ const SERVICE_CATEGORIES = {
   // ═══════════════════════════════════════════════════════
 
   ventas: {
-    name: 'Actos de Venta y Contratos Traslativos',
+    name: 'Contratos de Venta de Bienes',
     emoji: '🚗',
     legal: true,
-    description: 'Contratos de compra-venta de bienes muebles e inmuebles. Precio de notarización según valor del bien (S/E/A).',
+    description: 'Compra-venta de vehículos, inmuebles y otros bienes. S/E/A se define ÚNICAMENTE por el valor del bien.',
     items: [
-      // Redacción base
       { name: 'Redacción contrato de venta', modalidad: 'bajo_firma', prices: { desde: 200, hasta: 500 } },
       { name: 'Cesión de crédito', modalidad: 'bajo_firma', prices: { unico: 250 } },
-      // Notarización por valor del bien (S/E/A)
-      { name: 'Notarización — S (hasta RD$150K)', modalidad: 'autentico', prices: { unico: 500 } },
-      { name: 'Notarización — E (RD$150K – 500K)', modalidad: 'autentico', prices: { unico: 700 } },
-      { name: 'Notarización — E (RD$600K – 1M)', modalidad: 'autentico', prices: { unico: 1000 } },
-      { name: 'Notarización — A (RD$1M – 3M)', modalidad: 'autentico', prices: { unico: 2000 } },
-      { name: 'Notarización — A (RD$3M – 5M)', modalidad: 'autentico', prices: { unico: 4000 } },
-      { name: 'Notarización — A (RD$5M – 8M)', modalidad: 'autentico', prices: { unico: 5000 } },
-      { name: 'Notarización — A (RD$8M – 10M)', modalidad: 'autentico', prices: { unico: 10000 } },
-      // Auténticos
+      { name: 'Venta de bien — S (hasta RD$150K)', modalidad: 'autentico', prices: { unico: 500 } },
+      { name: 'Venta de bien — E (RD$150K – 500K)', modalidad: 'autentico', prices: { unico: 700 } },
+      { name: 'Venta de bien — E (RD$600K – 1M)', modalidad: 'autentico', prices: { unico: 1000 } },
+      { name: 'Venta de bien — A (RD$1M – 3M)', modalidad: 'autentico', prices: { unico: 2000 } },
+      { name: 'Venta de bien — A (RD$3M – 5M)', modalidad: 'autentico', prices: { unico: 4000 } },
+      { name: 'Venta de bien — A (RD$5M – 8M)', modalidad: 'autentico', prices: { unico: 5000 } },
+      { name: 'Venta de bien — A (RD$8M – 10M)', modalidad: 'autentico', prices: { unico: 10000 } },
       { name: 'Compulsa notarial', modalidad: 'autentico', prices: { unico: 250 } },
     ]
   },
