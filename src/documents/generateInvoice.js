@@ -5,11 +5,11 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const storage = require('../utils/storage');
 
 const LOGO_PATH = path.resolve(__dirname, '../../../../../Projects/guru-whatsapp-bot/leo/SRC/LOGO.png');
 const HEADER_IMG_PATH = path.resolve(__dirname, '../../public/templates/template_header.jpeg');
-const OUT_DIR = path.join(__dirname, '../../public/invoices');
-if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
+const OUT_DIR = storage.getDir('invoices');
 
 const fmt = (n) => `RD$ ${n.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

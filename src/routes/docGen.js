@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const ClientDocument = require('../models/ClientDocument');
 const { isS3Configured, uploadLocalFile, getS3Key, getSignedDownloadUrl } = require('../utils/s3');
+const storage = require('../utils/storage');
 
 const router = express.Router();
 router.use(authenticate);
@@ -212,22 +213,35 @@ print(output)
       throw new Error(result.stderr || 'Generation failed');
     }
 
-    const outputPath = result.stdout.trim();
+    const generatedPath = result.stdout.trim();
 
-    // Upload to S3 if configured
+    // Move generated file to persistent Railway volume storage
+    let outputPath = generatedPath;
+    let storageType = 'local';
     let s3Key = null;
     let s3Url = null;
-    let storageType = 'local';
+    try {
+      const safeName = `${session.id}_${Date.now()}.docx`;
+      outputPath = storage.saveLocalFile(generatedPath, 'documents', safeName);
+      storageType = 'railway_volume';
+      console.log(`[DocGen] Saved to Railway volume: ${outputPath}`);
+      // Clean up the original temporary file
+      try { fs.unlinkSync(generatedPath); } catch {}
+    } catch (storageErr) {
+      console.error('[DocGen] Railway volume save failed, keeping temporary file:', storageErr.message);
+      outputPath = generatedPath;
+    }
+
+    // Upload to S3 if configured (dual storage for backup/accessibility)
     if (isS3Configured()) {
       try {
         const key = getS3Key('documents', `${session.id}_${Date.now()}.docx`);
         const upload = await uploadLocalFile(outputPath, key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         s3Key = upload.key;
         s3Url = upload.url;
-        storageType = 's3';
         console.log(`[DocGen] Uploaded to S3: ${s3Key}`);
       } catch (s3Err) {
-        console.error('[DocGen] S3 upload failed, keeping local file:', s3Err.message);
+        console.error('[DocGen] S3 upload failed:', s3Err.message);
       }
     }
 
@@ -254,7 +268,7 @@ print(output)
         fileName: path.basename(outputPath),
         generatedByUserId: req.user?.id || null,
         status: 'active',
-        storageType,
+        storageType: s3Key ? 's3' : storageType,
         s3Key,
         s3Url,
       });
@@ -267,7 +281,7 @@ print(output)
       success: true,
       filePath: outputPath,
       fileName: path.basename(outputPath),
-      storageType,
+      storageType: s3Key ? 's3' : storageType,
       s3Url,
     });
   } catch (err) {
@@ -308,13 +322,16 @@ router.get('/sessions/:id/download', async (req, res) => {
         return res.redirect(signedUrl);
       } catch (s3Err) {
         console.error('[DocGen] Failed to generate S3 signed URL:', s3Err.message);
-        // Fall through to local file
+        // Fall through to volume/local file
       }
     }
 
     const absPath = path.resolve(filePath);
-    const outputDir = path.resolve(__dirname, '..', '..', 'templates', 'output');
-    if (!absPath.startsWith(outputDir)) {
+    const allowedRoots = [
+      path.resolve(__dirname, '..', '..', 'templates', 'output'),
+      path.resolve(storage.getStorageRoot()),
+    ];
+    if (!allowedRoots.some((root) => absPath.startsWith(root))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

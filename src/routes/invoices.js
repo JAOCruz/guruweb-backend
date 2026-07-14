@@ -2,7 +2,8 @@ const express = require('express');
 const path = require('path');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
-const { isS3Configured, uploadLocalFile, getS3Key } = require('../utils/s3');
+const { isS3Configured, uploadLocalFile, getS3Key, getSignedDownloadUrl } = require('../utils/s3');
+const storage = require('../utils/storage');
 
 function isEmployee(role) {
   return role !== 'admin';
@@ -232,16 +233,15 @@ router.post('/:id/send', async (req, res) => {
       });
       console.log(`[Invoice] PDF generated: ${pdfPath}`);
 
-      // Upload to S3 if configured
+      // Upload to S3 if configured (backup/public access)
       if (isS3Configured() && pdfPath) {
         try {
           const key = getS3Key('invoices', `${invoice.doc_number}_${Date.now()}.pdf`);
           const upload = await uploadLocalFile(pdfPath, key, 'application/pdf');
           s3Key = upload.key;
-          pdfPath = upload.url;
           console.log(`[Invoice] PDF uploaded to S3: ${s3Key}`);
         } catch (s3Err) {
-          console.error('[Invoice] S3 upload failed, keeping local path:', s3Err.message);
+          console.error('[Invoice] S3 upload failed, keeping volume path:', s3Err.message);
         }
       }
     } catch (pdfErr) {
@@ -250,7 +250,7 @@ router.post('/:id/send', async (req, res) => {
       pdfPath = null;
     }
 
-    const updated = await Invoice.markSent(invoice.id, pdfPath, s3Key, s3Key ? 's3' : 'local');
+    const updated = await Invoice.markSent(invoice.id, pdfPath, s3Key, s3Key ? 's3' : 'railway_volume');
     res.json({
       invoice: updated,
       pdfPath,
@@ -274,14 +274,29 @@ router.get('/:id/pdf', async (req, res) => {
       return res.status(404).json({ error: 'PDF not yet generated. Send the invoice first.' });
     }
 
-    // If PDF is stored on S3 (URL), redirect to signed URL
-    if (invoice.pdf_path.startsWith('http')) {
-      return res.redirect(invoice.pdf_path);
+    // If PDF has an S3 key, redirect to signed URL
+    if (invoice.pdf_s3_key) {
+      try {
+        const signedUrl = await getSignedDownloadUrl(invoice.pdf_s3_key);
+        return res.redirect(signedUrl);
+      } catch (s3Err) {
+        console.error('[Invoice] Failed to generate S3 signed URL:', s3Err.message);
+        // Fall through to volume/local file
+      }
+    }
+
+    const absPath = path.resolve(invoice.pdf_path);
+    const allowedRoots = [
+      path.resolve(__dirname, '..', '..', 'public', 'invoices'),
+      path.resolve(storage.getStorageRoot()),
+    ];
+    if (!allowedRoots.some((root) => absPath.startsWith(root))) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${invoice.doc_number}.pdf"`);
-    res.sendFile(invoice.pdf_path);
+    res.sendFile(absPath);
   } catch (err) {
     console.error('Serve PDF error:', err);
     res.status(500).json({ error: 'Failed to serve PDF' });

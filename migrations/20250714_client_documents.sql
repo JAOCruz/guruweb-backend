@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS client_documents (
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revised', 'obsolete')),
   notes TEXT,
   parent_document_id INTEGER REFERENCES client_documents(id) ON DELETE SET NULL,
-  storage_type VARCHAR(20) NOT NULL DEFAULT 'local' CHECK (storage_type IN ('local', 's3')),
+  storage_type VARCHAR(20) NOT NULL DEFAULT 'local' CHECK (storage_type IN ('local', 's3', 'railway_volume')),
   s3_key TEXT,
   s3_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
