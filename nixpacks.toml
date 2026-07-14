@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ['python3', 'gnumake', 'gcc', 'rustc', 'cargo']
+
+[phases.build]
+cmds = ['npm run build || true']
+
+[start]
+cmd = 'npm start'
