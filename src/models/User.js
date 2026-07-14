@@ -93,6 +93,26 @@ const User = {
     return bcrypt.compare(plaintext, hash);
   },
 
+  async updatePassword(userId, newPassword) {
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    const { rows } = await pool.query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2
+       RETURNING id, username, email, name, role`,
+      [passwordHash, userId]
+    );
+    return rows[0] || null;
+  },
+
+  async updatePasswordByUsername(username, newPassword) {
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    const { rows } = await pool.query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE username = $2
+       RETURNING id, username, email, name, role`,
+      [passwordHash, username]
+    );
+    return rows[0] || null;
+  },
+
   async findByUsernameOrColumn(identifier) {
     try {
       const { rows } = await pool.query(

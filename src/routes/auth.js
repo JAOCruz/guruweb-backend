@@ -2,7 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const config = require('../config');
-const { generateToken, authenticate } = require('../middleware/auth');
+const { generateToken, authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -153,6 +153,59 @@ router.post('/logout', authenticate, (req, res) => {
     path: '/',
   });
   res.json({ ok: true, message: 'Logged out successfully' });
+});
+
+// Admin-only password reset for any employee account
+router.post('/reset-password', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const { username, newPassword } = req.body;
+    if (!username || !newPassword) {
+      return res.status(400).json({ error: 'username and newPassword are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const target = await User.findByUsername(username);
+    if (!target) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updated = await User.updatePasswordByUsername(username, newPassword);
+    res.json({ ok: true, message: `Password reset for ${username}`, user: { id: updated.id, username: updated.username, role: updated.role } });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Authenticated user changes their own password
+router.put('/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const valid = await User.verifyPassword(currentPassword, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    await User.updatePassword(user.id, newPassword);
+    res.json({ ok: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
 });
 
 module.exports = router;
