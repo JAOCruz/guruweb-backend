@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const storage = require('../utils/storage');
 const config = require('../config');
 
 // Baileys is optional — only needed when actually connected to WhatsApp.
@@ -62,11 +63,8 @@ async function saveMediaFromMessage(msg, phone) {
     : msg.message.audioMessage ? 'audio'
     : 'video';
 
-  // Ensure directory exists: uploads/<phone>/
-  const uploadsDir = config.uploads?.dir || './uploads';
-  const phoneDir = path.join(uploadsDir, phone);
-  fs.mkdirSync(phoneDir, { recursive: true });
-
+  // Ensure directory exists in persistent Railway Volume: media/<phone>/
+  const phoneDir = storage.getDir(`media/${phone}`);
   const filePath = path.join(phoneDir, savedName);
 
   // Download the media buffer from WhatsApp servers

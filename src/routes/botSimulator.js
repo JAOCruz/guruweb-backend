@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { authenticate, requireRole } = require('../middleware/auth');
+const storage = require('../utils/storage');
 const { routeMessage } = require('../conversation/router');
 const { withList } = require('../whatsapp/interactive');
 const { analyzeDocument, transcribeAudio } = require('../llm/mediaAnalysis');
@@ -13,11 +14,10 @@ const config = require('../config');
 
 const router = express.Router();
 
-// Ensure base uploads directory exists
-const UPLOADS_BASE = path.join(process.cwd(), 'uploads', 'simulator');
-fs.mkdirSync(UPLOADS_BASE, { recursive: true });
+// Ensure base uploads directory exists in persistent Railway Volume
+const UPLOADS_BASE = storage.getDir('simulator');
 
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const sessionId = req.body.sessionId || `sim_${Date.now().toString(36).slice(-8)}`;
     const dest = path.join(UPLOADS_BASE, sessionId);
@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage,
+  storage: multerStorage,
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
   fileFilter: (req, file, cb) => {
     const allowedMimePrefixes = ['image/', 'audio/', 'application/pdf', 'application/msword',

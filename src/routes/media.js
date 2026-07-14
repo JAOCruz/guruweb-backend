@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { authenticate } = require('../middleware/auth');
 const ClientMedia = require('../models/ClientMedia');
+const storage = require('../utils/storage');
 
 const router = express.Router();
 router.use(authenticate);
@@ -30,7 +31,7 @@ router.get('/phone/:phone', async (req, res) => {
 });
 
 // Download a specific media file
-const UPLOADS_ROOT = path.resolve(__dirname, '..', '..', 'uploads');
+const UPLOADS_ROOT = storage.getDir('media');
 
 router.get('/:id/download', async (req, res) => {
   try {
@@ -38,8 +39,8 @@ router.get('/:id/download', async (req, res) => {
     if (!media) return res.status(404).json({ error: 'Media not found' });
 
     const absPath = path.resolve(media.file_path);
-    // Path traversal prevention: resolved path must be within the uploads directory
-    const uploadsRoot = path.resolve(__dirname, '..', '..', 'uploads');
+    // Path traversal prevention: resolved path must be within the persistent media directory
+    const uploadsRoot = storage.getDir('media');
     if (!absPath.startsWith(uploadsRoot)) {
       console.error(`[SECURITY] Path traversal attempt: ${absPath}`);
       return res.status(403).json({ error: 'Access denied' });
