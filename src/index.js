@@ -22,6 +22,7 @@ const settingsRoutes = require("./routes/settings");
 const notificationRoutes = require("./routes/notifications");
 const serviceCatalogRoutes = require("./routes/serviceCatalog");
 const ServiceCatalog = require("./models/serviceCatalog");
+const { authenticate } = require("./middleware/auth");
 
 // WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
 let reconnectSavedSessions = null;
