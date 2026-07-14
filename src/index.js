@@ -20,6 +20,7 @@ const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
 const settingsRoutes = require("./routes/settings");
 const notificationRoutes = require("./routes/notifications");
+const serviceCatalogRoutes = require("./routes/serviceCatalog");
 
 const app = express();
 
@@ -81,6 +82,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Trust Railway/reverse proxy so express-rate-limit can use X-Forwarded-For safely
+app.set('trust proxy', 1);
+
 // Security: global rate limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -102,6 +106,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+// Compatibility alias: some dashboard builds call /api/services/categories/list
+// but the catalog lives under /api/service-catalog.
+app.use('/api/services/categories/list', serviceCatalogRoutes);
 
 // --- NEW ROUTES from bot dashboard merge ---
 const safeRoutes = [
