@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const config = require('../config');
+const pool = require('../db/pool');
+const { usePostgresAuthState } = require('./authStatePg');
 
 // pino is an optional dependency used only by Baileys.
 let logger = { level: 'silent' };
@@ -32,11 +34,8 @@ function ensureBaileys() {
 async function createConnection(sessionId, onQR, onConnected, onMessage) {
   ensureBaileys();
 
-  const sessionDir = path.join(config.wa.sessionDir, sessionId);
-  fs.mkdirSync(sessionDir, { recursive: true });
-
-  console.log(`[WA] Loading auth state from: ${sessionDir}`);
-  const { state, saveCreds } = await baileys.useMultiFileAuthState(sessionDir);
+  console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
+  const { state, saveCreds } = await usePostgresAuthState(sessionId);
   console.log(`[WA] Auth state loaded. Has creds: ${!!state.creds}, registered: ${state.creds?.registered || false}`);
 
   console.log(`[WA] Fetching latest WA version...`);
@@ -133,30 +132,29 @@ async function reconnectSavedSessions(onMessage) {
     return;
   }
 
-  const sessionsDir = config.wa.sessionDir;
-  if (!fs.existsSync(sessionsDir)) return;
+  try {
+    const { rows } = await pool.query(
+      `SELECT session_id FROM wa_credentials
+       WHERE creds IS NOT NULL AND creds::text != '{}'
+       AND session_id LIKE 'user_%'`
+    );
 
-  const dirs = fs.readdirSync(sessionsDir, { withFileTypes: true })
-    .filter(d => d.isDirectory() && d.name.startsWith('user_'));
-
-  for (const dir of dirs) {
-    const sessionId = dir.name;
-    const credsFile = path.join(sessionsDir, sessionId, 'creds.json');
-
-    // Only reconnect if credentials exist (previously authenticated)
-    if (!fs.existsSync(credsFile)) continue;
-
-    console.log(`[WA] Auto-reconnecting session: ${sessionId}`);
-    try {
-      await createConnection(
-        sessionId,
-        null, // No QR callback — already authenticated
-        () => console.log(`[WA] ✅ Auto-reconnected session: ${sessionId}`),
-        onMessage
-      );
-    } catch (err) {
-      console.error(`[WA] Failed to auto-reconnect ${sessionId}:`, err.message);
+    for (const row of rows) {
+      const sessionId = row.session_id;
+      console.log(`[WA] Auto-reconnecting session: ${sessionId}`);
+      try {
+        await createConnection(
+          sessionId,
+          null, // No QR callback — already authenticated
+          () => console.log(`[WA] ✅ Auto-reconnected session: ${sessionId}`),
+          onMessage
+        );
+      } catch (err) {
+        console.error(`[WA] Failed to auto-reconnect ${sessionId}:`, err.message);
+      }
     }
+  } catch (err) {
+    console.error('[WA] Error loading saved sessions from DB:', err.message);
   }
 }
 

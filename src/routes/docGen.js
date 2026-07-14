@@ -3,6 +3,8 @@ const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 const path = require('path');
 const fs = require('fs');
+const ClientDocument = require('../models/ClientDocument');
+const { isS3Configured, uploadLocalFile, getS3Key, getSignedDownloadUrl } = require('../utils/s3');
 
 const router = express.Router();
 router.use(authenticate);
@@ -212,6 +214,23 @@ print(output)
 
     const outputPath = result.stdout.trim();
 
+    // Upload to S3 if configured
+    let s3Key = null;
+    let s3Url = null;
+    let storageType = 'local';
+    if (isS3Configured()) {
+      try {
+        const key = getS3Key('documents', `${session.id}_${Date.now()}.docx`);
+        const upload = await uploadLocalFile(outputPath, key, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        s3Key = upload.key;
+        s3Url = upload.url;
+        storageType = 's3';
+        console.log(`[DocGen] Uploaded to S3: ${s3Key}`);
+      } catch (s3Err) {
+        console.error('[DocGen] S3 upload failed, keeping local file:', s3Err.message);
+      }
+    }
+
     // Update session
     await pool.query(`
       UPDATE doc_generation_sessions
@@ -219,10 +238,37 @@ print(output)
       WHERE id = $2
     `, [outputPath, req.params.id]);
 
+    // Version control: store generated document in client_documents
+    try {
+      const latestVersion = await ClientDocument.getLatestVersion(
+        session.client_id,
+        session.template_id,
+        null // doc generation sessions are not yet tied to a case
+      );
+      await ClientDocument.create({
+        clientId: session.client_id,
+        docGenerationSessionId: session.id,
+        templateId: session.template_id,
+        versionNumber: latestVersion + 1,
+        filePath: outputPath,
+        fileName: path.basename(outputPath),
+        generatedByUserId: req.user?.id || null,
+        status: 'active',
+        storageType,
+        s3Key,
+        s3Url,
+      });
+    } catch (versionErr) {
+      console.error('[DocGen] Failed to record document version:', versionErr.message);
+      // Do not fail generation if versioning fails
+    }
+
     res.json({
       success: true,
       filePath: outputPath,
       fileName: path.basename(outputPath),
+      storageType,
+      s3Url,
     });
   } catch (err) {
     console.error('DocGen generate error:', err);
@@ -233,15 +279,40 @@ print(output)
 // ── GET /api/docgen/sessions/:id/download ── Download generated document
 router.get('/sessions/:id/download', async (req, res) => {
   try {
-    const { rows: [session] } = await pool.query(`
-      SELECT generated_file_path FROM doc_generation_sessions WHERE id = $1
+    const { rows: [docRecord] } = await pool.query(`
+      SELECT storage_type, s3_key, file_path, file_name
+      FROM client_documents
+      WHERE doc_generation_session_id = $1
+      ORDER BY version_number DESC
+      LIMIT 1
     `, [req.params.id]);
 
-    if (!session || !session.generated_file_path) {
+    // Fallback to session table for legacy documents
+    let session = null;
+    if (!docRecord) {
+      const { rows: [s] } = await pool.query(`
+        SELECT generated_file_path FROM doc_generation_sessions WHERE id = $1
+      `, [req.params.id]);
+      session = s;
+    }
+
+    const filePath = docRecord?.file_path || session?.generated_file_path;
+    if (!filePath) {
       return res.status(404).json({ error: 'Document not yet generated' });
     }
 
-    const absPath = path.resolve(session.generated_file_path);
+    // Serve from S3 if available
+    if (docRecord?.storage_type === 's3' && docRecord.s3_key) {
+      try {
+        const signedUrl = await getSignedDownloadUrl(docRecord.s3_key);
+        return res.redirect(signedUrl);
+      } catch (s3Err) {
+        console.error('[DocGen] Failed to generate S3 signed URL:', s3Err.message);
+        // Fall through to local file
+      }
+    }
+
+    const absPath = path.resolve(filePath);
     const outputDir = path.resolve(__dirname, '..', '..', 'templates', 'output');
     if (!absPath.startsWith(outputDir)) {
       return res.status(403).json({ error: 'Access denied' });

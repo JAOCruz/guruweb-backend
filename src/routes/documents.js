@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
+const ClientDocument = require('../models/ClientDocument');
 
 const router = express.Router();
 
@@ -243,6 +244,78 @@ router.get('/file/:docId', async (req, res) => {
   } catch (err) {
     console.error('Error serving document file:', err);
     res.status(500).json({ error: 'Failed to serve document' });
+  }
+});
+
+// ── CLIENT DOCUMENT VERSION CONTROL ENDPOINTS ──
+
+// GET /api/clients/:id/documents — expediente del cliente
+router.get('/client/:id/documents', authenticate, async (req, res) => {
+  try {
+    const documents = await ClientDocument.findByClientId(req.params.id);
+    res.json({ documents });
+  } catch (err) {
+    console.error('Error fetching client documents:', err);
+    res.status(500).json({ error: 'Failed to fetch client documents' });
+  }
+});
+
+// GET /api/cases/:id/documents — documentos de un caso
+router.get('/case/:id/documents', authenticate, async (req, res) => {
+  try {
+    const documents = await ClientDocument.findByCaseId(req.params.id);
+    res.json({ documents });
+  } catch (err) {
+    console.error('Error fetching case documents:', err);
+    res.status(500).json({ error: 'Failed to fetch case documents' });
+  }
+});
+
+// POST /api/documents/:id/revise — marcar como revisado y agregar nota
+router.post('/:id/revise', authenticate, async (req, res) => {
+  try {
+    const { notes } = req.body;
+    const document = await ClientDocument.findById(req.params.id);
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+
+    const updated = await ClientDocument.updateStatus(req.params.id, 'revised');
+    if (notes) await ClientDocument.addNote(req.params.id, notes);
+
+    res.json({ success: true, document: updated });
+  } catch (err) {
+    console.error('Error revising document:', err);
+    res.status(500).json({ error: 'Failed to revise document' });
+  }
+});
+
+// POST /api/documents/:id/mark-obsolete — marcar versión como obsoleta
+router.post('/:id/mark-obsolete', authenticate, async (req, res) => {
+  try {
+    const { notes } = req.body;
+    const document = await ClientDocument.findById(req.params.id);
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+
+    const updated = await ClientDocument.updateStatus(req.params.id, 'obsolete');
+    if (notes) await ClientDocument.addNote(req.params.id, notes);
+
+    res.json({ success: true, document: updated });
+  } catch (err) {
+    console.error('Error marking document obsolete:', err);
+    res.status(500).json({ error: 'Failed to mark document obsolete' });
+  }
+});
+
+// GET /api/documents/:id/versions — historial de versiones
+router.get('/:id/versions', authenticate, async (req, res) => {
+  try {
+    const document = await ClientDocument.findById(req.params.id);
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+
+    const versions = await ClientDocument.findVersions(req.params.id);
+    res.json({ versions });
+  } catch (err) {
+    console.error('Error fetching document versions:', err);
+    res.status(500).json({ error: 'Failed to fetch document versions' });
   }
 });
 

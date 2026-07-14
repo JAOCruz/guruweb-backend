@@ -1,6 +1,7 @@
 const express = require('express');
 const Case = require('../models/Case');
 const Client = require('../models/Client');
+const Notification = require('../models/Notification');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 
@@ -131,6 +132,45 @@ router.post('/detect-and-create', authenticate, async (req, res) => {
         'INSERT INTO case_tags (case_id, tag_type, tag_value) VALUES ($1, $2, $3)',
         [caseRecord.id, 'source_phone', phone]
       );
+    }
+
+    // Notify admins and the assigned digitador of any previous case for this client
+    try {
+      const { rows: admins } = await pool.query("SELECT id FROM users WHERE role = 'admin'");
+      const { rows: assignedCases } = await pool.query(
+        `SELECT DISTINCT user_id FROM cases
+         WHERE client_id = $1 AND user_id IS NOT NULL
+         ORDER BY updated_at DESC LIMIT 1`,
+        [client.id]
+      );
+
+      const notifiedUserIds = new Set();
+      for (const admin of admins) {
+        await Notification.create({
+          userId: admin.id,
+          type: 'complaint',
+          title: 'Nueva reclamación',
+          message: `Reclamación de ${client.name || phone}: ${analysis.case_type}`,
+          link: `/cases/${caseRecord.id}`,
+          metadata: { case_id: caseRecord.id, client_id: client.id, phone },
+        });
+        notifiedUserIds.add(admin.id);
+      }
+
+      for (const assigned of assignedCases) {
+        if (!notifiedUserIds.has(assigned.user_id)) {
+          await Notification.create({
+            userId: assigned.user_id,
+            type: 'complaint',
+            title: 'Reclamación de un cliente asignado',
+            message: `El cliente ${client.name || phone} ha generado una reclamación: ${analysis.case_type}`,
+            link: `/cases/${caseRecord.id}`,
+            metadata: { case_id: caseRecord.id, client_id: client.id, phone },
+          });
+        }
+      }
+    } catch (notifyErr) {
+      console.error('[Cases] Failed to create complaint notifications:', notifyErr.message);
     }
 
     console.log(`[Cases] Auto-created complaint case #${caseRecord.id} for ${phone}: ${analysis.case_type} (${analysis.complaint_tag})`);

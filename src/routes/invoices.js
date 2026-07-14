@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { isS3Configured, uploadLocalFile, getS3Key } = require('../utils/s3');
 
 function isEmployee(role) {
   return role !== 'admin';
@@ -216,6 +217,7 @@ router.post('/:id/send', async (req, res) => {
 
     // Generate PDF
     let pdfPath = invoice.pdf_path;
+    let s3Key = null;
     try {
       const today = new Date();
       const dateStr = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
@@ -229,13 +231,26 @@ router.post('/:id/send', async (req, res) => {
         type:        invoice.type,
       });
       console.log(`[Invoice] PDF generated: ${pdfPath}`);
+
+      // Upload to S3 if configured
+      if (isS3Configured() && pdfPath) {
+        try {
+          const key = getS3Key('invoices', `${invoice.doc_number}_${Date.now()}.pdf`);
+          const upload = await uploadLocalFile(pdfPath, key, 'application/pdf');
+          s3Key = upload.key;
+          pdfPath = upload.url;
+          console.log(`[Invoice] PDF uploaded to S3: ${s3Key}`);
+        } catch (s3Err) {
+          console.error('[Invoice] S3 upload failed, keeping local path:', s3Err.message);
+        }
+      }
     } catch (pdfErr) {
       console.error('[Invoice] PDF generation failed:', pdfErr.message);
       // Don't block sending if PDF fails — save null
       pdfPath = null;
     }
 
-    const updated = await Invoice.markSent(invoice.id, pdfPath);
+    const updated = await Invoice.markSent(invoice.id, pdfPath, s3Key, s3Key ? 's3' : 'local');
     res.json({
       invoice: updated,
       pdfPath,
@@ -258,12 +273,54 @@ router.get('/:id/pdf', async (req, res) => {
     if (!invoice.pdf_path) {
       return res.status(404).json({ error: 'PDF not yet generated. Send the invoice first.' });
     }
+
+    // If PDF is stored on S3 (URL), redirect to signed URL
+    if (invoice.pdf_path.startsWith('http')) {
+      return res.redirect(invoice.pdf_path);
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${invoice.doc_number}.pdf"`);
     res.sendFile(invoice.pdf_path);
   } catch (err) {
     console.error('Serve PDF error:', err);
     res.status(500).json({ error: 'Failed to serve PDF' });
+  }
+});
+
+// ── POST /api/invoices/:id/confirm-payment ── admin only
+// Confirms client payment. If the invoice is linked to a case, the case is closed as paid.
+router.post('/:id/confirm-payment', requireRole('admin'), async (req, res) => {
+  try {
+    const { payment_method, payment_reference } = req.body;
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'paid') {
+      return res.status(400).json({ error: 'Invoice is already paid' });
+    }
+    if (!['approved', 'sent'].includes(invoice.status)) {
+      return res.status(400).json({ error: 'Invoice must be approved or sent before payment' });
+    }
+
+    const updated = await Invoice.confirmPayment(req.params.id, {
+      paidBy: req.user.id,
+      paymentMethod: payment_method,
+      paymentReference: payment_reference,
+    });
+
+    // Close related case as paid
+    if (updated && updated.case_id) {
+      await pool.query(
+        `UPDATE cases SET status='paid', updated_at=NOW() WHERE id=$1`,
+        [updated.case_id]
+      );
+      console.log(`[Invoices] Related case #${updated.case_id} closed as paid`);
+    }
+
+    res.json({ invoice: updated, message: 'Payment confirmed. Case closed if linked.' });
+  } catch (err) {
+    console.error('Confirm payment error:', err);
+    res.status(500).json({ error: 'Failed to confirm payment' });
   }
 });
 

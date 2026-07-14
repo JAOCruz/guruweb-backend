@@ -19,6 +19,7 @@ if (process.env.SENTRY_DSN) {
 const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
 const settingsRoutes = require("./routes/settings");
+const notificationRoutes = require("./routes/notifications");
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // --- NEW ROUTES from bot dashboard merge ---
 const safeRoutes = [

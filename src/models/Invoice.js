@@ -64,13 +64,24 @@ const Invoice = {
     return rows[0] || null;
   },
 
-  async markSent(id, pdfPath) {
+  async markSent(id, pdfPath, pdfS3Key = null, storageType = 'local') {
     const { rows } = await pool.query(
       `UPDATE invoices
-       SET status='sent', pdf_path=$1, sent_at=NOW(), updated_at=NOW()
-       WHERE id=$2
+       SET status='sent', pdf_path=$1, pdf_s3_key=$2, pdf_storage_type=$3, sent_at=NOW(), updated_at=NOW()
+       WHERE id=$4
        RETURNING *`,
-      [pdfPath || null, id]
+      [pdfPath || null, pdfS3Key, storageType, id]
+    );
+    return rows[0] || null;
+  },
+
+  async confirmPayment(id, { paidBy, paymentMethod, paymentReference }) {
+    const { rows } = await pool.query(
+      `UPDATE invoices
+       SET status='paid', paid_by=$1, paid_at=NOW(), payment_method=$2, payment_reference=$3, updated_at=NOW()
+       WHERE id=$4 AND status IN ('approved', 'sent')
+       RETURNING *`,
+      [paidBy, paymentMethod || null, paymentReference || null, id]
     );
     return rows[0] || null;
   },

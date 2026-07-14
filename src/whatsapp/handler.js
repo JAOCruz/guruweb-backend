@@ -29,36 +29,50 @@ function bufferMessage(phone, payload, sock) {
   }, MESSAGE_BUFFER_MS);
 }
 
-// Load persisted settings on startup
-const saved = loadSettings();
+// Load persisted settings on startup (async)
+let botActive = true;
+let botMode = 'all';
+let assignmentMode = 'automatic';
+const enabledPhones = new Set();
+const manualPhones = new Set();
 
-let botActive = saved.botActive;
-let botMode = saved.botMode;
-let assignmentMode = saved.assignmentMode || 'automatic';
-const enabledPhones = new Set(saved.enabledPhones);
-const manualPhones = new Set(saved.manualPhones);
-
-console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}`);
+(async function initSettings() {
+  try {
+    const saved = await loadSettings();
+    botActive = saved.botActive;
+    botMode = saved.botMode;
+    assignmentMode = saved.assignmentMode || 'automatic';
+    (saved.enabledPhones || []).forEach(p => enabledPhones.add(p));
+    (saved.manualPhones || []).forEach(p => manualPhones.add(p));
+    console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}`);
+  } catch (err) {
+    console.error('[WA] Failed to load settings:', err.message);
+  }
+})();
 
 // Strip @s.whatsapp.net or @lid suffixes from phone numbers
 function normalizePhone(phone) {
   return phone.replace(/@s\.whatsapp\.net$|@lid$/g, '');
 }
 
-function persist() {
-  saveSettings({
-    botActive,
-    botMode,
-    assignmentMode,
-    enabledPhones: [...enabledPhones],
-    manualPhones: [...manualPhones],
-  });
+async function persist() {
+  try {
+    await saveSettings({
+      botActive,
+      botMode,
+      assignmentMode,
+      enabledPhones: [...enabledPhones],
+      manualPhones: [...manualPhones],
+    });
+  } catch (err) {
+    console.error('[WA] Failed to persist settings:', err.message);
+  }
 }
 
 function setBotActive(active) {
   botActive = active;
   console.log(`[WA] Bot ${active ? 'RESUMED' : 'PAUSED'}`);
-  persist();
+  persist().catch(() => {});
 }
 
 function isBotActive() {
@@ -70,7 +84,7 @@ function setBotMode(mode) {
   botMode = mode;
   enabledPhones.clear();
   console.log(`[WA] Bot mode set to: ${mode} (enabled list cleared)`);
-  persist();
+  persist().catch(() => {});
 }
 
 function getBotMode() {
@@ -81,7 +95,7 @@ function setAssignmentMode(mode) {
   if (mode !== 'manual' && mode !== 'automatic') return;
   assignmentMode = mode;
   console.log(`[WA] Assignment mode set to: ${mode}`);
-  persist();
+  persist().catch(() => {});
 }
 
 function getAssignmentMode() {
@@ -98,7 +112,7 @@ function setChatEnabled(phone, enabled) {
     enabledPhones.delete(clean);
   }
   console.log(`[WA] Phone ${clean}: chat ${enabled ? 'ENABLED' : 'DISABLED'}`);
-  persist();
+  persist().catch(() => {});
 }
 
 function isChatEnabled(phone) {
@@ -120,7 +134,7 @@ function setManualMode(phone, manual) {
     manualPhones.delete(clean);
   }
   console.log(`[WA] Phone ${clean}: ${manual ? 'MANUAL (agent)' : 'BOT mode'}`);
-  persist();
+  persist().catch(() => {});
 }
 
 function isManualMode(phone) {
