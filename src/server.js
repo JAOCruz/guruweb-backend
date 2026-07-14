@@ -60,6 +60,9 @@ app.use(cors({
 
 app.use(express.json());
 
+// Trust Railway/reverse proxy so express-rate-limit can use X-Forwarded-For safely
+app.set('trust proxy', 1);
+
 // Security: global rate limiting
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
