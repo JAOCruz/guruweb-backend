@@ -48,8 +48,8 @@ router.post('/', requireRole('admin'), async (req, res) => {
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
     }
-    if (employee.role !== 'employee') {
-      return res.status(400).json({ error: 'Can only add services for employees' });
+    if (employee.role === 'admin') {
+      return res.status(400).json({ error: 'Can only add services for non-admin employees' });
     }
 
     const service = await EmployeeService.create(

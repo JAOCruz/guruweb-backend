@@ -110,7 +110,7 @@ class Service {
            50.0
          ) as val
        ) pct ON s.id IS NOT NULL
-       WHERE u.role = 'employee'
+       WHERE u.role != 'admin'
        GROUP BY u.id, u.username, u.data_column
        ORDER BY u.username`,
     );

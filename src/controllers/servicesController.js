@@ -51,10 +51,10 @@ const servicesController = {
         return res.status(404).json({ error: "Employee not found" });
       }
 
-      if (employee.role !== "employee") {
+      if (employee.role === "admin") {
         return res
           .status(400)
-          .json({ error: "Can only add services for employees" });
+          .json({ error: "Can only add services for non-admin employees" });
       }
 
       const service = await EmployeeService.create(
