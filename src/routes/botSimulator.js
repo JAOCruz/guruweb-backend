@@ -243,4 +243,33 @@ router.put('/simulate/feedback/:messageId', authenticate, requireRole('admin'), 
   }
 });
 
+// Admin review endpoints (also available via /api/admin/simulator mount)
+router.get('/admin/simulator/conversations', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const { status, limit = 50, offset = 0 } = req.query;
+    const conversations = await SimulatorConversation.findAllForAdmin({
+      status,
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
+    });
+    res.json({ conversations });
+  } catch (err) {
+    console.error('[BotSimulator] admin list error:', err);
+    res.status(500).json({ error: 'Failed to list conversations' });
+  }
+});
+
+router.get('/admin/simulator/conversations/:sessionId', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const conversation = await SimulatorConversation.findBySession(req.params.sessionId);
+    if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+    const messages = await SimulatorMessage.findByConversation(conversation.id);
+    res.json({ conversation, messages });
+  } catch (err) {
+    console.error('[BotSimulator] admin get error:', err);
+    res.status(500).json({ error: 'Failed to get conversation' });
+  }
+});
+
 module.exports = router;

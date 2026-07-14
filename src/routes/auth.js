@@ -1,19 +1,25 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
+const config = require('../config');
 const { generateToken, authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Cookie options for cross-origin (Netlify frontend ↔ Railway backend)
 const isProduction = process.env.NODE_ENV === 'production';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: isProduction,           // Only send over HTTPS in production
-  sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin cookies
-  maxAge: 24 * 60 * 60 * 1000,    // 24 hours
-  path: '/',
-};
+const SESSION_MAX_AGE = 24 * 60 * 60 * 1000;     // 24 hours
+const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function cookieOptions(rememberMe = false) {
+  return {
+    httpOnly: true,
+    secure: isProduction,           // Only send over HTTPS in production
+    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin cookies
+    maxAge: rememberMe ? REMEMBER_MAX_AGE : SESSION_MAX_AGE,
+    path: '/',
+  };
+}
 
 // IPv6-safe key generator (use last 3 segments)
 const ipKeyGenerator = (req) => {
@@ -66,7 +72,7 @@ router.post('/register', registerLimiter, async (req, res) => {
 
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, username, password, rememberMe } = req.body;
     const identifier = email || username;
 
     if (!identifier || !password) {
@@ -85,14 +91,15 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    const tokenExpiresIn = rememberMe ? '30d' : config.jwt.expiresIn;
     const token = generateToken({
       ...user,
       email: user.email || user.username,
       name: user.name || user.username,
-    });
+    }, tokenExpiresIn);
 
     // Set HttpOnly cookie (primary auth method — prevents XSS theft)
-    res.cookie('access_token', token, COOKIE_OPTIONS);
+    res.cookie('access_token', token, cookieOptions(rememberMe));
 
     res.json({
       user: {
@@ -104,6 +111,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         dataColumn: user.data_column,
       },
       token, // Kept for backward-compat during transition; frontend should ignore
+      rememberMe: !!rememberMe,
     });
   } catch (err) {
     console.error('Login error:', err);

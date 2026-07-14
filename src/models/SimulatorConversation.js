@@ -35,7 +35,8 @@ class SimulatorConversation {
       SELECT
         sc.*,
         COUNT(sm.id) AS message_count,
-        MAX(sm.created_at) AS last_message_at
+        MAX(sm.created_at) AS last_message_at,
+        BOOL_OR(sm.rating = -1) AS has_negative_feedback
       FROM simulator_conversations sc
       LEFT JOIN simulator_messages sm ON sm.conversation_id = sc.id
     `;

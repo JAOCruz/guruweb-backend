@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 const Invoice = require('../models/Invoice');
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
@@ -9,7 +10,7 @@ const router = express.Router();
 // ── get all quotations (auth required) ──
 router.get('/quotations', authenticate, async (req, res) => {
   try {
-    const { rows } = await require('../db/pool').query(`
+    const { rows } = await pool.query(`
       SELECT i.*,
              cb.name AS created_by_name
       FROM invoices i

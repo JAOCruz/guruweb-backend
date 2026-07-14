@@ -40,11 +40,11 @@ function authenticate(req, res, next) {
   }
 }
 
-function generateToken(user) {
+function generateToken(user, expiresIn = config.jwt.expiresIn) {
   return jwt.sign(
     { id: user.id, email: user.email, username: user.username, role: user.role },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn, algorithm: 'HS256' }
+    { expiresIn, algorithm: 'HS256' }
   );
 }
 

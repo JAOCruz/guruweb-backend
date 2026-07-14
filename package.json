@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "db:migrate": "node src/db/runMigrations.js",
+    "db:migrate": "node -r dotenv/config src/db/runMigrations.js",
     "init-db": "node src/config/initDb.js"
   },
   "keywords": [
