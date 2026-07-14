@@ -112,11 +112,29 @@ WHERE created_by IS NULL
 
 -- doc_number is the new required unique identifier
 ALTER TABLE invoices ALTER COLUMN doc_number SET NOT NULL;
-ALTER TABLE invoices ADD CONSTRAINT IF NOT EXISTS uq_invoices_doc_number UNIQUE (doc_number);
 
--- Foreign keys to users
-ALTER TABLE invoices ADD CONSTRAINT IF NOT EXISTS fk_invoices_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
-ALTER TABLE invoices ADD CONSTRAINT IF NOT EXISTS fk_invoices_approved_by FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
+DO $$
+BEGIN
+  -- Unique doc_number constraint
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'uq_invoices_doc_number'
+  ) THEN
+    ALTER TABLE invoices ADD CONSTRAINT uq_invoices_doc_number UNIQUE (doc_number);
+  END IF;
+
+  -- Foreign keys to users
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_created_by'
+  ) THEN
+    ALTER TABLE invoices ADD CONSTRAINT fk_invoices_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_approved_by'
+  ) THEN
+    ALTER TABLE invoices ADD CONSTRAINT fk_invoices_approved_by FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- ============================================================
 -- Remove obsolete columns
