@@ -269,6 +269,8 @@ async function handleQuoteConfirm(session, text) {
   const normalized = (text || '').toLowerCase().trim();
   const isConfirm = /^(sí|si|yes|y|1|confirmar|generar|ok)/.test(normalized);
   const isModify = /^(no|2|modificar|cambiar|corregir)/.test(normalized);
+  const isSimulator = isSimulatorPhone(session.phone);
+  const source = getSource(session.phone);
 
   if (!isConfirm && !isModify) {
     return `❓ No entendí. ¿Desea proceder con la factura?\n\n` +
@@ -323,11 +325,12 @@ async function handleQuoteConfirm(session, text) {
       itbis: 0,
       total: session.data.quoteTotal,
       createdBy: 1, // System-generated quotations
+      source,
     });
 
-    console.log(`[Billing] Quotation saved to DB: ${quotation.id}`);
+    console.log(`[Billing] Quotation saved to DB: ${quotation.id} (source=${source})`);
 
-    const pdfPath = await generateInvoiceFromTemplate({
+    let pdfPath = await generateInvoiceFromTemplate({
       clientName: session.data?.clientName || 'Cliente',
       clientPhone: session.phone,
       docNumber: docNum,
@@ -337,12 +340,15 @@ async function handleQuoteConfirm(session, text) {
       type: 'COTIZACIÓN',
     });
 
+    // Move PDF to persistent storage
+    const pdfFilename = path.basename(pdfPath);
+    pdfPath = storage.saveLocalFile(pdfPath, 'invoices', pdfFilename);
+
     // Update quotation with PDF path
-    await Invoice.update(quotation.id, { pdf_path: pdfPath });
+    await Invoice.update(quotation.id, { pdf_path: pdfPath, pdf_storage_type: 'railway_volume' });
 
     console.log(`[Billing] PDF generated at: ${pdfPath}`);
 
-    const pdfFilename = path.basename(pdfPath);
     const baseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
     const pdfUrl = `${baseUrl}/api/invoices/pdf/${pdfFilename}`;
 
@@ -394,8 +400,8 @@ if images:
       `Nuestro equipo se pondrá en contacto para procesar el pago.\n\n` +
       `¿En qué más puedo ayudarle?`;
 
-    // Send preview image if available
-    if (previewPath) {
+    // Send preview image if available (skip for simulator)
+    if (previewPath && !isSimulator) {
       try {
         const { sendImageToChat } = require('../../whatsapp/sender');
         const jid = `${session.phone}@s.whatsapp.net`;
