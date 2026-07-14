@@ -18,6 +18,7 @@ const { sendDocumentToChat } = require('../../whatsapp/sender');
 const { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber } = require('../../documents/generateInvoice');
 const { normalize } = require('../nlp');
 const { isSimulatorPhone, getSource } = require('../../utils/simulator');
+const storage = require('../../utils/storage');
 
 const FREE_TEXT = new Set(['billing:ask_services', 'billing:confirm_details', 'billing:quote_confirm']);
 
