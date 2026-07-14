@@ -10,7 +10,7 @@ const Case = {
     return rows[0];
   },
 
-  async findAll({ status, clientId, caseType } = {}) {
+  async findAll({ status, clientId, caseType, userId } = {}) {
     let query = `SELECT c.*, cl.name as client_name, cl.phone as client_phone FROM cases c
                  LEFT JOIN clients cl ON c.client_id = cl.id WHERE 1=1`;
     const params = [];
@@ -25,6 +25,10 @@ const Case = {
     if (caseType) {
       params.push(caseType);
       query += ` AND c.case_type = $${params.length}`;
+    }
+    if (userId) {
+      params.push(userId);
+      query += ` AND c.user_id = $${params.length}`;
     }
     query += ' ORDER BY c.created_at DESC';
     const { rows } = await pool.query(query, params);

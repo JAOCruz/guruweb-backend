@@ -2,7 +2,11 @@ const express = require('express');
 const Message = require('../models/Message');
 const { sendMessage, getAnyConnection } = require('../whatsapp/connection');
 const Client = require('../models/Client');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
+
+function isEmployee(role) {
+  return role !== 'admin';
+}
 const {
   setChatEnabled, isChatEnabled, getEnabledPhones,
   setManualMode, isManualMode, getManualPhones,
@@ -22,10 +26,11 @@ router.post('/internal/manual-toggle/:phone', authenticate, (req, res) => {
 router.use(authenticate);
 
 // Get all conversations grouped by phone number
+// Admin sees everything; employees (digitador/auxiliar) only see assigned clients/cases.
 router.get('/conversations', async (req, res) => {
   try {
     const filter = req.query.filter || 'all'; // all | clients | non_clients
-    const userId = req.user.role === 'digitador' ? req.user.id : null;
+    const userId = isEmployee(req.user.role) ? req.user.id : null;
     const conversations = await Message.getConversations(filter, userId);
     // Enrich with bot active state
     for (const conv of conversations) {

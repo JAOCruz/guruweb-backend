@@ -61,7 +61,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    const user = await User.create({ email, password, name, role: role || 'lawyer', username, data_column });
+    const user = await User.create({ email, password, name, role: role || 'digitador', username, data_column });
     const token = generateToken(user);
     res.status(201).json({ user, token });
   } catch (err) {

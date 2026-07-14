@@ -1,7 +1,11 @@
 const express = require('express');
 const Client = require('../models/Client');
 const pool = require('../db/pool');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
+
+function isEmployee(role) {
+  return role !== 'admin';
+}
 
 const router = express.Router();
 router.use(authenticate);
@@ -9,7 +13,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     let clients;
-    if (req.user.role === 'digitador') {
+    if (isEmployee(req.user.role)) {
       clients = await Client.findByAssignedTo(req.user.id);
     } else {
       clients = await Client.findAll();
@@ -25,8 +29,8 @@ router.get('/:id', async (req, res) => {
   try {
     const client = await Client.findById(req.params.id);
     if (!client) return res.status(404).json({ error: 'Client not found' });
-    // Digitador can only access assigned clients
-    if (req.user.role === 'digitador' && client.assigned_to !== req.user.id) {
+    // Employee can only access assigned clients
+    if (isEmployee(req.user.role) && client.assigned_to !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
     res.json({ client });
@@ -161,6 +165,33 @@ router.get('/:id/media', async (req, res) => {
   } catch (err) {
     console.error('Get client media error:', err);
     res.status(500).json({ error: 'Failed to get client media' });
+  }
+});
+
+// Assign client to an employee (admin only)
+router.put('/:id/assign', requireRole('admin'), async (req, res) => {
+  try {
+    const { user_id, notes } = req.body;
+    const clientId = req.params.id;
+
+    const client = await Client.findById(clientId);
+    if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    const previousUserId = client.assigned_to;
+
+    const updated = await Client.update(clientId, { assigned_to: user_id || null });
+
+    await pool.query(
+      `INSERT INTO client_assignment_history (client_id, from_user_id, to_user_id, assigned_by, notes)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [clientId, previousUserId, user_id || null, req.user.id, notes || null]
+    );
+
+    console.log(`[Clients] Client #${clientId} assigned to user ${user_id} by ${req.user.username}`);
+    res.json({ client: updated, message: 'Client assigned successfully' });
+  } catch (err) {
+    console.error('Assign client error:', err);
+    res.status(500).json({ error: 'Failed to assign client' });
   }
 });
 

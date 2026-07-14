@@ -91,7 +91,7 @@ const Message = {
 
   // Get all conversations grouped by phone, with latest message and client info
   // Uses COALESCE to fall back to client.phone for old messages missing the phone column
-  // If userId provided, only returns conversations from clients assigned to that user
+  // If userId provided, only returns conversations from clients OR cases assigned to that user
   async getConversations(filter = 'all', userId = null) {
     const conditions = [];
     if (filter === 'clients') {
@@ -100,15 +100,17 @@ const Message = {
       conditions.push('m.client_id IS NULL AND m.phone IS NOT NULL');
     }
 
-    // Digitador: only see assigned clients' conversations (non-client phones hidden)
+    // Employee (digitador/auxiliar): only see assigned clients' or assigned cases' conversations.
+    // Non-client phones are hidden for employees.
     if (userId !== null) {
-      conditions.push(`(m.client_id IS NULL OR c.assigned_to = ${parseInt(userId)})`);
-      // For digitadores, only show 'clients' filter effectively (no unregistered chats)
-      // Remove the non_clients option by requiring client_id
-      if (filter !== 'non_clients') {
-        // Replace conditions to force assigned filter
-        conditions.length = 0;
-        conditions.push(`m.client_id IS NOT NULL AND c.assigned_to = ${parseInt(userId)}`);
+      if (filter === 'non_clients') {
+        // Employees should never see unregistered chats
+        conditions.push('1=0');
+      } else {
+        conditions.push(`(
+          c.assigned_to = ${parseInt(userId)}
+          OR m.case_id IN (SELECT id FROM cases WHERE user_id = ${parseInt(userId)})
+        )`);
       }
     }
 
@@ -119,6 +121,7 @@ const Message = {
         COALESCE(m.phone, c.phone) AS phone,
         MAX(m.client_id) AS client_id,
         MAX(c.name) AS client_name,
+        MAX(c.assigned_to) AS client_assigned_to,
         MAX(m.created_at) AS last_message_at,
         COUNT(*) AS message_count
       FROM messages m

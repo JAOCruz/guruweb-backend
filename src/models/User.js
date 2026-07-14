@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 
 const User = {
-  async create({ email, password, name, role = 'lawyer', username, data_column }) {
+  async create({ email, password, name, role = 'digitador', username, data_column }) {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
     const { rows } = await pool.query(
       `INSERT INTO users (email, password_hash, name, role, username, data_column)
@@ -81,7 +81,7 @@ const User = {
   async getAllEmployees() {
     try {
       const { rows } = await pool.query(
-        `SELECT * FROM users WHERE role = 'employee' ORDER BY username`
+        `SELECT * FROM users WHERE role != 'admin' ORDER BY username`
       );
       return rows;
     } catch (err) {

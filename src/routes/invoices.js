@@ -2,6 +2,10 @@ const express = require('express');
 const path = require('path');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
+
+function isEmployee(role) {
+  return role !== 'admin';
+}
 const Invoice = require('../models/Invoice');
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
@@ -53,7 +57,7 @@ router.use(authenticate);
 // ── GET /api/invoices ── list (admin: all | digitador: own)
 router.get('/', async (req, res) => {
   try {
-    const invoices = req.user.role === 'admin'
+    const invoices = !isEmployee(req.user.role)
       ? await Invoice.findAll()
       : await Invoice.findByCreator(req.user.id);
     res.json({ invoices });
@@ -68,8 +72,8 @@ router.get('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    // Digitador can only see own invoices
-    if (req.user.role === 'digitador' && invoice.created_by !== req.user.id) {
+    // Employee can only see own invoices
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
     res.json({ invoice });
@@ -120,7 +124,7 @@ router.put('/:id', async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
 
-    if (req.user.role === 'digitador') {
+    if (isEmployee(req.user.role)) {
       if (invoice.created_by !== req.user.id) return res.status(403).json({ error: 'Access denied' });
       if (invoice.status !== 'draft') return res.status(400).json({ error: 'Cannot edit a non-draft invoice' });
     }
@@ -160,7 +164,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (req.user.role === 'digitador' && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (invoice.status === 'sent') {
@@ -196,13 +200,13 @@ router.post('/:id/send', async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
 
-    // Digitador ownership check
-    if (req.user.role === 'digitador' && invoice.created_by !== req.user.id) {
+    // Employee ownership check
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Digitador can only send approved invoices
-    if (req.user.role === 'digitador' && invoice.status !== 'approved') {
+    // Employee can only send approved invoices
+    if (isEmployee(req.user.role) && invoice.status !== 'approved') {
       return res.status(403).json({ error: 'Invoice must be approved by admin before sending' });
     }
 
@@ -248,7 +252,7 @@ router.get('/:id/pdf', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (req.user.role === 'digitador' && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (!invoice.pdf_path) {

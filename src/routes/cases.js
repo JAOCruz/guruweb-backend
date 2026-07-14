@@ -2,7 +2,11 @@ const express = require('express');
 const Case = require('../models/Case');
 const Client = require('../models/Client');
 const pool = require('../db/pool');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
+
+function isEmployee(role) {
+  return role !== 'admin';
+}
 const config = require('../config');
 
 const router = express.Router();
@@ -150,7 +154,12 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   try {
     const { status, client_id, case_type } = req.query;
-    const cases = await Case.findAll({ status, clientId: client_id, caseType: case_type });
+    const filters = { status, clientId: client_id, caseType: case_type };
+    // Employees only see cases assigned to them
+    if (isEmployee(req.user.role)) {
+      filters.userId = req.user.id;
+    }
+    const cases = await Case.findAll(filters);
     res.json({ cases });
   } catch (err) {
     console.error('List cases error:', err);
@@ -162,6 +171,9 @@ router.get('/:id', async (req, res) => {
   try {
     const caseRecord = await Case.findById(req.params.id);
     if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json({ case: caseRecord });
   } catch (err) {
     console.error('Get case error:', err);
@@ -241,20 +253,83 @@ router.post('/:id/reopen', async (req, res) => {
   }
 });
 
-// Assign case to a user (employee/lawyer)
-router.post('/:id/assign', async (req, res) => {
+// Assign case to a user (admin only)
+router.post('/:id/assign', requireRole('admin'), async (req, res) => {
   try {
-    const { user_id } = req.body;
+    const { user_id, notes } = req.body;
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
     }
-    const caseRecord = await Case.update(req.params.id, { user_id });
+    const caseRecord = await Case.findById(req.params.id);
     if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+    const previousUserId = caseRecord.user_id;
+    const updated = await Case.update(req.params.id, { user_id, status: 'in_progress' });
+
+    await pool.query(
+      `INSERT INTO case_assignment_history (case_id, from_user_id, to_user_id, assigned_by, notes)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.params.id, previousUserId, user_id, req.user.id, notes || null]
+    );
+
     console.log(`[Cases] Case #${req.params.id} assigned to user ${user_id} by ${req.user.username}`);
-    res.json({ case: caseRecord, message: 'Case assigned' });
+    res.json({ case: updated, message: 'Case assigned' });
   } catch (err) {
     console.error('Assign case error:', err);
     res.status(500).json({ error: 'Failed to assign case' });
+  }
+});
+
+// Close case (admin only)
+// reason: 'paid', 'cancelled', 'resolved', 'other'
+router.post('/:id/close', requireRole('admin'), async (req, res) => {
+  try {
+    const { reason, notes } = req.body;
+    const caseRecord = await Case.findById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+    const newStatus = reason === 'paid' ? 'paid' : 'closed';
+    const updated = await Case.update(req.params.id, {
+      status: newStatus,
+      description: caseRecord.description
+        ? `${caseRecord.description}\n\n[CERRADO - ${reason || 'other'}${notes ? ': ' + notes : ''}]`
+        : `[CERRADO - ${reason || 'other'}${notes ? ': ' + notes : ''}]`,
+    });
+
+    console.log(`[Cases] Case #${req.params.id} closed (${reason}) by ${req.user.username}`);
+    res.json({ case: updated, message: 'Case closed' });
+  } catch (err) {
+    console.error('Close case error:', err);
+    res.status(500).json({ error: 'Failed to close case' });
+  }
+});
+
+// Get assignment history for a case
+router.get('/:id/assignment-history', authenticate, async (req, res) => {
+  try {
+    const caseRecord = await Case.findById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT h.*,
+              fu.username AS from_username,
+              tu.username AS to_username,
+              bu.username AS assigned_by_username
+       FROM case_assignment_history h
+       LEFT JOIN users fu ON fu.id = h.from_user_id
+       LEFT JOIN users tu ON tu.id = h.to_user_id
+       LEFT JOIN users bu ON bu.id = h.assigned_by
+       WHERE h.case_id = $1
+       ORDER BY h.assigned_at DESC`,
+      [req.params.id]
+    );
+    res.json({ history: rows });
+  } catch (err) {
+    console.error('Get case assignment history error:', err);
+    res.status(500).json({ error: 'Failed to get assignment history' });
   }
 });
 
