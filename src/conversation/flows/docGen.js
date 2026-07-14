@@ -162,8 +162,8 @@ async function handle(session, text, msg, savedMedia = null) {
     return '❌ Proceso cancelado. ¿En qué más te puedo ayudar?';
   }
 
-  // ── STEP 1: Show categories ──
-  if (step === 'select_category' || step === 'show') {
+  // ── STEP 1: Show categories (only on first entry) ──
+  if (step === 'show') {
     const categories = await getCategories();
     let response = `📁 *Generación de Documentos Legales*\n\n`;
     response += `Selecciona una categoría:\n\n`;
