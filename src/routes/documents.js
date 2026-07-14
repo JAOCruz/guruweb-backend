@@ -1,18 +1,73 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Path to the generated document index JSON
+// Legacy path to the generated document index JSON (kept for fallback)
 const DOCUMENT_INDEX_PATH = '/home/jay/Projects/guru-whatsapp-bot/DB/document_index.json';
 
 router.use(authenticate);
 
 // GET /api/documents/index — fetch complete document index
+// Primary source: doc_templates/doc_categories in PostgreSQL.
+// Fallback to legacy JSON file if it exists locally.
 router.get('/index', async (req, res) => {
   try {
+    // Try database first
+    const { rows: templates } = await pool.query(`
+      SELECT t.id, t.name, t.slug, t.file_path, t.file_name, t.doc_type,
+             t.description, t.required_roles, t.created_at, t.updated_at,
+             c.name AS category_name, c.slug AS category_slug,
+             p.name AS parent_category_name, p.slug AS parent_category_slug
+      FROM doc_templates t
+      LEFT JOIN doc_categories c ON c.id = t.category_id
+      LEFT JOIN doc_categories p ON p.id = c.parent_id
+      WHERE t.is_active = true
+      ORDER BY c.sort_order, c.name, t.sort_order, t.name
+    `);
+
+    if (templates.length > 0) {
+      const categories = [...new Set(templates.map(t => t.category_slug).filter(Boolean))].sort();
+      const documents = templates.map(t => {
+        const parts = [t.parent_category_name, t.category_name].filter(Boolean);
+        return {
+          id: String(t.id),
+          name: t.name,
+          category: t.parent_category_name || t.category_name || 'General',
+          subcategory: t.parent_category_name ? t.category_name : null,
+          sub_subcategory: null,
+          specialization: parts.join(' / '),
+          file_path: t.file_path,
+          absolute_path: t.file_path,
+          file_extension: t.doc_type ? `.${t.doc_type}` : '.docx',
+          file_size_bytes: 0,
+          modified_date: t.updated_at ? new Date(t.updated_at).toISOString() : new Date().toISOString(),
+          status: 'active',
+          description: t.description || `Plantilla: ${t.name}`,
+          tags: Array.isArray(t.required_roles) ? t.required_roles : [],
+          comments: [],
+        };
+      });
+
+      return res.json({
+        metadata: {
+          total_documents: documents.length,
+          generated_at: new Date().toISOString(),
+          base_path: '/',
+        },
+        categories,
+        documents,
+        grouped_by_category: documents.reduce((acc, d) => {
+          acc[d.category] = (acc[d.category] || 0) + 1;
+          return acc;
+        }, {}),
+      });
+    }
+
+    // Fallback to legacy JSON file
     if (!fs.existsSync(DOCUMENT_INDEX_PATH)) {
       return res.status(404).json({
         error: 'Document index not found. Please run the document indexing script first.'
