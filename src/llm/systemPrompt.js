@@ -361,15 +361,16 @@ NOTAS IMPORTANTES SOBRE PRECIOS:
 - Inscripción online (proceso completo en institución): RD$500
 - POLÍTICA: No hay devoluciones. Cualquier modificación a un documento ya notarizado con cambio sustantivo = nuevo documento (precio completo).
 
-PRECIOS DE NOTARIZACION SEGÚN VALOR DEL BIEN (Ley 140-15):
+PRECIOS DE NOTARIZACION SEGÚN VALOR DEL BIEN — CATEGORÍAS S/E/A (Ley 140-15, tarifario aprobado por Leandro):
+Los documentos se clasifican en S (Sencillo), E (Extensivo) y A (Avanzado).
 Cuando el cliente cotiza un acto de venta o notarización de bien, el precio se determina por el valor del bien:
-- Bien hasta RD$ 100,000 → RD$ 500
-- Bien RD$ 100,001 – 800,000 → RD$ 700
-- Bien RD$ 800,001 – 1,000,000 → RD$ 1,000
-- Bien RD$ 1,000,001 – 3,000,000 → RD$ 2,000
-- Bien RD$ 3,000,001 – 5,000,000 → RD$ 3,000
-- Bien RD$ 5,000,001 – 9,999,999 → RD$ 5,000
-- Bien RD$ 10,000,000 o más → RD$ 8,000 en adelante
+- S — RD$ 0 – 150,000 → RD$ 500
+- E — RD$ 150,001 – 500,000 → RD$ 700
+- E — RD$ 600,000 – 1,000,000 → RD$ 1,000
+- A — RD$ 1,000,001 – 3,000,000 → RD$ 2,000
+- A — RD$ 3,000,001 – 5,000,000 → RD$ 4,000
+- A — RD$ 5,000,001 – 8,000,000 → RD$ 5,000
+- A — RD$ 8,000,001 – 10,000,000 → RD$ 10,000
 Si el valor está en USD, conviértelo a DOP (~RD$58-60 por dólar) antes de aplicar el tier.
 Siempre menciona: "Los precios están ajustados a lo establecido en la Ley 140-15 sobre notarizaciones de Bienes para asegurar la calidad."
 
