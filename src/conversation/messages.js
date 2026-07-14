@@ -5,16 +5,15 @@ const { buildListMessage } = require('../whatsapp/interactive');
 const MSG = {
   // ── Greeting & Welcome ──
   WELCOME_NEW:
-    `🦉 ¡Saludos! Soy *El Gurú*, su sabio búho legal de *Gurú Soluciones*.\n\n` +
-    `Estoy aquí para iluminar su camino en cualquier asunto legal dentro de la República Dominicana.\n\n` +
-    `Puede preguntarme lo que necesite — cotizaciones, información legal, servicios, o lo que sea. ¡Con mucho gusto le asisto!`,
+    `🦉 ¡Buenas! Bienvenido/a a *Gurú Soluciones*.\n\n` +
+    `¿En qué podemos orientarle hoy?`,
 
   WELCOME_NEW_SHORT:
-    `🦉 ¡Saludos! Soy *El Gurú*, su sabio búho legal de *Gurú Soluciones*.\n\n` +
-    `Estoy aquí para ayudarle con cualquier asunto legal o servicio. ¿En qué puedo orientarle?`,
+    `🦉 ¡Buenas! Bienvenido/a a *Gurú Soluciones*.\n\n` +
+    `¿En qué podemos orientarle hoy?`,
 
   WELCOME_BACK: (name) =>
-    `🦉 ¡Bienvenido/a de nuevo, *${name}*! Es un gusto verle por aquí.\n\n¿En qué podemos asistirle el día de hoy?`,
+    `🦉 ¡Buenas *${name}*! Qué bueno verle de nuevo.\n\n¿En qué le ayudamos hoy?`,
 
   // ── Main Menu ──
   MAIN_MENU:
