@@ -8,9 +8,15 @@ import re
 import json
 from docx import Document
 
-BASE_DIR = "/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source"
-TEMPLATES_DIR = os.path.join(BASE_DIR, "LATEST_UPDATES/LATEST UPDATES")
-OUTPUT_DIR = os.path.join(BASE_DIR, "templates/output")
+BASE_DIR = os.environ.get(
+    "GURU_TEMPLATES_BASE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "templates", "documents"),
+)
+TEMPLATES_DIR = BASE_DIR
+OUTPUT_DIR = os.environ.get(
+    "GURU_TEMPLATES_OUTPUT_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "templates", "output"),
+)
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

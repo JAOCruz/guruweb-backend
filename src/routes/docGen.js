@@ -96,7 +96,7 @@ roles = analyze_template_roles(sys.argv[1])
 print(json.dumps(roles))
 `;
     const result = spawnSync('python3', ['-c', script, template.file_path], {
-      cwd: '/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source',
+      cwd: path.resolve(__dirname, '../..'),
       encoding: 'utf-8',
       timeout: 10000,
     });
@@ -204,7 +204,7 @@ print(output)
       session.file_path,
       outputName
     ], {
-      cwd: '/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source',
+      cwd: path.resolve(__dirname, '../..'),
       encoding: 'utf-8',
       timeout: 30000,
     });
