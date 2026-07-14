@@ -1,28 +1,9 @@
-FROM node:18-slim
+FROM node:18-alpine
 
 WORKDIR /app
 
-# System deps for native Node modules (Baileys/libsignal) and weasyprint
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-cffi \
-    python3-brotli \
-    make \
-    g++ \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
-    libpixman-1-dev \
-    libpango-1.0-0 \
-    libharfbuzz0b \
-    libpangoft2-1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install weasyprint for PDF invoice generation
-RUN pip3 install --no-cache-dir weasyprint
+# Install build deps for native Node modules (Baileys/libsignal)
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 
