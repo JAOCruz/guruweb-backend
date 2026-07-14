@@ -1,8 +1,8 @@
-FROM node:18
+FROM node:18-bullseye
 
 WORKDIR /app
 
-# Install system dependencies for Baileys, native modules, and weasyprint
+# System dependencies for native Node modules (Baileys/libsignal) and weasyprint
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
