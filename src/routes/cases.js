@@ -320,13 +320,18 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
   }
 });
 
-// Close case (admin only)
+// Close case (admin or assigned employee)
 // reason: 'paid', 'cancelled', 'resolved', 'other'
-router.post('/:id/close', requireRole('admin'), async (req, res) => {
+router.post('/:id/close', async (req, res) => {
   try {
     const { reason, notes } = req.body;
     const caseRecord = await Case.findById(req.params.id);
     if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+    // Employees can only close cases assigned to them
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const newStatus = reason === 'paid' ? 'paid' : 'closed';
     const updated = await Case.update(req.params.id, {

@@ -9,6 +9,8 @@
  */
 const path = require('path');
 const Invoice = require('../../models/Invoice');
+const Case = require('../../models/Case');
+const Client = require('../../models/Client');
 const { transitionTo, updateData } = require('../stateManager');
 const { MSG, LIST } = require('../messages');
 const { withList } = require('../../whatsapp/interactive');
@@ -18,6 +20,41 @@ const { normalize } = require('../nlp');
 const { isSimulatorPhone, getSource } = require('../../utils/simulator');
 
 const FREE_TEXT = new Set(['billing:ask_services', 'billing:confirm_details', 'billing:quote_confirm']);
+
+// ── Helper: link invoice to an open case for this client ───────────────────────
+
+async function getOrCreateCaseForPhone(phone, clientName, source) {
+  try {
+    let client = await Client.findByPhone(phone);
+    if (!client) {
+      client = await Client.create({
+        name: clientName || 'Cliente',
+        phone,
+        source,
+        notes: 'Creado automáticamente desde facturación del bot',
+      });
+    }
+
+    // Look for an existing open/pending case for this client
+    const existingCases = await Case.findAll({ clientId: client.id, status: 'open' });
+    if (existingCases.length > 0) {
+      return { caseId: existingCases[0].id, clientId: client.id };
+    }
+
+    const newCase = await Case.create({
+      caseNumber: `BOT-${Date.now().toString(36).toUpperCase()}`,
+      title: `Caso iniciado desde WhatsApp`,
+      description: `Caso generado automáticamente por solicitud de ${clientName || 'cliente'}`,
+      caseType: 'consulta',
+      clientId: client.id,
+      source,
+    });
+    return { caseId: newCase.id, clientId: client.id };
+  } catch (err) {
+    console.error('[Billing] getOrCreateCaseForPhone error:', err.message);
+    return { caseId: null, clientId: null };
+  }
+}
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 
@@ -158,12 +195,20 @@ async function generateAndSendInvoice(session) {
   const source = getSource(phone);
 
   try {
-    // 1. Create invoice in DB (as draft)
+    // 1. Link to an open case / client
+    const { caseId, clientId } = await getOrCreateCaseForPhone(
+      phone,
+      data.clientName || 'Cliente',
+      source
+    );
+
+    // 2. Create invoice in DB (as draft)
     const docNumber = generateDocNumber('FAC');
     const invoice = await Invoice.create({
       docNumber,
       type: 'FACTURA',
-      clientId: data.clientId || null,
+      clientId: clientId || data.clientId || null,
+      caseId,
       clientName: data.clientName || 'Cliente',
       clientPhone: data.clientPhone || phone,
       items: data.items,
@@ -312,11 +357,19 @@ async function handleQuoteConfirm(session, text) {
 
     console.log(`[Billing] Quote confirm - items: ${JSON.stringify(items)}`);
 
+    // Link to an open case / client
+    const { caseId, clientId } = await getOrCreateCaseForPhone(
+      session.phone,
+      session.data?.clientName || 'Cliente',
+      source
+    );
+
     // Save quotation to database
     const quotation = await Invoice.create({
       docNumber: docNum,
       type: 'COTIZACIÓN',
-      clientId: null,
+      clientId: clientId || null,
+      caseId,
       clientName: session.data?.clientName || 'Cliente',
       clientPhone: session.phone,
       items,

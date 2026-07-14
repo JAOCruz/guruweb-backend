@@ -22,6 +22,10 @@ const ClientDocument = require('../../models/ClientDocument');
 const { isSimulatorPhone, getSource } = require('../../utils/simulator');
 const storage = require('../../utils/storage');
 
+// Working directory for Python document generator.
+// In Railway the app runs from /app; locally from the repo root.
+const PYTHON_CWD = process.cwd();
+
 // ── Database helpers ──
 
 async function getCategories() {
@@ -66,7 +70,7 @@ roles = analyze_template_roles(sys.argv[1])
 print(json.dumps(roles))
 `;
   const result = spawnSync('python3', ['-c', script, filePath], {
-    cwd: '/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source',
+    cwd: PYTHON_CWD,
     encoding: 'utf-8',
     timeout: 10000,
   });
@@ -374,7 +378,7 @@ for v in vars:
     print(v)
 `;
   const result = spawnSync('python3', ['-c', script, templatePath], {
-    cwd: '/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source',
+    cwd: PYTHON_CWD,
     encoding: 'utf-8',
     timeout: 10000,
   });
@@ -475,7 +479,7 @@ print(output)
       templatePath,
       outputName
     ], {
-      cwd: '/home/jay/.openclaw/workspace/projects/whatsapp-bot/guru-source',
+      cwd: PYTHON_CWD,
       encoding: 'utf-8',
       timeout: 30000,
     });
@@ -490,57 +494,60 @@ print(output)
     const safeName = `${path.basename(templateName).replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.docx`;
     const persistentPath = storage.saveLocalFile(rawOutputPath, 'documents', safeName);
 
-    // For simulator: persist client, case and document record
+    // Persist client, case and document record for every generated document
     let clientId = session.client_id || null;
     let caseId = null;
-    if (isSimulator) {
-      const defaultUserId = await Client.getDefaultUserId();
-      let client = clientId ? await Client.findById(clientId) : null;
-      if (!client) {
-        client = await Client.findByPhone(phone);
-      }
-      if (!client) {
-        client = await Client.create({
-          name: collectedRoles?.compareciente?.nombre || collectedRoles?.VENDEDOR?.NOMBRE || collectedRoles?.SOLICITANTE?.NOMBRE || 'Cliente Simulado',
-          phone,
-          notes: 'Cliente creado automáticamente desde el simulador del bot',
-          userId: defaultUserId,
-          source,
-        });
-      }
-      clientId = client.id;
+    const defaultUserId = await Client.getDefaultUserId();
 
-      const caseNumber = `SIM-${Date.now().toString(36).toUpperCase()}`;
-      const newCase = await Case.create({
-        caseNumber,
-        title: `${templateName} — Simulación`,
-        description: `Documento generado en simulador: ${templateName}`,
-        caseType: 'simulacion',
-        clientId,
+    let client = clientId ? await Client.findById(clientId) : null;
+    if (!client) {
+      client = await Client.findByPhone(phone);
+    }
+    if (!client) {
+      client = await Client.create({
+        name: collectedRoles?.compareciente?.nombre || collectedRoles?.VENDEDOR?.NOMBRE || collectedRoles?.SOLICITANTE?.NOMBRE || (isSimulator ? 'Cliente Simulado' : 'Cliente WhatsApp'),
+        phone,
+        notes: isSimulator
+          ? 'Cliente creado automáticamente desde el simulador del bot'
+          : 'Cliente creado automáticamente desde WhatsApp',
         userId: defaultUserId,
         source,
       });
-      caseId = newCase.id;
-
-      // Link client to session
-      const ConversationSession = require('../../models/ConversationSession');
-      await ConversationSession.setClientId(session.id, clientId);
-
-      // Save document record with versioning
-      const latestVersion = await ClientDocument.getLatestVersion(clientId, templateId, caseId);
-      await ClientDocument.create({
-        clientId,
-        caseId,
-        templateId,
-        versionNumber: latestVersion + 1,
-        filePath: persistentPath,
-        fileName: safeName,
-        generatedByUserId: defaultUserId,
-        status: 'active',
-        notes: `Generado desde simulador. Template: ${templateName}`,
-        storageType: 'railway_volume',
-      });
     }
+    clientId = client.id;
+
+    const caseNumber = isSimulator
+      ? `SIM-${Date.now().toString(36).toUpperCase()}`
+      : `DOC-${Date.now().toString(36).toUpperCase()}`;
+    const newCase = await Case.create({
+      caseNumber,
+      title: `${templateName}`,
+      description: `Documento generado${isSimulator ? ' en simulador' : ' vía WhatsApp'}: ${templateName}`,
+      caseType: isSimulator ? 'simulacion' : 'documento',
+      clientId,
+      userId: defaultUserId,
+      source,
+    });
+    caseId = newCase.id;
+
+    // Link client to session
+    const ConversationSession = require('../../models/ConversationSession');
+    await ConversationSession.setClientId(session.id, clientId);
+
+    // Save document record with versioning
+    const latestVersion = await ClientDocument.getLatestVersion(clientId, templateId, caseId);
+    await ClientDocument.create({
+      clientId,
+      caseId,
+      templateId,
+      versionNumber: latestVersion + 1,
+      filePath: persistentPath,
+      fileName: safeName,
+      generatedByUserId: defaultUserId,
+      status: 'active',
+      notes: `Generado ${isSimulator ? 'desde simulador' : 'desde WhatsApp'}. Template: ${templateName}`,
+      storageType: 'railway_volume',
+    });
 
     // Send via WhatsApp (skip for simulator)
     if (!isSimulator && msg && msg.key && msg.key.remoteJid) {

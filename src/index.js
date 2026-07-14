@@ -22,6 +22,16 @@ const settingsRoutes = require("./routes/settings");
 const notificationRoutes = require("./routes/notifications");
 const serviceCatalogRoutes = require("./routes/serviceCatalog");
 
+// WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
+let reconnectSavedSessions = null;
+let handleIncomingMessage = null;
+try {
+  ({ reconnectSavedSessions } = require("./whatsapp/connection"));
+  ({ handleIncomingMessage } = require("./whatsapp/handler"));
+} catch (err) {
+  console.warn("[WA] Could not load WhatsApp reconnect helpers:", err.message);
+}
+
 const app = express();
 
 // Sentry request handler (must be first middleware)
@@ -238,6 +248,13 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔗 API: http://localhost:${PORT}`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
+
+  // Auto-reconnect saved WhatsApp sessions (credentials live in PostgreSQL)
+  if (reconnectSavedSessions) {
+    reconnectSavedSessions(handleIncomingMessage).catch(err => {
+      console.error('[WA] Auto-reconnect error:', err.message);
+    });
+  }
 });
 
 module.exports = app;

@@ -1,13 +1,13 @@
 const pool = require('../db/pool');
 
 const Invoice = {
-  async create({ docNumber, type = 'COTIZACIÓN', clientId, clientName, clientPhone, items, notes, subtotal, itbis, total, createdBy, source = 'whatsapp' }) {
+  async create({ docNumber, type = 'COTIZACIÓN', clientId, caseId = null, clientName, clientPhone, items, notes, subtotal, itbis, total, createdBy, source = 'whatsapp' }) {
     const { rows } = await pool.query(
       `INSERT INTO invoices
-         (doc_number, type, status, client_id, client_name, client_phone, items, notes, subtotal, itbis, total, created_by, source)
-       VALUES ($1,$2,'draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         (doc_number, type, status, client_id, case_id, client_name, client_phone, items, notes, subtotal, itbis, total, created_by, source)
+       VALUES ($1,$2,'draft',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
-      [docNumber, type, clientId || null, clientName, clientPhone || null,
+      [docNumber, type, clientId || null, caseId || null, clientName, clientPhone || null,
        JSON.stringify(items), notes || null, subtotal, itbis, total, createdBy, source]
     );
     return rows[0];
