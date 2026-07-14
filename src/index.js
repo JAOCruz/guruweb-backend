@@ -21,6 +21,7 @@ const servicesRoutes = require("./routes/services");
 const settingsRoutes = require("./routes/settings");
 const notificationRoutes = require("./routes/notifications");
 const serviceCatalogRoutes = require("./routes/serviceCatalog");
+const ServiceCatalog = require("./models/serviceCatalog");
 
 // WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
 let reconnectSavedSessions = null;
@@ -119,7 +120,15 @@ app.use("/api/notifications", notificationRoutes);
 
 // Compatibility alias: some dashboard builds call /api/services/categories/list
 // but the catalog lives under /api/service-catalog.
-app.use('/api/services/categories/list', serviceCatalogRoutes);
+app.get('/api/services/categories/list', authenticate, async (req, res) => {
+  try {
+    const categories = await ServiceCatalog.getCategories();
+    res.json({ categories });
+  } catch (err) {
+    console.error('List categories error:', err);
+    res.status(500).json({ error: 'Failed to list categories' });
+  }
+});
 
 // --- NEW ROUTES from bot dashboard merge ---
 const safeRoutes = [
