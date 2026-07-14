@@ -5,6 +5,7 @@ const { transitionTo, updateData } = require('../stateManager');
 const { MSG, LIST, CASE_TYPES, URGENCY_LEVELS } = require('../messages');
 const { withList } = require('../../whatsapp/interactive');
 const { isValidEmail, detectIntent, normalize, isEscapeIntent, extractCedula } = require('../nlp');
+const { getSource } = require('../../utils/simulator');
 const config = require('../../config');
 
 let caseCounter = 0;
@@ -429,6 +430,7 @@ async function handle(session, text, msg) {
 
 async function completeIntake(session) {
   const data = session.data;
+  const source = getSource(session.phone);
 
   try {
     // Create or update client
@@ -442,6 +444,7 @@ async function completeIntake(session) {
         address: data.address,
         notes: `Urgencia: ${data.urgency}${data.cedula ? ` | Cédula: ${data.cedula}` : ''}`,
         userId: defaultUserId,
+        source,
       });
     }
 
@@ -462,6 +465,7 @@ async function completeIntake(session) {
       caseType: data.caseType,
       clientId: client.id,
       userId: defaultUserId,
+      source,
     });
 
     // Store caseNumber in session so billing can reference it

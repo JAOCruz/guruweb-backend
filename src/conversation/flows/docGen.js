@@ -12,9 +12,15 @@
  *  7. generating          → Generate and send DOCX
  */
 
+const path = require('path');
 const { transitionTo, updateData } = require('../stateManager');
 const pool = require('../../db/pool');
 const { spawnSync } = require('child_process');
+const Client = require('../../models/Client');
+const Case = require('../../models/Case');
+const ClientDocument = require('../../models/ClientDocument');
+const { isSimulatorPhone, getSource } = require('../../utils/simulator');
+const storage = require('../../utils/storage');
 
 // ── Database helpers ──
 
@@ -445,8 +451,12 @@ function buildReviewMessage(data) {
 async function generateDocumentAndSend(session, data, msg) {
   const templatePath = data.docGenTemplatePath;
   const templateName = data.docGenTemplateName;
+  const templateId = data.docGenTemplateId || null;
   const collectedRoles = data.docGenCollectedRoles || {};
   const collectedFields = data.docGenCollectedFields || {};
+  const phone = session.phone;
+  const isSimulator = isSimulatorPhone(phone);
+  const source = getSource(phone);
 
   try {
     const script = `
@@ -474,17 +484,76 @@ print(output)
       throw new Error(result.stderr || 'Generation failed');
     }
 
-    const outputPath = result.stdout.trim();
+    const rawOutputPath = result.stdout.trim();
 
-    // Send via WhatsApp
-    const { sendDocumentToChat } = require('../../whatsapp/sender');
-    const jid = msg.key.remoteJid;
-    await sendDocumentToChat(jid, outputPath, `${templateName}.docx`);
+    // Move generated file to persistent storage
+    const safeName = `${path.basename(templateName).replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.docx`;
+    const persistentPath = storage.saveLocalFile(rawOutputPath, 'documents', safeName);
+
+    // For simulator: persist client, case and document record
+    let clientId = session.client_id || null;
+    let caseId = null;
+    if (isSimulator) {
+      const defaultUserId = await Client.getDefaultUserId();
+      let client = clientId ? await Client.findById(clientId) : null;
+      if (!client) {
+        client = await Client.findByPhone(phone);
+      }
+      if (!client) {
+        client = await Client.create({
+          name: collectedRoles?.compareciente?.nombre || collectedRoles?.VENDEDOR?.NOMBRE || collectedRoles?.SOLICITANTE?.NOMBRE || 'Cliente Simulado',
+          phone,
+          notes: 'Cliente creado automáticamente desde el simulador del bot',
+          userId: defaultUserId,
+          source,
+        });
+      }
+      clientId = client.id;
+
+      const caseNumber = `SIM-${Date.now().toString(36).toUpperCase()}`;
+      const newCase = await Case.create({
+        caseNumber,
+        title: `${templateName} — Simulación`,
+        description: `Documento generado en simulador: ${templateName}`,
+        caseType: 'simulacion',
+        clientId,
+        userId: defaultUserId,
+        source,
+      });
+      caseId = newCase.id;
+
+      // Link client to session
+      const ConversationSession = require('../../models/ConversationSession');
+      await ConversationSession.setClientId(session.id, clientId);
+
+      // Save document record with versioning
+      const latestVersion = await ClientDocument.getLatestVersion(clientId, templateId, caseId);
+      await ClientDocument.create({
+        clientId,
+        caseId,
+        templateId,
+        versionNumber: latestVersion + 1,
+        filePath: persistentPath,
+        fileName: safeName,
+        generatedByUserId: defaultUserId,
+        status: 'active',
+        notes: `Generado desde simulador. Template: ${templateName}`,
+        storageType: 'railway_volume',
+      });
+    }
+
+    // Send via WhatsApp (skip for simulator)
+    if (!isSimulator && msg && msg.key && msg.key.remoteJid) {
+      const { sendDocumentToChat } = require('../../whatsapp/sender');
+      const jid = msg.key.remoteJid;
+      await sendDocumentToChat(jid, persistentPath, `${templateName}.docx`);
+    }
 
     // Transition back to menu
     await transitionTo(session, 'main_menu', 'show', {});
 
-    return `✅ *¡Documento generado exitosamente!*\n\n📎 Tu *${templateName}* está listo. Revísalo y si necesitas ajustes me avisas.\n\n⚠️ _Este documento es un borrador. Debe ser revisado y firmado ante notario para tener validez legal._\n\n¿En qué más te puedo ayudar?`;
+    const sendLabel = isSimulator ? 'generado y guardado en modo simulador' : 'generado exitosamente';
+    return `✅ *¡Documento ${sendLabel}!*\n\n📎 Tu *${templateName}* está listo. Revísalo y si necesitas ajustes me avisas.\n\n⚠️ _Este documento es un borrador. Debe ser revisado y firmado ante notario para tener validez legal._\n\n¿En qué más te puedo ayudar?`;
 
   } catch (err) {
     console.error('[DocGen v2] Generation error:', err);

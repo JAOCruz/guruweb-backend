@@ -1,11 +1,11 @@
 const pool = require('../db/pool');
 
 const Case = {
-  async create({ caseNumber, title, description, caseType, clientId, userId, court, nextHearing }) {
+  async create({ caseNumber, title, description, caseType, clientId, userId, court, nextHearing, source = 'whatsapp' }) {
     const { rows } = await pool.query(
-      `INSERT INTO cases (case_number, title, description, case_type, client_id, user_id, court, next_hearing)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [caseNumber, title, description || null, caseType || null, clientId, userId, court || null, nextHearing || null]
+      `INSERT INTO cases (case_number, title, description, case_type, client_id, user_id, court, next_hearing, source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [caseNumber, title, description || null, caseType || null, clientId, userId, court || null, nextHearing || null, source]
     );
     return rows[0];
   },

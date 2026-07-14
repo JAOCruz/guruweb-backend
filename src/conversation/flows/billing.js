@@ -15,6 +15,7 @@ const { withList } = require('../../whatsapp/interactive');
 const { sendDocumentToChat } = require('../../whatsapp/sender');
 const { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber } = require('../../documents/generateInvoice');
 const { normalize } = require('../nlp');
+const { isSimulatorPhone, getSource } = require('../../utils/simulator');
 
 const FREE_TEXT = new Set(['billing:ask_services', 'billing:confirm_details', 'billing:quote_confirm']);
 
@@ -153,6 +154,8 @@ async function handleConfirmDetails(session, text) {
 async function generateAndSendInvoice(session) {
   const data = session.data;
   const phone = session.phone;
+  const isSimulator = isSimulatorPhone(phone);
+  const source = getSource(phone);
 
   try {
     // 1. Create invoice in DB (as draft)
@@ -169,9 +172,10 @@ async function generateAndSendInvoice(session) {
       itbis: data.itbis,
       total: data.total,
       createdBy: data.userId || 1,
+      source,
     });
 
-    console.log(`[Billing] Invoice created: ${docNumber} for ${data.clientName}`);
+    console.log(`[Billing] Invoice created: ${docNumber} for ${data.clientName} (source=${source})`);
 
     // 2. Generate PDF
     const today = new Date();
@@ -196,8 +200,8 @@ async function generateAndSendInvoice(session) {
     // 3. Mark as sent (draft → sent, stores pdf_path)
     await Invoice.markSent(invoice.id, pdfPath);
 
-    // 4. Send PDF via WhatsApp
-    if (pdfPath) {
+    // 4. Send PDF via WhatsApp (skip for simulator)
+    if (pdfPath && !isSimulator) {
       const jid = `${phone}@s.whatsapp.net`;
       try {
         await sendDocumentToChat(jid, pdfPath, `${docNumber}.pdf`);
@@ -207,12 +211,14 @@ async function generateAndSendInvoice(session) {
     }
 
     await transitionTo(session, 'main_menu', 'show', {});
-    return `✅ *Factura generada y enviada*\n\n` +
+    const sendLabel = isSimulator ? 'generada en modo simulador' : 'generada y enviada';
+    return `✅ *Factura ${sendLabel}*\n\n` +
       `📄 *${docNumber}*\n` +
       `👤 *${data.clientName}*\n` +
       `📌 *RD$ ${data.total.toLocaleString('es-DO', { minimumFractionDigits: 2 })}*\n\n` +
-      `Su factura ha sido enviada a este chat.\n` +
-      `Nuestro equipo se pondrá en contacto para procesar el pago.\n\n` +
+      (isSimulator
+        ? `La factura quedó guardada en el sistema para revisión.\n\n`
+        : `Su factura ha sido enviada a este chat.\nNuestro equipo se pondrá en contacto para procesar el pago.\n\n`) +
       `¿En qué más puedo ayudarle?\n\n` + MSG.MAIN_MENU;
 
   } catch (err) {

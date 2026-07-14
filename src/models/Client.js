@@ -1,11 +1,11 @@
 const pool = require('../db/pool');
 
 const Client = {
-  async create({ name, phone, email, address, notes, userId }) {
+  async create({ name, phone, email, address, notes, userId, source = 'whatsapp' }) {
     const { rows } = await pool.query(
-      `INSERT INTO clients (name, phone, email, address, notes, user_id)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name, phone, email || null, address || null, notes || null, userId]
+      `INSERT INTO clients (name, phone, email, address, notes, user_id, source)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [name, phone, email || null, address || null, notes || null, userId, source]
     );
     return rows[0];
   },
