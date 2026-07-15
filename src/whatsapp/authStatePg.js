@@ -1,15 +1,33 @@
 const pool = require('../db/pool');
 
 let initAuthCreds = () => ({});
+let BufferJSON = {
+  replacer: (_, value) => value,
+  reviver: (_, value) => value,
+};
+
 try {
   const baileys = require('@whiskeysockets/baileys');
   initAuthCreds = baileys.initAuthCreds || baileys.utils?.initAuthCreds || (() => ({}));
+  BufferJSON = baileys.BufferJSON || BufferJSON;
 } catch {
   // Baileys optional — fallback to empty object if not installed
 }
 
 function initCreds() {
   return initAuthCreds();
+}
+
+function serialize(value) {
+  return JSON.stringify(value, BufferJSON.replacer);
+}
+
+function deserialize(value) {
+  if (!value) return {};
+  if (typeof value === 'object') {
+    return JSON.parse(JSON.stringify(value), BufferJSON.reviver);
+  }
+  return JSON.parse(value, BufferJSON.reviver);
 }
 
 function makeKeyStore(sessionId) {
@@ -19,7 +37,7 @@ function makeKeyStore(sessionId) {
         'SELECT keys FROM wa_credentials WHERE session_id = $1',
         [sessionId]
       );
-      const data = rows[0]?.keys || {};
+      const data = deserialize(rows[0]?.keys) || {};
       const result = {};
       for (const id of ids) {
         const key = `${type}:${id}`;
@@ -34,7 +52,7 @@ function makeKeyStore(sessionId) {
         'SELECT keys FROM wa_credentials WHERE session_id = $1',
         [sessionId]
       );
-      const existing = rows[0]?.keys || {};
+      const existing = deserialize(rows[0]?.keys) || {};
       const merged = { ...existing, ...data };
       await pool.query(
         `INSERT INTO wa_credentials (session_id, creds, keys, updated_at)
@@ -42,7 +60,7 @@ function makeKeyStore(sessionId) {
          ON CONFLICT (session_id) DO UPDATE SET
            keys = EXCLUDED.keys,
            updated_at = NOW()`,
-        [sessionId, JSON.stringify({}), JSON.stringify(merged)]
+        [sessionId, JSON.stringify({}), serialize(merged)]
       );
     },
 
@@ -51,7 +69,7 @@ function makeKeyStore(sessionId) {
         'SELECT keys FROM wa_credentials WHERE session_id = $1',
         [sessionId]
       );
-      const existing = rows[0]?.keys || {};
+      const existing = deserialize(rows[0]?.keys) || {};
       for (const id of ids) {
         delete existing[`${type}:${id}`];
       }
@@ -61,7 +79,7 @@ function makeKeyStore(sessionId) {
          ON CONFLICT (session_id) DO UPDATE SET
            keys = EXCLUDED.keys,
            updated_at = NOW()`,
-        [sessionId, JSON.stringify({}), JSON.stringify(existing)]
+        [sessionId, JSON.stringify({}), serialize(existing)]
       );
     },
 
@@ -77,7 +95,7 @@ async function usePostgresAuthState(sessionId) {
     [sessionId]
   );
 
-  const creds = rows[0]?.creds || initCreds();
+  const creds = rows[0]?.creds ? deserialize(rows[0].creds) : initCreds();
   const keys = makeKeyStore(sessionId);
 
   const saveCreds = async (newCreds) => {
@@ -87,7 +105,7 @@ async function usePostgresAuthState(sessionId) {
        ON CONFLICT (session_id) DO UPDATE SET
          creds = EXCLUDED.creds,
          updated_at = NOW()`,
-      [sessionId, JSON.stringify(newCreds || creds), JSON.stringify(rows[0]?.keys || {})]
+      [sessionId, serialize(newCreds || creds), serialize(rows[0]?.keys || {})]
     );
   };
 
