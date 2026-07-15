@@ -36,18 +36,29 @@ router.get('/quotations', authenticate, async (req, res) => {
 router.get('/pdf/:filename', authenticate, (req, res) => {
   try {
     const filename = path.basename(req.params.filename); // Prevent directory traversal
-    const filePath = path.join(__dirname, '../../public/invoices', filename);
 
-    // Validate path is within invoices directory
-    const resolvedPath = path.resolve(filePath);
+    // Primary: Railway volume (storage.getDir('invoices'))
+    const volumePath = storage.getFilePath('invoices', filename);
+    if (fs.existsSync(volumePath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      return res.sendFile(volumePath);
+    }
+
+    // Fallback: legacy public/invoices
+    const publicPath = path.join(__dirname, '../../public/invoices', filename);
+    const resolvedPath = path.resolve(publicPath);
     const invoicesDir = path.resolve(path.join(__dirname, '../../public/invoices'));
     if (!resolvedPath.startsWith(invoicesDir)) {
       return res.status(403).json({ error: 'Access denied' });
     }
+    if (fs.existsSync(resolvedPath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      return res.sendFile(resolvedPath);
+    }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    res.sendFile(filePath);
+    return res.status(404).json({ error: 'PDF not found' });
   } catch (err) {
     console.error('Serve public PDF error:', err);
     res.status(500).json({ error: 'Failed to serve PDF' });
