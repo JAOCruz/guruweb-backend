@@ -122,6 +122,7 @@ const Message = {
         MAX(m.client_id) AS client_id,
         MAX(c.name) AS client_name,
         MAX(c.assigned_to) AS client_assigned_to,
+        MAX(c.profile_pic_url) AS profile_pic_url,
         MAX(m.created_at) AS last_message_at,
         COUNT(*) AS message_count
       FROM messages m
@@ -153,6 +154,7 @@ const Message = {
         COALESCE(m.phone, c.phone) AS phone,
         MAX(m.client_id) AS client_id,
         MAX(c.name) AS client_name,
+        MAX(c.profile_pic_url) AS profile_pic_url,
         MAX(m.created_at) AS last_message_at,
         COUNT(*) AS message_count
       FROM messages m

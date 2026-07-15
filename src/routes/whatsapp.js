@@ -6,6 +6,7 @@ const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
 const pool = require('../db/pool');
+const Client = require('../models/Client');
 
 const router = express.Router();
 router.use(authenticate);
@@ -190,13 +191,32 @@ router.get('/profile-pic/:phone', async (req, res) => {
     if (!conn) return res.json({ url: null });
 
     let url = null;
-    try {
-      url = await conn.sock.profilePictureUrl(phone + '@s.whatsapp.net', 'image');
-    } catch {
-      // 404 = no profile pic, 401 = privacy — both normal
+    // Try real phone JID first, then LID privacy JID
+    const jids = [phone + '@s.whatsapp.net'];
+    if (/^\d{15,}$/.test(phone)) {
+      jids.push(phone + '@lid');
+    }
+
+    for (const jid of jids) {
+      try {
+        url = await conn.sock.profilePictureUrl(jid, 'image');
+        if (url) break;
+      } catch {
+        // 404 = no profile pic, 401 = privacy — both normal
+      }
     }
 
     profilePicCache.set(phone, { url, fetchedAt: Date.now() });
+
+    // Persist to client record if available
+    if (url) {
+      try {
+        await Client.updateProfilePic(phone, url);
+      } catch (persistErr) {
+        console.error('[WA] Failed to persist profile pic:', persistErr.message);
+      }
+    }
+
     res.json({ url });
   } catch (err) {
     console.error('Profile pic error:', err.message);

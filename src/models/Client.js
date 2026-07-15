@@ -79,6 +79,18 @@ const Client = {
     );
     return rows[0];
   },
+
+  // Update profile picture URL for a phone
+  async updateProfilePic(phone, url) {
+    const { rows } = await pool.query(
+      `UPDATE clients
+       SET profile_pic_url = $1, updated_at = NOW()
+       WHERE phone = $2
+       RETURNING *`,
+      [url, phone]
+    );
+    return rows[0] || null;
+  },
 };
 
 module.exports = Client;
