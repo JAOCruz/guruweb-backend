@@ -161,6 +161,11 @@ router.post('/disconnect', async (req, res) => {
     const sessionId = `user_${req.user.id}`;
     disconnectSession(sessionId);
     await clearPendingQR(sessionId);
+    // Persist so startup auto-reconnect skips this session until a fresh /connect
+    await pool.query(
+      `UPDATE wa_credentials SET manual_disconnect = TRUE WHERE session_id = $1`,
+      [sessionId]
+    );
     res.json({ message: 'Disconnected' });
   } catch (err) {
     console.error('[WA] Disconnect error:', err.message);

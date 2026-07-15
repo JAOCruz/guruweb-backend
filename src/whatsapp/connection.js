@@ -179,7 +179,8 @@ async function reconnectSavedSessions(onMessage) {
     const { rows } = await pool.query(
       `SELECT session_id FROM wa_credentials
        WHERE creds IS NOT NULL AND creds::text != '{}'
-       AND session_id LIKE 'user_%'`
+       AND session_id LIKE 'user_%'
+       AND manual_disconnect IS NOT TRUE`
     );
 
     for (const row of rows) {

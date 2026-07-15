@@ -289,8 +289,14 @@ async function handleIncomingMessage(msg, sock) {
 
     if (!text && !hasMedia) return;
 
-    const willRespond = !isFromMe && shouldBotRespond(phone);
+    // Anti-spam guard: never auto-reply to old messages (offline burst after
+    // a reconnect). They are still logged to the dashboard below.
+    const msgTs = Number(msg.messageTimestamp || 0) * 1000;
+    const isStale = msgTs > 0 && (Date.now() - msgTs) > 120000;
+
+    const willRespond = !isFromMe && !isStale && shouldBotRespond(phone);
     const tag = isFromMe ? '[DIRECT] '
+      : isStale ? '[OLD] '
       : !botActive ? '[PAUSED] '
       : manualPhones.has(phone) ? '[MANUAL] '
       : (botMode === 'selected' && !enabledPhones.has(phone)) ? '[INACTIVE] '
