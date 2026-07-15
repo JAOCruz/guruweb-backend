@@ -83,8 +83,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
       connections.delete(sessionId);
 
       if (shouldReconnect) {
-        console.log(`[WA] Reconnecting session ${sessionId}...`);
-        createConnection(sessionId, onQR, onConnected, onMessage);
+        console.log(`[WA] Reconnecting session ${sessionId} in 3s...`);
+        setTimeout(() => {
+          createConnection(sessionId, onQR, onConnected, onMessage);
+        }, 3000);
       } else {
         console.log(`[WA] Session ${sessionId} logged out. Generate new QR to reconnect.`);
       }
