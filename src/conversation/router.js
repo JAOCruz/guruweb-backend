@@ -1,4 +1,5 @@
 const Client = require('../models/Client');
+const Case = require('../models/Case');
 const { getOrCreateSession, transitionTo, checkGlobalCommand, handleGlobalCommand } = require('./stateManager');
 const { MSG, LIST } = require('./messages');
 const { withList } = require('../whatsapp/interactive');
@@ -362,13 +363,35 @@ ${hint ? `INSTRUCCIÓN: ${hint}` : ''}
     // Fetch recent conversation for context-aware responses
     let history = [];
     try {
-      history = await Message.findRecentByPhone(session.phone, 8);
+      history = await Message.findRecentByPhone(session.phone, 20);
     } catch (err) {
       console.error('[Router] Error fetching conversation history:', err.message);
     }
 
+    // Build client/case context so the bot remembers who it's talking to
+    let clientContext = '';
+    try {
+      const client = await Client.findByPhone(session.phone);
+      if (client) {
+        const activeCases = await Case.findAll({ clientId: client.id, status: 'active' });
+        const parts = [];
+        parts.push(`Nombre del cliente: ${client.name || 'No registrado'}`);
+        if (client.email) parts.push(`Correo: ${client.email}`);
+        if (client.address) parts.push(`Dirección: ${client.address}`);
+        if (activeCases.length > 0) {
+          const caseSummary = activeCases.map(c =>
+            `- Expediente ${c.case_number || c.id}: ${c.title || 'Sin título'} (${c.case_type || 'tipo no especificado'})`
+          ).join('\n');
+          parts.push(`Casos activos del cliente:\n${caseSummary}`);
+        }
+        clientContext = '\n\n[DATOS DEL CLIENTE]\n' + parts.join('\n') + '\n[FIN DATOS DEL CLIENTE]';
+      }
+    } catch (err) {
+      console.error('[Router] Error building client context:', err.message);
+    }
+
     const query = text || (savedMedia?.analysis ? 'El cliente envió un archivo.' : '');
-    const llmResponse = await generateLegalResponse(query, kbContext + mediaContext, history);
+    const llmResponse = await generateLegalResponse(query, kbContext + mediaContext + clientContext, history);
     if (llmResponse) {
       console.log(`[LLM] Smart fallback responded to: "${(text || '[media]').substring(0, 50)}"`);
       return llmResponse;

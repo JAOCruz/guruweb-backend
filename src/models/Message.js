@@ -39,7 +39,7 @@ const Message = {
   },
 
   // Get recent messages for a phone in chronological order (for LLM context)
-  async findRecentByPhone(phone, limit = 8) {
+  async findRecentByPhone(phone, limit = 20) {
     const { rows } = await pool.query(
       `SELECT direction, content FROM messages
        WHERE phone = $1

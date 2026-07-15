@@ -1,5 +1,6 @@
 const ConversationSession = require('../models/ConversationSession');
 const Client = require('../models/Client');
+const Message = require('../models/Message');
 const { detectIntent } = require('./nlp');
 const { MSG } = require('./messages');
 
@@ -11,7 +12,13 @@ async function getOrCreateSession(phone) {
   if (session) return session;
 
   const client = await Client.findByPhone(phone);
-  session = await ConversationSession.create(phone, client?.id || null);
+
+  // If this phone already has conversation history, resume in menu-ready state
+  // instead of restarting with the welcome greeting.
+  const priorMessages = await Message.findRecentByPhone(phone, 1);
+  const initialStep = priorMessages.length > 0 ? 'show' : 'init';
+
+  session = await ConversationSession.create(phone, client?.id || null, initialStep);
   return session;
 }
 

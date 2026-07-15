@@ -1,6 +1,6 @@
 const pool = require('../db/pool');
 
-const SESSION_TTL_MINUTES = 30;
+const SESSION_TTL_DAYS = 7;
 
 const ConversationSession = {
   async findActive(phone) {
@@ -13,12 +13,12 @@ const ConversationSession = {
     return rows[0] || null;
   },
 
-  async create(phone, clientId = null) {
+  async create(phone, clientId = null, initialStep = 'show') {
     const { rows } = await pool.query(
       `INSERT INTO conversation_sessions (phone, client_id, flow, step, data, expires_at)
-       VALUES ($1, $2, 'main_menu', 'init', '{}', NOW() + INTERVAL '${SESSION_TTL_MINUTES} minutes')
+       VALUES ($1, $2, 'main_menu', $3, '{}', NOW() + INTERVAL '${SESSION_TTL_DAYS} days')
        RETURNING *`,
-      [phone, clientId]
+      [phone, clientId, initialStep]
     );
     return rows[0];
   },
@@ -32,7 +32,7 @@ const ConversationSession = {
     if (step !== undefined) { fields.push(`step = $${idx++}`); values.push(step); }
     if (data !== undefined) { fields.push(`data = $${idx++}`); values.push(JSON.stringify(data)); }
 
-    fields.push(`expires_at = NOW() + INTERVAL '${SESSION_TTL_MINUTES} minutes'`);
+    fields.push(`expires_at = NOW() + INTERVAL '${SESSION_TTL_DAYS} days'`);
     fields.push('updated_at = NOW()');
 
     values.push(id);
