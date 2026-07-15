@@ -127,6 +127,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Admin-only: assign a client to a digitador/auxiliar
+router.post('/:id/assign', requireRole('admin'), async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (user_id === undefined || user_id === null || user_id === '') {
+      return res.status(400).json({ error: 'user_id is required' });
+    }
+    const targetUserId = parseInt(user_id, 10);
+    if (Number.isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'user_id must be a number' });
+    }
+
+    // Verify target user exists and is not admin (admins don't need assignment)
+    const { rows: userRows } = await pool.query(
+      'SELECT id, role, username, name FROM users WHERE id = $1',
+      [targetUserId]
+    );
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: 'Target user not found' });
+    }
+
+    const client = await Client.update(req.params.id, { assigned_to: targetUserId });
+    if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    console.log(`[Clients] Client ${req.params.id} assigned to user ${targetUserId} (${userRows[0].username}) by ${req.user.username}`);
+    res.json({ client, assigned_to_user: userRows[0] });
+  } catch (err) {
+    console.error('Assign client error:', err);
+    res.status(500).json({ error: 'Failed to assign client' });
+  }
+});
+
 // Get detailed client information
 router.get('/:id/detail', async (req, res) => {
   try {
