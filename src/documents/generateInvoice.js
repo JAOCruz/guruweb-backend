@@ -12,6 +12,12 @@ const OUT_DIR = storage.getDir('invoices');
 
 const fmt = (n) => `RD$ ${Number(n).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Strip emojis and other symbols the PDF fonts can't render
+const clean = (s) => String(s)
+  .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{2190}-\u{21FF}\u{2300}-\u{23FF}]/gu, '')
+  .replace(/[ \t]{2,}/g, ' ')
+  .trim();
+
 function toBase64(filePath) {
   if (!fs.existsSync(filePath)) return '';
   const ext = path.extname(filePath).toLowerCase();
@@ -37,7 +43,7 @@ async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, it
 
   const itemsHTML = paddedItems.map((item, i) => {
     const isEmpty = !item.desc;
-    let desc = isEmpty ? '&nbsp;' : String(item.desc).substring(0, 90);
+    let desc = isEmpty ? '&nbsp;' : clean(item.desc).substring(0, 90);
     if (!isEmpty && Number(item.cantidad) > 1) desc += ` (x${item.cantidad})`;
     const price = isEmpty ? '' : fmt(item.precio);
     const amount = isEmpty ? '' : fmt(item.cantidad * item.precio);
@@ -297,7 +303,7 @@ async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, it
       <tr>
         <td class="notes-cell" colspan="2">
           <div class="notes-label">NOTAS (OBSERVACIONES):</div>
-          ${notes ? `<div class="notes-text">${String(notes).replace(/\n/g, '<br>')}</div>` : ''}
+          ${notes ? `<div class="notes-text">${clean(notes).replace(/\n/g, '<br>')}</div>` : ''}
         </td>
         <td class="totals-cell" colspan="2">
           <table class="totals-inner">
