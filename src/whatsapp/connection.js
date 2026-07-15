@@ -76,9 +76,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const errMsg = lastDisconnect?.error?.message;
       const shouldReconnect = statusCode !== baileys.DisconnectReason.loggedOut && statusCode !== 405;
 
-      console.log(`[WA] Session ${sessionId} disconnected. Code: ${statusCode}`);
+      console.log(`[WA] Session ${sessionId} disconnected. Code: ${statusCode}${errMsg ? ` (${errMsg})` : ''}`);
       connections.delete(sessionId);
 
       if (shouldReconnect) {

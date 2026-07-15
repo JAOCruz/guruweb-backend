@@ -33,6 +33,44 @@ router.get('/quotations', authenticate, async (req, res) => {
   }
 });
 
+// ── POST /api/invoices/admin/regenerate-pdfs ── admin only
+// One-off maintenance: regenerate every invoice PDF with the current layout.
+// generateInvoicePDF writes to a deterministic path (<docNumber>.pdf), so the
+// stored pdf_path stays valid after regeneration.
+router.post('/admin/regenerate-pdfs', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const invoices = await Invoice.findAll();
+    const withPdf = invoices.filter(i => i.pdf_path);
+    const results = { total: withPdf.length, ok: 0, failed: [] };
+
+    for (const invoice of withPdf) {
+      try {
+        const created = new Date(invoice.created_at || Date.now());
+        const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
+        await generateInvoicePDF({
+          clientName: invoice.client_name,
+          clientPhone: invoice.client_phone,
+          docNumber: invoice.doc_number,
+          date: dateStr,
+          items: typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
+          notes: invoice.notes,
+          type: invoice.type,
+        });
+        results.ok++;
+      } catch (err) {
+        console.error(`[Invoice] Regenerate PDF failed for ${invoice.doc_number}:`, err.message);
+        results.failed.push({ id: invoice.id, doc: invoice.doc_number, error: err.message });
+      }
+    }
+
+    console.log(`[Invoice] PDF regeneration complete: ${results.ok}/${results.total} ok`);
+    res.json(results);
+  } catch (err) {
+    console.error('Regenerate PDFs error:', err);
+    res.status(500).json({ error: 'Failed to regenerate PDFs' });
+  }
+});
+
 // ── serve invoice PDF by filename (auth required) ──
 router.get('/pdf/:filename', authenticate, (req, res) => {
   try {
