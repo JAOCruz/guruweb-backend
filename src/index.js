@@ -1,3 +1,13 @@
+// Polyfill global crypto for Baileys on Node 20 (Railway default)
+if (typeof globalThis.crypto === "undefined") {
+  try {
+    globalThis.crypto = require("crypto").webcrypto;
+    console.log("[crypto] polyfilled globalThis.crypto");
+  } catch (err) {
+    console.warn("[crypto] could not polyfill:", err.message);
+  }
+}
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
