@@ -60,13 +60,19 @@ const Client = {
     return rows[0]?.id || null;
   },
 
-  // Save WhatsApp display name for @lid contacts (no real phone available)
+  // Save WhatsApp display name for contacts. Prefer the richest name:
+  // more words beats fewer words; longer beats shorter; existing beats empty.
   async updateOrCreatePushName(phone, pushName) {
     const { rows } = await pool.query(
       `INSERT INTO clients (phone, name, created_at, updated_at)
        VALUES ($1, $2, NOW(), NOW())
        ON CONFLICT (phone) DO UPDATE SET
-         name = CASE WHEN clients.name IS NULL OR clients.name = '' THEN $2 ELSE clients.name END,
+         name = CASE
+           WHEN clients.name IS NULL OR clients.name = '' THEN $2
+           WHEN array_length(string_to_array($2, ' '), 1) > array_length(string_to_array(clients.name, ' '), 1) THEN $2
+           WHEN length($2) > length(clients.name) THEN $2
+           ELSE clients.name
+         END,
          updated_at = NOW()
        RETURNING *`,
       [phone, pushName]

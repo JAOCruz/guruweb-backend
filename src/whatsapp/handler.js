@@ -303,14 +303,17 @@ async function handleIncomingMessage(msg, sock) {
       : '';
     console.log(`[WA] ${tag}Mensaje ${isFromMe ? 'enviado a' : 'de'} ${phone}: ${text || '[media]'}`);
 
-    // Always log messages
-    let client = await Client.findByPhone(phone);
-    // Auto-save pushName for @lid contacts that have no real phone
-    if (pushName && !client && remoteJid.endsWith('@lid')) {
-      try {
-        await Client.updateOrCreatePushName(phone, pushName);
-        client = await Client.findByPhone(phone);
-      } catch (_) {}
+    // For inbound messages, ensure we have a client record with the latest pushName.
+    // For outbound messages (fromMe), do NOT create a client for the bot's own number.
+    let client = null;
+    if (!isFromMe) {
+      client = await Client.findByPhone(phone);
+      if (pushName) {
+        try {
+          const updated = await Client.updateOrCreatePushName(phone, pushName);
+          client = updated;
+        } catch (_) {}
+      }
     }
 
     // Auto-save media (file download only — no Gemini analysis yet)
