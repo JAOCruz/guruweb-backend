@@ -5,6 +5,7 @@ const { createConnection, getConnection, getAnyConnection, disconnectSession } =
 const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
+const pool = require('../db/pool');
 
 const router = express.Router();
 router.use(authenticate);
@@ -12,7 +13,31 @@ router.use(authenticate);
 // Admin-only middleware for WhatsApp control endpoints
 const requireAdmin = requireRole('admin');
 
-const pendingQRs = new Map();
+async function clearPendingQR(sessionId) {
+  try {
+    await pool.query(
+      `UPDATE wa_credentials SET pending_qr = NULL, pending_qr_at = NULL WHERE session_id = $1`,
+      [sessionId]
+    );
+  } catch (err) {
+    console.error(`[WA] Failed to clear pending QR for ${sessionId}:`, err.message);
+  }
+}
+
+async function savePendingQR(sessionId, qr) {
+  try {
+    await pool.query(
+      `INSERT INTO wa_credentials (session_id, creds, keys, pending_qr, pending_qr_at)
+       VALUES ($1, '{}', '{}', $2, NOW())
+       ON CONFLICT (session_id) DO UPDATE SET
+         pending_qr = EXCLUDED.pending_qr,
+         pending_qr_at = EXCLUDED.pending_qr_at`,
+      [sessionId, qr]
+    );
+  } catch (err) {
+    console.error(`[WA] Failed to save pending QR for ${sessionId}:`, err.message);
+  }
+}
 
 router.post('/connect', async (req, res) => {
   try {
@@ -30,8 +55,8 @@ router.post('/connect', async (req, res) => {
       console.log(`[WA] Cleared old session files for ${sessionId}`);
     }
 
-    // Clear any old pending QR
-    pendingQRs.delete(sessionId);
+    // Clear any old pending QR in the database
+    await clearPendingQR(sessionId);
 
     console.log(`[WA] Starting fresh connection for ${sessionId}...`);
 
@@ -39,11 +64,11 @@ router.post('/connect', async (req, res) => {
       sessionId,
       (qr) => {
         console.log(`[WA] QR code received for ${sessionId} (length: ${qr.length})`);
-        pendingQRs.set(sessionId, qr);
+        savePendingQR(sessionId, qr);
       },
       () => {
         console.log(`[WA] Session ${sessionId} connected! Clearing QR.`);
-        pendingQRs.delete(sessionId);
+        clearPendingQR(sessionId);
       },
       handleIncomingMessage
     );
@@ -55,14 +80,23 @@ router.post('/connect', async (req, res) => {
   }
 });
 
-router.get('/qr', (req, res) => {
-  const sessionId = `user_${req.user.id}`;
-  const qr = pendingQRs.get(sessionId);
-  if (qr) console.log(`[WA] QR request for ${sessionId}: FOUND`);
-  if (!qr) {
-    return res.json({ status: 'no_qr', message: 'No QR available. Already connected or not yet generated.' });
+router.get('/qr', async (req, res) => {
+  try {
+    const sessionId = `user_${req.user.id}`;
+    const { rows } = await pool.query(
+      `SELECT pending_qr FROM wa_credentials WHERE session_id = $1 AND pending_qr_at > NOW() - INTERVAL '5 minutes'`,
+      [sessionId]
+    );
+    const qr = rows[0]?.pending_qr || null;
+    if (qr) console.log(`[WA] QR request for ${sessionId}: FOUND`);
+    if (!qr) {
+      return res.json({ status: 'no_qr', message: 'No QR available. Already connected or not yet generated.' });
+    }
+    res.json({ qr });
+  } catch (err) {
+    console.error('[WA] QR request error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve QR code' });
   }
-  res.json({ qr });
 });
 
 router.get('/status', (req, res) => {
@@ -104,11 +138,16 @@ router.post('/assignment-mode', requireAdmin, (req, res) => {
   res.json({ assignmentMode: mode });
 });
 
-router.post('/disconnect', (req, res) => {
-  const sessionId = `user_${req.user.id}`;
-  disconnectSession(sessionId);
-  pendingQRs.delete(sessionId);
-  res.json({ message: 'Disconnected' });
+router.post('/disconnect', async (req, res) => {
+  try {
+    const sessionId = `user_${req.user.id}`;
+    disconnectSession(sessionId);
+    await clearPendingQR(sessionId);
+    res.json({ message: 'Disconnected' });
+  } catch (err) {
+    console.error('[WA] Disconnect error:', err.message);
+    res.status(500).json({ error: 'Failed to disconnect' });
+  }
 });
 
 // Profile picture cache: Map<phone, { url, fetchedAt }>
