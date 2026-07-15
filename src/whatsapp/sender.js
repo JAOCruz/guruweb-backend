@@ -50,8 +50,9 @@ async function sendDocumentToChat(jid, filePath, fileName) {
  * Send an image file to a WhatsApp chat
  */
 async function sendImageToChat(jid, filePath, caption = '') {
-  const sock = await getAnyConnection();
-  if (!sock) throw new Error('No active WhatsApp connection');
+  const conn = getAnyConnection();
+  if (!conn) throw new Error('No active WhatsApp connection');
+  const sock = conn.sock;
 
   const fileBuffer = fs.readFileSync(filePath);
   await sock.sendMessage(jid, {

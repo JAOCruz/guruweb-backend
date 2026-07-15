@@ -24,15 +24,40 @@ try {
   console.warn('[WA] Baileys not installed — WhatsApp connection features disabled');
 }
 
+// sessionId -> { sock, open }. Sockets are tracked from creation (not just on
+// open) so a session can never end up with two live sockets fighting over the
+// same WhatsApp credentials (WhatsApp kills duplicates with a 440 conflict,
+// which used to cause an endless connect/disconnect loop).
 const connections = new Map();
+// Generation counter per session: every createConnection/stopSession bumps it.
+// Event handlers from older sockets check it and stop, so stale reconnect
+// chains die instead of reconnecting on top of the current socket.
+const generations = new Map();
 const BAILEYS_MISSING_ERROR = 'WhatsApp/Baileys is not available in this environment';
 
 function ensureBaileys() {
   if (!baileys) throw new Error(BAILEYS_MISSING_ERROR);
 }
 
+// Stop any live socket for a session and invalidate its reconnect chain.
+function stopSession(sessionId) {
+  generations.set(sessionId, (generations.get(sessionId) || 0) + 1);
+  const existing = connections.get(sessionId);
+  if (existing) {
+    if (existing.sock) {
+      try { existing.sock.end(); } catch (_) { /* already closed */ }
+    }
+    connections.delete(sessionId);
+  }
+}
+
 async function createConnection(sessionId, onQR, onConnected, onMessage) {
   ensureBaileys();
+
+  // Kill any previous socket (open or still connecting) for this session.
+  stopSession(sessionId);
+  const gen = generations.get(sessionId);
+  const isCurrent = () => generations.get(sessionId) === gen;
 
   console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
   const { state, saveCreds } = await usePostgresAuthState(sessionId);
@@ -55,6 +80,9 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
     retryRequestDelayMs: 250,
   });
 
+  // Track immediately so stopSession() can kill a still-connecting socket.
+  connections.set(sessionId, { sock, open: false });
+
   console.log(`[WA] Socket created for ${sessionId}. Waiting for events...`);
 
   sock.ev.on('creds.update', saveCreds);
@@ -68,6 +96,15 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
       hasQR: !!qr,
       qrLength: qr?.length || 0,
     }));
+
+    if (!isCurrent()) {
+      // A newer socket replaced this one. Make sure this one dies quietly.
+      if (connection === 'open') {
+        console.log(`[WA] Stale socket for ${sessionId} opened after replacement — closing it.`);
+        try { sock.end(); } catch (_) { /* ignore */ }
+      }
+      return;
+    }
 
     if (qr && onQR) {
       console.log(`[WA] ✅ QR code received for ${sessionId}! Length: ${qr.length}`);
@@ -85,7 +122,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
       if (shouldReconnect) {
         console.log(`[WA] Reconnecting session ${sessionId} in 3s...`);
         setTimeout(() => {
-          createConnection(sessionId, onQR, onConnected, onMessage);
+          if (!isCurrent()) return; // replaced/stopped meanwhile
+          createConnection(sessionId, onQR, onConnected, onMessage).catch(err => {
+            console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message);
+          });
         }, 3000);
       } else {
         console.log(`[WA] Session ${sessionId} logged out. Generate new QR to reconnect.`);
@@ -94,13 +134,16 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 
     if (connection === 'open') {
       console.log(`[WA] ✅ Session ${sessionId} connected successfully!`);
-      connections.set(sessionId, sock);
+      const entry = connections.get(sessionId);
+      if (entry) entry.open = true;
+      else connections.set(sessionId, { sock, open: true });
       if (onConnected) onConnected(sock);
     }
   });
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (type !== 'notify') return;
+    if (!isCurrent()) return; // stale socket must not process messages
     for (const msg of messages) {
       if (onMessage) onMessage(msg, sock);
     }
@@ -110,23 +153,20 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 }
 
 function getConnection(sessionId) {
-  return connections.get(sessionId) || null;
+  const entry = connections.get(sessionId);
+  return entry && entry.open ? entry.sock : null;
 }
 
 async function sendMessage(sessionId, jid, content) {
   ensureBaileys();
-  const sock = connections.get(sessionId);
-  if (!sock) throw new Error(`No active session: ${sessionId}`);
-  return sock.sendMessage(jid, content);
+  const entry = connections.get(sessionId);
+  if (!entry || !entry.open) throw new Error(`No active session: ${sessionId}`);
+  return entry.sock.sendMessage(jid, content);
 }
 
 function disconnectSession(sessionId) {
   if (!baileys) return;
-  const sock = connections.get(sessionId);
-  if (sock) {
-    sock.end();
-    connections.delete(sessionId);
-  }
+  stopSession(sessionId);
 }
 
 async function reconnectSavedSessions(onMessage) {
@@ -162,10 +202,10 @@ async function reconnectSavedSessions(onMessage) {
 }
 
 function getAnyConnection() {
-  for (const [id, sock] of connections) {
-    if (sock) return { sessionId: id, sock };
+  for (const [id, entry] of connections) {
+    if (entry && entry.open) return { sessionId: id, sock: entry.sock };
   }
   return null;
 }
 
-module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, reconnectSavedSessions };
+module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, reconnectSavedSessions };

@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { createConnection, getConnection, getAnyConnection, disconnectSession } = require('../whatsapp/connection');
+const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession } = require('../whatsapp/connection');
 const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
@@ -59,6 +59,11 @@ router.post('/connect', async (req, res) => {
     if (existing) {
       return res.json({ status: 'already_connected', sessionId });
     }
+
+    // Kill any half-open socket or pending reconnect chain for this session
+    // before wiping credentials — otherwise the old chain reconnects with the
+    // old creds and fights the new socket (WhatsApp 440 conflict loop).
+    stopSession(sessionId);
 
     // Clear old session files for a fresh QR code
     const sessionDir = path.join(config.wa.sessionDir, sessionId);
