@@ -129,6 +129,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
         }, 3000);
       } else {
         console.log(`[WA] Session ${sessionId} logged out. Generate new QR to reconnect.`);
+        // Dead creds: wipe them so startup auto-reconnect doesn't try them again
+        pool.query(`DELETE FROM wa_credentials WHERE session_id = $1`, [sessionId])
+          .then(() => console.log(`[WA] Cleared dead credentials for ${sessionId} after logout`))
+          .catch(err => console.error(`[WA] Failed to clear dead credentials:`, err.message));
       }
     }
 
