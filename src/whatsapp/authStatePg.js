@@ -1,21 +1,15 @@
 const pool = require('../db/pool');
 
-const DEFAULT_CREDS = {
-  noiseKey: undefined,
-  signedIdentityKey: undefined,
-  signedPreKey: undefined,
-  registrationId: undefined,
-  advSecretKey: undefined,
-  nextPreKeyId: undefined,
-  firstUnuploadedPreKeyId: undefined,
-  serverHasPreKeys: undefined,
-  accountSyncCounter: undefined,
-  accountSettings: undefined,
-  platform: undefined,
-};
+let initAuthCreds = () => ({});
+try {
+  const baileys = require('@whiskeysockets/baileys');
+  initAuthCreds = baileys.initAuthCreds || baileys.utils?.initAuthCreds || (() => ({}));
+} catch {
+  // Baileys optional — fallback to empty object if not installed
+}
 
 function initCreds() {
-  return { ...DEFAULT_CREDS };
+  return initAuthCreds();
 }
 
 function makeKeyStore(sessionId) {

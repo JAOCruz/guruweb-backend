@@ -24,6 +24,18 @@ async function clearPendingQR(sessionId) {
   }
 }
 
+async function clearSessionCredentials(sessionId) {
+  try {
+    await pool.query(
+      `DELETE FROM wa_credentials WHERE session_id = $1`,
+      [sessionId]
+    );
+    console.log(`[WA] Cleared stored credentials for ${sessionId}`);
+  } catch (err) {
+    console.error(`[WA] Failed to clear credentials for ${sessionId}:`, err.message);
+  }
+}
+
 async function savePendingQR(sessionId, qr) {
   try {
     await pool.query(
@@ -55,8 +67,9 @@ router.post('/connect', async (req, res) => {
       console.log(`[WA] Cleared old session files for ${sessionId}`);
     }
 
-    // Clear any old pending QR in the database
+    // Clear any old pending QR and stored credentials for a truly fresh session
     await clearPendingQR(sessionId);
+    await clearSessionCredentials(sessionId);
 
     console.log(`[WA] Starting fresh connection for ${sessionId}...`);
 
