@@ -13,6 +13,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const Sentry = require("@sentry/node");
 require("dotenv").config();
 
@@ -33,6 +34,7 @@ const notificationRoutes = require("./routes/notifications");
 const serviceCatalogRoutes = require("./routes/serviceCatalog");
 const ServiceCatalog = require("./models/serviceCatalog");
 const { authenticate } = require("./middleware/auth");
+const config = require("./config");
 
 // WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
 let reconnectSavedSessions = null;
@@ -115,13 +117,36 @@ app.use(cookieParser());
 // Trust Railway/reverse proxy so express-rate-limit can use X-Forwarded-For safely
 app.set('trust proxy', 1);
 
-// Security: global rate limiting
+// Rate limit key: per authenticated user, falling back to IP
+function getRateLimitKey(req) {
+  try {
+    let token = null;
+    const header = req.headers.authorization;
+    if (header && header.startsWith('Bearer ')) {
+      token = header.slice(7);
+    }
+    if (!token && req.cookies?.access_token) {
+      token = req.cookies.access_token;
+    }
+    if (token) {
+      const payload = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
+      return `user:${payload.id}`;
+    }
+  } catch {
+    // ignore invalid/expired tokens
+  }
+  return req.ip || req.headers['x-forwarded-for'] || 'anonymous';
+}
+
+// Security: global rate limiting (high limit for dashboards with polling)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 2000,
+  keyGenerator: getRateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
+  skip: (req) => req.path.startsWith('/api/auth/login'), // login has its own stricter limiter
 });
 app.use("/api/", globalLimiter);
 
