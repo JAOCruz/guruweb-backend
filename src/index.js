@@ -66,9 +66,17 @@ app.use(
           "https://generativelanguage.googleapis.com",
           "https://api.minimaxi.chat",
         ],
+        frameAncestors: [
+          "'self'",
+          "https://guruweb-dashboard-prod.netlify.app",
+          "https://gurusolucionesrd.com",
+          "https://www.gurusolucionesrd.com",
+          "https://gurusoluciones.netlify.app",
+        ],
       },
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
