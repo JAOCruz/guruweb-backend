@@ -19,6 +19,16 @@ const Message = {
     return rows[0]?.wa_jid || null;
   },
 
+  // Find the phone we previously used for a given wa_jid (used when a contact
+  // sends messages from a privacy @lid JID so we keep one conversation thread).
+  async findPhoneByWaJid(waJid) {
+    const { rows } = await pool.query(
+      `SELECT phone FROM messages WHERE wa_jid = $1 AND phone IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
+      [waJid]
+    );
+    return rows[0]?.phone || null;
+  },
+
   async findByClient(clientId, { limit = 50, offset = 0 } = {}) {
     const { rows } = await pool.query(
       'SELECT * FROM messages WHERE client_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',

@@ -272,7 +272,22 @@ async function handleIncomingMessage(msg, sock) {
     // Skip group messages and status broadcasts
     if (remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') return;
 
-    const phone = remoteJid.replace(/@s\.whatsapp\.net$|@lid$/g, '');
+    const isLid = remoteJid.endsWith('@lid');
+    const rawPhone = remoteJid.replace(/@s\.whatsapp\.net$|@lid$/g, '');
+
+    // For privacy @lid accounts, try to reuse the phone we mapped earlier so
+    // the conversation doesn't split into random lid-only threads.
+    let phone = rawPhone;
+    if (isLid) {
+      const mappedPhone = await Message.findPhoneByWaJid(remoteJid);
+      if (mappedPhone) {
+        phone = mappedPhone;
+        console.log(`[WA] Mapped @lid ${rawPhone} to known phone ${mappedPhone}`);
+      } else {
+        console.log(`[WA] New @lid contact ${rawPhone} — conversation will use lid until a real phone is known`);
+      }
+    }
+
     const pushName = msg.pushName || msg.verifiedBizName || null;
     const isFromMe = msg.key.fromMe === true;
     let text = msg.message?.conversation
@@ -347,15 +362,20 @@ async function handleIncomingMessage(msg, sock) {
       ? (savedMedia ? `${text}\n[📎 adjunto]` : text)
       : (savedMedia ? `[📎 ${savedMedia.media_type || 'archivo'}]` : '[mensaje]');
 
-    await Message.create({
-      waMessageId: msg.key.id,
-      phone,
-      clientId: client?.id || null,
-      direction: isFromMe ? 'outbound' : 'inbound',
-      content: logContent,
-      mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
-      waJid: remoteJid,  // store real JID (may be @lid for privacy accounts)
-    });
+    try {
+      await Message.create({
+        waMessageId: msg.key.id,
+        phone,
+        clientId: client?.id || null,
+        direction: isFromMe ? 'outbound' : 'inbound',
+        content: logContent,
+        mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
+        waJid: remoteJid,  // store real JID (may be @lid for privacy accounts)
+      });
+      console.log(`[WA] ✅ Mensaje guardado en BD: ${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
+    } catch (saveErr) {
+      console.error(`[WA] ❌ Error guardando mensaje phone=${phone} jid=${remoteJid}:`, saveErr.message);
+    }
 
     // Only buffer for processing if it's an inbound message that should get a bot response
     if (!isFromMe) {
