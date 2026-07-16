@@ -22,9 +22,44 @@ const storage = require('../../utils/storage');
 
 const FREE_TEXT = new Set(['billing:ask_services', 'billing:confirm_details', 'billing:quote_confirm']);
 
+// ── Certification detection helpers ───────────────────────────────────────────
+
+const CERTIFICATION_KEYWORDS = [
+  { keyword: 'apostille', institution: 'MIREX / Cancillería', subtype: 'apostilla' },
+  { keyword: 'apostilla', institution: 'MIREX / Cancillería', subtype: 'apostilla' },
+  { keyword: 'estatus', institution: 'Jurisdicción Inmobiliaria', subtype: 'estatus_juridico' },
+  { keyword: 'no gravamen', institution: 'Jurisdicción Inmobiliaria', subtype: 'no_gravamen' },
+  { keyword: 'gravamen', institution: 'Jurisdicción Inmobiliaria', subtype: 'no_gravamen' },
+  { keyword: 'salida de menor', institution: 'DGM', subtype: 'salida_menor' },
+  { keyword: 'viaje de menor', institution: 'DGM', subtype: 'salida_menor' },
+  { keyword: 'pasaporte', institution: 'DGM / Pasaportes', subtype: 'pasaporte' },
+  { keyword: 'dgii', institution: 'DGII', subtype: 'dgii' },
+  { keyword: 'tribunal', institution: 'Tribunales', subtype: 'tribunal' },
+  { keyword: 'aduana', institution: 'Aduanas', subtype: 'aduana' },
+  { keyword: 'buena costumbre', institution: 'Policía Nacional / Buena costumbre', subtype: 'buena_costumbre' },
+  { keyword: 'traducción', institution: 'Traductor certificado', subtype: 'traduccion_certificada' },
+  { keyword: 'traduccion', institution: 'Traductor certificado', subtype: 'traduccion_certificada' },
+  { keyword: 'certificación', institution: 'Institución correspondiente', subtype: 'certificacion' },
+  { keyword: 'certificacion', institution: 'Institución correspondiente', subtype: 'certificacion' },
+];
+
+function detectCertificationService(items = []) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+
+  for (const item of items) {
+    const desc = String(item.desc || item.name || item.description || '').toLowerCase();
+    for (const { keyword, institution, subtype } of CERTIFICATION_KEYWORDS) {
+      if (desc.includes(keyword)) {
+        return { institution, subtype };
+      }
+    }
+  }
+  return null;
+}
+
 // ── Helper: link invoice to an open case for this client ───────────────────────
 
-async function getOrCreateCaseForPhone(phone, clientName, source) {
+async function getOrCreateCaseForPhone(phone, clientName, source, items = []) {
   try {
     let client = await Client.findByPhone(phone);
     if (!client) {
@@ -36,10 +71,38 @@ async function getOrCreateCaseForPhone(phone, clientName, source) {
       });
     }
 
+    const cert = detectCertificationService(items);
+
+    if (cert) {
+      // Reuse an open certification case for this client when possible
+      const existingCase = await Case.findByClientAndType(client.id, 'certificacion', {
+        excludeStatuses: ['closed', 'cancelled', 'delivered'],
+      });
+      if (existingCase) {
+        return { caseId: existingCase.id, clientId: client.id, certification: cert };
+      }
+
+      const newCase = await Case.create({
+        caseNumber: `CERT-${Date.now().toString(36).toUpperCase()}`,
+        title: `Trámite de certificación — ${cert.institution}`,
+        description: `Caso generado automáticamente desde facturación del bot por servicio de certificación.`,
+        caseType: 'certificacion',
+        caseSubtype: cert.subtype,
+        clientId: client.id,
+        institution: cert.institution,
+        source,
+        status: 'new',
+      });
+      return { caseId: newCase.id, clientId: client.id, certification: cert };
+    }
+
     // Look for an existing open/pending case for this client
-    const existingCases = await Case.findAll({ clientId: client.id, status: 'open' });
-    if (existingCases.length > 0) {
-      return { caseId: existingCases[0].id, clientId: client.id };
+    const existingCases = await Case.findAll({ clientId: client.id });
+    const activeCase = existingCases.find(c =>
+      ['open', 'new', 'in_progress', 'pending_payment', 'awaiting_institution'].includes(c.status)
+    );
+    if (activeCase) {
+      return { caseId: activeCase.id, clientId: client.id, certification: null };
     }
 
     const newCase = await Case.create({
@@ -50,10 +113,10 @@ async function getOrCreateCaseForPhone(phone, clientName, source) {
       clientId: client.id,
       source,
     });
-    return { caseId: newCase.id, clientId: client.id };
+    return { caseId: newCase.id, clientId: client.id, certification: null };
   } catch (err) {
     console.error('[Billing] getOrCreateCaseForPhone error:', err.message);
-    return { caseId: null, clientId: null };
+    return { caseId: null, clientId: null, certification: null };
   }
 }
 
@@ -126,7 +189,7 @@ async function handleAskServices(session, text) {
       errors.push(`"${line}" — cantidad o precio no válido`);
       continue;
     }
-    items.push({ desc, cantidad, itbis: true }); // ITBIS default true for legal services
+    items.push({ desc, cantidad, precio, itbis: true }); // ITBIS default true for legal services
   }
 
   if (items.length === 0) {
@@ -197,10 +260,11 @@ async function generateAndSendInvoice(session) {
 
   try {
     // 1. Link to an open case / client
-    const { caseId, clientId } = await getOrCreateCaseForPhone(
+    const { caseId, clientId, certification } = await getOrCreateCaseForPhone(
       phone,
       data.clientName || 'Cliente',
-      source
+      source,
+      data.items
     );
 
     // 2. Create invoice in DB (as draft)
@@ -222,6 +286,11 @@ async function generateAndSendInvoice(session) {
     });
 
     console.log(`[Billing] Invoice created: ${docNumber} for ${data.clientName} (source=${source})`);
+
+    // Certification workflow: move case to pending payment
+    if (certification && caseId) {
+      await Case.update(caseId, { status: 'pending_payment' });
+    }
 
     // 2. Generate PDF
     const today = new Date();
@@ -359,10 +428,11 @@ async function handleQuoteConfirm(session, text) {
     console.log(`[Billing] Quote confirm - items: ${JSON.stringify(items)}`);
 
     // Link to an open case / client
-    const { caseId, clientId } = await getOrCreateCaseForPhone(
+    const { caseId, clientId, certification } = await getOrCreateCaseForPhone(
       session.phone,
       session.data?.clientName || 'Cliente',
-      source
+      source,
+      items
     );
 
     // Save quotation to database
@@ -383,6 +453,11 @@ async function handleQuoteConfirm(session, text) {
     });
 
     console.log(`[Billing] Quotation saved to DB: ${quotation.id} (source=${source})`);
+
+    // Certification workflow: move case to pending payment when a quote is generated
+    if (certification && caseId) {
+      await Case.update(caseId, { status: 'pending_payment' });
+    }
 
     let pdfPath = await generateInvoiceFromTemplate({
       clientName: session.data?.clientName || 'Cliente',

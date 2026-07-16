@@ -1,6 +1,6 @@
 const Case = require('../../models/Case');
 const { transitionTo, updateData } = require('../stateManager');
-const { MSG, LIST } = require('../messages');
+const { MSG, LIST, STATUS_LABELS, CERTIFICATION_NEXT_STEP } = require('../messages');
 const { withList } = require('../../whatsapp/interactive');
 
 async function handle(session, text) {
@@ -15,7 +15,7 @@ async function handle(session, text) {
       }
 
       try {
-        const cases = await Case.findAll(null, { clientId: session.client_id });
+        const cases = await Case.findAll({ clientId: session.client_id });
         if (cases.length === 0) {
           await transitionTo(session, 'main_menu', 'show', {});
           return withList(MSG.STATUS_NO_CASES + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
@@ -55,7 +55,7 @@ async function handle(session, text) {
         }
 
         await transitionTo(session, 'case_status', 'post_view', session.data);
-        return withList(MSG.STATUS_FOUND(found), LIST.POST_CASE_VIEW);
+        return withList(buildStatusMessage(found), LIST.POST_CASE_VIEW);
       } catch (err) {
         console.error('[CaseStatus] Error looking up case:', err);
         return MSG.ERROR_GENERAL;
@@ -82,6 +82,44 @@ async function handle(session, text) {
       await transitionTo(session, 'case_status', 'ask_or_list');
       return await handle({ ...session, step: 'ask_or_list' }, text);
   }
+}
+
+function buildStatusMessage(c) {
+  const isCertification = c.case_type === 'certificacion';
+  const statusLabel = STATUS_LABELS[c.status] || c.status;
+
+  if (isCertification) {
+    const lines = [
+      `📋 *Estado de su trámite de certificación*`,
+      ``,
+      `📁 Expediente: ${c.case_number}`,
+      `📌 Asunto: ${c.title}`,
+      `🏛️ Institución: ${c.institution || 'Por confirmar'}`,
+      `📊 Estado: ${statusLabel}`,
+    ];
+
+    if (c.expected_completion_date) {
+      const d = new Date(c.expected_completion_date);
+      lines.push(`📅 Fecha estimada: ${d.toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+    }
+
+    const nextStep = CERTIFICATION_NEXT_STEP[c.status] || 'Un asesor le mantendrá informado/a sobre cualquier avance.';
+    lines.push(
+      ``,
+      `📝 *Próximo paso:*`,
+      nextStep,
+      ``,
+      `_Nota: los tiempos de respuesta dependen de la institución. Le informaremos apenas tengamos una actualización oficial._`,
+      ``,
+      `¿Desea realizar alguna otra consulta?`,
+      `1️⃣ Consultar otro expediente`,
+      `2️⃣ Regresar al menú principal`
+    );
+
+    return lines.join('\n');
+  }
+
+  return MSG.STATUS_FOUND(c);
 }
 
 async function findCaseByNumber(caseNumber) {

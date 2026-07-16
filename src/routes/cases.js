@@ -223,7 +223,11 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { case_number, title, description, case_type, client_id, court, next_hearing } = req.body;
+    const {
+      case_number, title, description, case_type, case_subtype,
+      client_id, user_id, court, institution, service_id,
+      expected_completion_date, next_hearing, source, status,
+    } = req.body;
     if (!case_number || !title || !client_id) {
       return res.status(400).json({ error: 'case_number, title, and client_id are required' });
     }
@@ -232,10 +236,16 @@ router.post('/', async (req, res) => {
       title,
       description,
       caseType: case_type,
+      caseSubtype: case_subtype,
       clientId: client_id,
-      userId: req.user.id,
+      userId: user_id || req.user.id,
       court,
+      institution,
+      serviceId: service_id,
+      expectedCompletionDate: expected_completion_date,
       nextHearing: next_hearing,
+      source,
+      status,
     });
     res.status(201).json({ case: caseRecord });
   } catch (err) {
@@ -249,14 +259,24 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, status, case_type, court, next_hearing } = req.body;
+    const {
+      title, description, status, case_type, case_subtype,
+      court, institution, service_id, expected_completion_date,
+      next_hearing, user_id, reminder_sent_at,
+    } = req.body;
     const fields = {};
     if (title !== undefined) fields.title = title;
     if (description !== undefined) fields.description = description;
     if (status !== undefined) fields.status = status;
     if (case_type !== undefined) fields.case_type = case_type;
+    if (case_subtype !== undefined) fields.case_subtype = case_subtype;
     if (court !== undefined) fields.court = court;
+    if (institution !== undefined) fields.institution = institution;
+    if (service_id !== undefined) fields.service_id = service_id;
+    if (expected_completion_date !== undefined) fields.expected_completion_date = expected_completion_date;
     if (next_hearing !== undefined) fields.next_hearing = next_hearing;
+    if (user_id !== undefined) fields.user_id = user_id;
+    if (reminder_sent_at !== undefined) fields.reminder_sent_at = reminder_sent_at;
 
     const caseRecord = await Case.update(req.params.id, fields);
     if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
@@ -264,6 +284,129 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     console.error('Update case error:', err);
     res.status(500).json({ error: 'Failed to update case' });
+  }
+});
+
+// Change case status and store history
+router.post('/:id/status', async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    if (!status) {
+      return res.status(400).json({ error: 'status is required' });
+    }
+
+    const caseRecord = await Case.findById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+
+    // Employees can only update cases assigned to them
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const previousStatus = caseRecord.status;
+    const updated = await Case.update(req.params.id, { status });
+
+    await Case.addStatusHistory({
+      caseId: req.params.id,
+      status,
+      changedByUserId: req.user.id,
+      notes: notes || `Cambio de estado: ${previousStatus} → ${status}`,
+    });
+
+    // Notify assigned user and admins on meaningful certification status changes
+    if (caseRecord.case_type === 'certificacion') {
+      try {
+        const client = await Client.findById(caseRecord.client_id);
+        const notifyStatuses = ['in_progress', 'awaiting_institution', 'rejected', 'completed', 'delivered'];
+        if (notifyStatuses.includes(status)) {
+          const title = status === 'rejected'
+            ? 'Caso rechazado — requiere corrección'
+            : status === 'completed'
+              ? 'Caso completado'
+              : 'Actualización de caso de certificación';
+          const message = client
+            ? `${title}: ${caseRecord.case_number} (${caseRecord.institution || 'Sin institución'}) — cliente ${client.name || client.phone}`
+            : `${title}: ${caseRecord.case_number} (${caseRecord.institution || 'Sin institución'})`;
+
+          const notifiedUserIds = new Set();
+          const { rows: admins } = await pool.query("SELECT id FROM users WHERE role = 'admin'");
+          for (const admin of admins) {
+            await Notification.create({
+              userId: admin.id,
+              type: 'case_status',
+              title,
+              message,
+              link: `/cases/${caseRecord.id}`,
+              metadata: { case_id: caseRecord.id, status, previous_status: previousStatus, client_id: caseRecord.client_id },
+            });
+            notifiedUserIds.add(admin.id);
+          }
+
+          if (caseRecord.user_id && !notifiedUserIds.has(caseRecord.user_id)) {
+            await Notification.create({
+              userId: caseRecord.user_id,
+              type: 'case_status',
+              title,
+              message,
+              link: `/cases/${caseRecord.id}`,
+              metadata: { case_id: caseRecord.id, status, previous_status: previousStatus, client_id: caseRecord.client_id },
+            });
+          }
+        }
+      } catch (notifyErr) {
+        console.error('[Cases] Failed to create status-change notification:', notifyErr.message);
+      }
+    }
+
+    console.log(`[Cases] Case #${req.params.id} status changed to ${status} by ${req.user.username}`);
+    res.json({ case: updated, previous_status: previousStatus });
+  } catch (err) {
+    console.error('Change case status error:', err);
+    res.status(500).json({ error: 'Failed to change case status' });
+  }
+});
+
+// Get status history for a case
+router.get('/:id/status-history', async (req, res) => {
+  try {
+    const caseRecord = await Case.findById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const history = await Case.getStatusHistory(req.params.id);
+    res.json({ history });
+  } catch (err) {
+    console.error('Get case status history error:', err);
+    res.status(500).json({ error: 'Failed to get status history' });
+  }
+});
+
+// Schedule a reminder for a case
+router.post('/:id/reminder', async (req, res) => {
+  try {
+    const { reminder_type, scheduled_at } = req.body;
+    if (!reminder_type || !scheduled_at) {
+      return res.status(400).json({ error: 'reminder_type and scheduled_at are required' });
+    }
+
+    const caseRecord = await Case.findById(req.params.id);
+    if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
+    if (isEmployee(req.user.role) && caseRecord.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const reminder = await Case.scheduleReminder({
+      caseId: req.params.id,
+      reminderType: reminder_type,
+      scheduledAt: scheduled_at,
+    });
+
+    res.status(201).json({ reminder });
+  } catch (err) {
+    console.error('Schedule reminder error:', err);
+    res.status(500).json({ error: 'Failed to schedule reminder' });
   }
 });
 
@@ -311,6 +454,20 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
        VALUES ($1, $2, $3, $4, $5)`,
       [req.params.id, previousUserId, user_id, req.user.id, notes || null]
     );
+
+    // Notify assigned user
+    try {
+      await Notification.create({
+        userId: user_id,
+        type: 'case_assignment',
+        title: 'Nuevo caso asignado',
+        message: `Se le ha asignado el caso ${caseRecord.case_number}: ${caseRecord.title}`,
+        link: `/cases/${caseRecord.id}`,
+        metadata: { case_id: caseRecord.id, assigned_by: req.user.id },
+      });
+    } catch (notifyErr) {
+      console.error('[Cases] Failed to create assignment notification:', notifyErr.message);
+    }
 
     console.log(`[Cases] Case #${req.params.id} assigned to user ${user_id} by ${req.user.username}`);
     res.json({ case: updated, message: 'Case assigned' });

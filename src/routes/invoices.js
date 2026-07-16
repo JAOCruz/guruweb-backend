@@ -12,6 +12,8 @@ function isEmployee(role) {
 const Invoice = require('../models/Invoice');
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
+const Case = require('../models/Case');
+
 const router = express.Router();
 
 // ── get all quotations (auth required) ──
@@ -373,16 +375,29 @@ router.post('/:id/confirm-payment', requireRole('admin'), async (req, res) => {
       paymentReference: payment_reference,
     });
 
-    // Close related case as paid
+    // Update related case status
     if (updated && updated.case_id) {
+      const relatedCase = await Case.findById(updated.case_id);
+      const newCaseStatus = relatedCase && relatedCase.case_type === 'certificacion'
+        ? 'in_progress'
+        : 'paid';
+
       await pool.query(
-        `UPDATE cases SET status='paid', updated_at=NOW() WHERE id=$1`,
-        [updated.case_id]
+        `UPDATE cases SET status=$1, updated_at=NOW() WHERE id=$2`,
+        [newCaseStatus, updated.case_id]
       );
-      console.log(`[Invoices] Related case #${updated.case_id} closed as paid`);
+
+      await Case.addStatusHistory({
+        caseId: updated.case_id,
+        status: newCaseStatus,
+        changedByUserId: req.user.id,
+        notes: `Pago confirmado para ${invoice.doc_number}`,
+      });
+
+      console.log(`[Invoices] Related case #${updated.case_id} updated to ${newCaseStatus}`);
     }
 
-    res.json({ invoice: updated, message: 'Payment confirmed. Case closed if linked.' });
+    res.json({ invoice: updated, message: 'Payment confirmed. Case updated if linked.' });
   } catch (err) {
     console.error('Confirm payment error:', err);
     res.status(500).json({ error: 'Failed to confirm payment' });

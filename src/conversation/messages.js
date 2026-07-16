@@ -247,6 +247,30 @@ const STATUS_LABELS = {
   resolved: 'Resuelto',
   closed: 'Cerrado',
   archived: 'Archivado',
+  // Certification workflow
+  new: 'Nuevo',
+  pending_payment: 'Pendiente de pago',
+  awaiting_institution: 'En espera de institución',
+  rejected: 'Rechazado / Corregir',
+  completed: 'Completado',
+  delivered: 'Entregado',
+  cancelled: 'Cancelado',
+  escalated: 'Escalado',
+  paid: 'Pagado',
+};
+
+const CERTIFICATION_NEXT_STEP = {
+  new: 'Estamos preparando su solicitud y documentos iniciales.',
+  pending_payment: 'Su trámite está pendiente de pago. Una vez confirmado, iniciamos el proceso ante la institución.',
+  in_progress: 'Su trámite está en proceso interno. Le notificaremos cuando enviemos o recibamos respuesta de la institución.',
+  awaiting_institution: 'Su solicitud fue enviada a la institución correspondiente. Estamos a la espera de su respuesta oficial.',
+  rejected: 'La institución solicitó correcciones. Un asesor se contactará con usted para indicarle los pasos a seguir.',
+  completed: 'Su documento está listo. Coordinaremos la entrega o retiro a la brevedad.',
+  delivered: 'Su trámite fue entregado. Si necesita algo más, estamos a su disposición.',
+  closed: 'El caso fue cerrado.',
+  cancelled: 'El caso fue cancelado.',
+  escalated: 'El caso fue escalado a un especialista para revisión.',
+  paid: 'Pago confirmado. Iniciaremos el trámite ante la institución.',
 };
 
 const CASE_TYPES = {
@@ -477,4 +501,4 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-module.exports = { MSG, LIST, STATUS_LABELS, CASE_TYPES, URGENCY_LEVELS, APPOINTMENT_TYPES, DOCUMENT_TYPES, formatDate };
+module.exports = { MSG, LIST, STATUS_LABELS, CERTIFICATION_NEXT_STEP, CASE_TYPES, URGENCY_LEVELS, APPOINTMENT_TYPES, DOCUMENT_TYPES, formatDate };
