@@ -108,12 +108,12 @@ router.get('/pdf/:filename', authenticate, (req, res) => {
 
 router.use(authenticate);
 
-// ── GET /api/invoices ── list (admin: all | digitador: own)
+// ── GET /api/invoices ── list (admin: all | digitador/auxiliar: assigned clients or own)
 router.get('/', async (req, res) => {
   try {
     const invoices = !isEmployee(req.user.role)
       ? await Invoice.findAll()
-      : await Invoice.findByCreator(req.user.id);
+      : await Invoice.findByAssignedTo(req.user.id);
     res.json({ invoices });
   } catch (err) {
     console.error('List invoices error:', err);

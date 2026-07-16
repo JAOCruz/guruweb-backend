@@ -40,6 +40,21 @@ const Invoice = {
     return rows;
   },
 
+  async findByAssignedTo(userId) {
+    const { rows } = await pool.query(`
+      SELECT i.*,
+             cb.name AS created_by_name,
+             ab.name AS approved_by_name
+      FROM invoices i
+      LEFT JOIN users cb ON cb.id = i.created_by
+      LEFT JOIN users ab ON ab.id = i.approved_by
+      WHERE i.client_id IN (SELECT id FROM clients WHERE assigned_to = $1)
+         OR i.created_by = $1
+      ORDER BY i.created_at DESC
+    `, [userId]);
+    return rows;
+  },
+
   async findById(id) {
     const { rows } = await pool.query(`
       SELECT i.*,
