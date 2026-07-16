@@ -85,6 +85,7 @@ app.use(
 // CORS Middleware
 const allowedOrigins = [
   "https://gurusoluciones.netlify.app",
+  "https://guruweb-dashboard-prod.netlify.app",
   "https://gurusolucionesrd.com",
   "https://www.gurusolucionesrd.com",
   "http://localhost:5173",
