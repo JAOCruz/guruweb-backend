@@ -321,10 +321,12 @@ async function handleIncomingMessage(msg, sock) {
 
     // For inbound messages, ensure we have a client record with the latest pushName.
     // For outbound messages (fromMe), do NOT create a client for the bot's own number.
+    // For privacy @lid accounts we never trust pushName — WhatsApp often reports the
+    // bot's own business name instead of the real contact, which pollutes clients.
     let client = null;
     if (!isFromMe) {
       client = await Client.findByPhone(phone);
-      if (pushName) {
+      if (pushName && !isLid) {
         try {
           const updated = await Client.updateOrCreatePushName(phone, pushName);
           client = updated;
@@ -384,13 +386,9 @@ async function handleIncomingMessage(msg, sock) {
 
   } catch (err) {
     console.error('[WA] Error procesando mensaje:', err);
-    try {
-      await sock.sendMessage(msg.key.remoteJid, {
-        text: 'Disculpe, ha ocurrido un error en nuestro sistema. Por favor, intente nuevamente en unos momentos.',
-      });
-    } catch (sendErr) {
-      console.error('[WA] Error enviando mensaje de error:', sendErr);
-    }
+    // Do NOT send an error reply here — it can spam users if the socket is flapping
+    // or if a burst of old messages fails at once. Errors are logged and surfaced
+    // in the dashboard instead.
   }
 }
 

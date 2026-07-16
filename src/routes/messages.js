@@ -145,6 +145,7 @@ router.post('/send-direct', async (req, res) => {
       caseId: null,
       direction: 'outbound',
       content,
+      waJid: jid,
     });
 
     res.status(201).json({ message });

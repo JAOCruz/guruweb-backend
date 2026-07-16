@@ -121,8 +121,22 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 
       if (shouldReconnect) {
         console.log(`[WA] Reconnecting session ${sessionId} in 3s...`);
-        setTimeout(() => {
+        setTimeout(async () => {
           if (!isCurrent()) return; // replaced/stopped meanwhile
+          // Respect manual disconnect: if the user explicitly stopped the session,
+          // do not auto-reconnect.
+          try {
+            const { rows } = await pool.query(
+              `SELECT manual_disconnect FROM wa_credentials WHERE session_id = $1`,
+              [sessionId]
+            );
+            if (rows[0]?.manual_disconnect === true) {
+              console.log(`[WA] Skipping auto-reconnect for ${sessionId} — manual disconnect is set`);
+              return;
+            }
+          } catch (dbErr) {
+            console.error(`[WA] Failed to check manual_disconnect for ${sessionId}:`, dbErr.message);
+          }
           createConnection(sessionId, onQR, onConnected, onMessage).catch(err => {
             console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message);
           });
