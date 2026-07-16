@@ -32,9 +32,11 @@ router.get('/conversations', async (req, res) => {
     const filter = req.query.filter || 'all'; // all | clients | non_clients
     const userId = isEmployee(req.user.role) ? req.user.id : null;
     const conversations = await Message.getConversations(filter, userId);
-    // Enrich with bot active state
+    // Enrich with bot/manual state
     for (const conv of conversations) {
-      conv.botActive = isChatEnabled(conv.phone);
+      conv.chatEnabled = isChatEnabled(conv.phone);
+      conv.botActive = !isManualMode(conv.phone);
+      conv.manualMode = isManualMode(conv.phone);
     }
     res.json({ conversations });
   } catch (err) {
@@ -238,9 +240,11 @@ router.get('/search', async (req, res) => {
     }
 
     const conversations = await Message.searchByContent(q);
-    // Enrich with bot active state
+    // Enrich with bot/manual state
     for (const conv of conversations) {
-      conv.botActive = isChatEnabled(conv.phone);
+      conv.chatEnabled = isChatEnabled(conv.phone);
+      conv.botActive = !isManualMode(conv.phone);
+      conv.manualMode = isManualMode(conv.phone);
     }
 
     res.json({ conversations });

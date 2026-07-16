@@ -117,7 +117,7 @@ function setChatEnabled(phone, enabled) {
 
 function isChatEnabled(phone) {
   if (botMode === 'all') return true;
-  return enabledPhones.has(phone);
+  return enabledPhones.has(normalizePhone(phone));
 }
 
 function getEnabledPhones() {
@@ -138,7 +138,7 @@ function setManualMode(phone, manual) {
 }
 
 function isManualMode(phone) {
-  return manualPhones.has(phone);
+  return manualPhones.has(normalizePhone(phone));
 }
 
 function getManualPhones() {
@@ -147,9 +147,10 @@ function getManualPhones() {
 
 // Determine if bot should respond to a specific phone
 function shouldBotRespond(phone) {
+  const clean = normalizePhone(phone);
   if (!botActive) return false;
-  if (botMode === 'selected' && !enabledPhones.has(phone)) return false;
-  if (manualPhones.has(phone)) return false;
+  if (botMode === 'selected' && !enabledPhones.has(clean)) return false;
+  if (manualPhones.has(clean)) return false;
   return true;
 }
 
