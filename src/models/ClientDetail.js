@@ -12,10 +12,10 @@ const ClientDetail = {
 
     // Fetch services
     const services = await pool.query(
-      `SELECT s.*, sc.abbreviation, sc.color, sc.category_type
+      `SELECT scat.*, sc.abbreviation, sc.color, sc.category_type
        FROM client_services cs
-       JOIN services s ON cs.service_id = s.id
-       JOIN service_categories sc ON s.category_id = sc.id
+       JOIN service_catalog scat ON cs.service_id = scat.id
+       LEFT JOIN service_categories sc ON scat.category_id = sc.id
        WHERE cs.client_id = $1 AND cs.status IN ('active', 'completed')
        ORDER BY cs.started_at DESC`,
       [clientId]
