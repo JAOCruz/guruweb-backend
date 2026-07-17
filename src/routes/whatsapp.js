@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession } = require('../whatsapp/connection');
-const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode } = require('../whatsapp/handler');
+const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
 const pool = require('../db/pool');
@@ -137,6 +137,12 @@ router.post('/bot-toggle', requireAdmin, (req, res) => {
   const current = isBotActive();
   setBotActive(!current);
   res.json({ botActive: !current });
+});
+
+// Clear all manual-mode overrides so the bot responds to every chat again.
+router.post('/clear-manual', requireAdmin, (req, res) => {
+  clearManualPhones();
+  res.json({ cleared: true, manualPhones: [] });
 });
 
 router.post('/bot-mode', requireAdmin, (req, res) => {

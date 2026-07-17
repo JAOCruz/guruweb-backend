@@ -145,6 +145,13 @@ function getManualPhones() {
   return [...manualPhones];
 }
 
+function clearManualPhones() {
+  const count = manualPhones.size;
+  manualPhones.clear();
+  console.log(`[WA] Cleared ${count} manual phones — bot will respond to all chats`);
+  persist().catch(() => {});
+}
+
 // Determine if bot should respond to a specific phone
 function shouldBotRespond(phone) {
   const clean = normalizePhone(phone);
@@ -398,6 +405,6 @@ module.exports = {
   setBotMode, getBotMode,
   setAssignmentMode, getAssignmentMode,
   setChatEnabled, isChatEnabled, getEnabledPhones,
-  setManualMode, isManualMode, getManualPhones,
+  setManualMode, isManualMode, getManualPhones, clearManualPhones,
   shouldBotRespond,
 };
