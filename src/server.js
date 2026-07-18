@@ -47,6 +47,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:5174', 'http://127.0.0.1:5174', 'http://100.87.41.106:5174',
       'https://gurusolucionesrd.com', 'https://www.gurusolucionesrd.com',
       'https://gurusoluciones.netlify.app',
+      'https://guruweb-dashboard-prod.netlify.app',
+      'https://guruweb-frontend-dev.netlify.app',
     ];
 app.use(cors({
   origin: (origin, callback) => {
