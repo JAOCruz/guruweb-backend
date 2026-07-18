@@ -436,41 +436,52 @@ router.post('/:id/reopen', async (req, res) => {
   }
 });
 
-// Assign case to a user (admin only)
+// Assign case to a user (admin only). user_id = null/empty unassigns the case.
 router.post('/:id/assign', requireRole('admin'), async (req, res) => {
   try {
     const { user_id, notes } = req.body;
-    if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
+    const isUnassign = user_id === undefined || user_id === null || user_id === '';
+    const targetUserId = isUnassign ? null : parseInt(user_id, 10);
+
+    if (!isUnassign && Number.isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'user_id must be a number' });
     }
+
     const caseRecord = await Case.findById(req.params.id);
     if (!caseRecord) return res.status(404).json({ error: 'Case not found' });
 
     const previousUserId = caseRecord.user_id;
-    const updated = await Case.update(req.params.id, { user_id, status: 'in_progress' });
+    const updateFields = { user_id: targetUserId };
+    // Keep existing status when unassigning; move to in_progress when assigning
+    if (!isUnassign) {
+      updateFields.status = 'in_progress';
+    }
+    const updated = await Case.update(req.params.id, updateFields);
 
     await pool.query(
       `INSERT INTO case_assignment_history (case_id, from_user_id, to_user_id, assigned_by, notes)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.params.id, previousUserId, user_id, req.user.id, notes || null]
+      [req.params.id, previousUserId, targetUserId, req.user.id, notes || null]
     );
 
-    // Notify assigned user
-    try {
-      await Notification.create({
-        userId: user_id,
-        type: 'case_assignment',
-        title: 'Nuevo caso asignado',
-        message: `Se le ha asignado el caso ${caseRecord.case_number}: ${caseRecord.title}`,
-        link: `/cases/${caseRecord.id}`,
-        metadata: { case_id: caseRecord.id, assigned_by: req.user.id },
-      });
-    } catch (notifyErr) {
-      console.error('[Cases] Failed to create assignment notification:', notifyErr.message);
+    // Notify assigned user (only when assigning, not unassigning)
+    if (!isUnassign) {
+      try {
+        await Notification.create({
+          userId: targetUserId,
+          type: 'case_assignment',
+          title: 'Nuevo caso asignado',
+          message: `Se le ha asignado el caso ${caseRecord.case_number}: ${caseRecord.title}`,
+          link: `/cases/${caseRecord.id}`,
+          metadata: { case_id: caseRecord.id, assigned_by: req.user.id },
+        });
+      } catch (notifyErr) {
+        console.error('[Cases] Failed to create assignment notification:', notifyErr.message);
+      }
     }
 
-    console.log(`[Cases] Case #${req.params.id} assigned to user ${user_id} by ${req.user.username}`);
-    res.json({ case: updated, message: 'Case assigned' });
+    console.log(`[Cases] Case #${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId}`} by ${req.user.username}`);
+    res.json({ case: updated, message: isUnassign ? 'Case unassigned' : 'Case assigned' });
   } catch (err) {
     console.error('Assign case error:', err);
     res.status(500).json({ error: 'Failed to assign case' });

@@ -101,13 +101,15 @@ const Message = {
 
   // Get all conversations grouped by phone, with latest message and client info
   // Uses COALESCE to fall back to client.phone for old messages missing the phone column
-  // If userId provided, only returns conversations from clients OR cases assigned to that user
+  // Joins clients by either client_id OR phone so assignment info is available even when
+  // messages were not yet backfilled with client_id.
+  // If userId provided, only returns conversations from clients OR cases assigned to that user.
   async getConversations(filter = 'all', userId = null) {
     const conditions = [];
     if (filter === 'clients') {
-      conditions.push('m.client_id IS NOT NULL');
+      conditions.push('(m.client_id IS NOT NULL OR c.id IS NOT NULL)');
     } else if (filter === 'non_clients') {
-      conditions.push('m.client_id IS NULL AND m.phone IS NOT NULL');
+      conditions.push('m.client_id IS NULL AND c.id IS NULL AND m.phone IS NOT NULL');
     }
 
     // Employee (digitador/auxiliar): only see assigned clients' or assigned cases' conversations.
@@ -129,14 +131,14 @@ const Message = {
     const { rows } = await pool.query(`
       SELECT
         COALESCE(m.phone, c.phone) AS phone,
-        MAX(m.client_id) AS client_id,
+        MAX(COALESCE(m.client_id, c.id)) AS client_id,
         MAX(c.name) AS client_name,
         MAX(c.assigned_to) AS client_assigned_to,
         MAX(c.profile_pic_url) AS profile_pic_url,
         MAX(m.created_at) AS last_message_at,
         COUNT(*) AS message_count
       FROM messages m
-      LEFT JOIN clients c ON c.id = m.client_id
+      LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
       ${whereClause}
       GROUP BY COALESCE(m.phone, c.phone)
       HAVING COALESCE(m.phone, c.phone) IS NOT NULL
@@ -162,13 +164,14 @@ const Message = {
     const { rows } = await pool.query(`
       SELECT
         COALESCE(m.phone, c.phone) AS phone,
-        MAX(m.client_id) AS client_id,
+        MAX(COALESCE(m.client_id, c.id)) AS client_id,
         MAX(c.name) AS client_name,
+        MAX(c.assigned_to) AS client_assigned_to,
         MAX(c.profile_pic_url) AS profile_pic_url,
         MAX(m.created_at) AS last_message_at,
         COUNT(*) AS message_count
       FROM messages m
-      LEFT JOIN clients c ON c.id = m.client_id
+      LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
       WHERE LOWER(m.content) LIKE LOWER($1)
       GROUP BY COALESCE(m.phone, c.phone)
       ORDER BY MAX(m.created_at) DESC

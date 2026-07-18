@@ -7,6 +7,22 @@ function isEmployee(role) {
   return role !== 'admin';
 }
 
+// Link existing messages (matched by phone) to a client after it is created/identified.
+async function backfillMessagesClientId(clientId, phone) {
+  if (!clientId || !phone) return;
+  try {
+    const { rowCount } = await pool.query(
+      'UPDATE messages SET client_id = $1 WHERE phone = $2 AND client_id IS NULL',
+      [clientId, phone]
+    );
+    if (rowCount > 0) {
+      console.log(`[Clients] Backfilled ${rowCount} messages for client #${clientId} (${phone})`);
+    }
+  } catch (err) {
+    console.error('[Clients] Failed to backfill messages client_id:', err.message);
+  }
+}
+
 const router = express.Router();
 router.use(authenticate);
 
@@ -72,6 +88,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'name and phone are required' });
     }
     const client = await Client.create({ name, phone, email, address, notes, userId: req.user.id });
+    await backfillMessagesClientId(client.id, client.phone);
     res.status(201).json({ client });
   } catch (err) {
     if (err.code === '23505') {
@@ -100,6 +117,9 @@ router.put('/:id', async (req, res) => {
 
     const client = await Client.update(req.params.id, fields);
     if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    // Link any existing messages for this phone to the client
+    await backfillMessagesClientId(client.id, client.phone);
 
     // Sync name into case titles (format: "CaseType — ClientName")
     if (name && existing && existing.name !== name) {
@@ -153,6 +173,9 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
 
     const client = await Client.update(req.params.id, { assigned_to: targetUserId });
     if (!client) return res.status(404).json({ error: 'Client not found' });
+
+    // Make sure messages for this phone know about the client so assignment shows up in chats
+    await backfillMessagesClientId(client.id, client.phone);
 
     console.log(`[Clients] Client ${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser.username})`} by ${req.user.username}`);
     res.json({ client, assigned_to_user: assignedToUser });
@@ -221,6 +244,8 @@ router.put('/:id/assign', requireRole('admin'), async (req, res) => {
        VALUES ($1, $2, $3, $4, $5)`,
       [clientId, previousUserId, user_id || null, req.user.id, notes || null]
     );
+
+    await backfillMessagesClientId(updated.id, updated.phone);
 
     console.log(`[Clients] Client #${clientId} assigned to user ${user_id} by ${req.user.username}`);
     res.json({ client: updated, message: 'Client assigned successfully' });

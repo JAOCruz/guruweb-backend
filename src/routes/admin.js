@@ -56,7 +56,11 @@ router.post('/assign-client', requireRole('admin'), async (req, res) => {
 router.get('/users', requireRole('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, username, email, name, role, created_at FROM users ORDER BY COALESCE(name, username) ASC'
+      `SELECT id, username, email,
+              COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
+              role, created_at
+       FROM users
+       ORDER BY COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) ASC`
     );
     res.json({ users: rows });
   } catch (err) {
