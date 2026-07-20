@@ -125,19 +125,18 @@ async function handleMainMenu(session, text, msg, savedMedia = null) {
       }
     }
 
-    // Simple greeting or short text — show welcome + menu
+    // Simple greeting or short text — respond naturally, never show numbered menu
     if (config.gemini.enabled) {
       const { generateGreeting } = require('../llm/generate');
       const greeting = client
         ? await generateGreeting('returning', client.name)
         : await generateGreeting('new');
       if (greeting) {
-        const fullText = greeting + '\n\n' + MSG.MAIN_MENU;
-        return withList(fullText, { ...LIST.MAIN_MENU, text: greeting + '\n\n¿En qué puedo orientarle?' });
+        return greeting + ' ¿En qué puedo orientarle hoy?';
       }
     }
     const welcomeText = client ? MSG.WELCOME_BACK(client.name) : MSG.WELCOME_NEW_SHORT;
-    return withList(welcomeText + '\n\n' + MSG.MAIN_MENU, { ...LIST.MAIN_MENU, text: welcomeText + '\n\n¿En qué puedo orientarle?' });
+    return welcomeText + ' Cuénteme, ¿qué necesita?';
   }
 
   // Menu shown, waiting for selection
@@ -179,8 +178,8 @@ async function handleMainMenu(session, text, msg, savedMedia = null) {
       case 'help':
         return MSG.HELP;
       case 'greeting':
-        // Already at menu — brief LLM acknowledgment or static menu
-        return withList(MSG.MAIN_MENU, LIST.MAIN_MENU);
+        // Already at menu — brief natural acknowledgment, no numbered list
+        return '¡Buenas! 🦉 Estoy aquí para lo que necesite. ¿En qué puedo orientarle?';
       case 'casual':
       case 'unknown':
       case 'confirm_yes':
