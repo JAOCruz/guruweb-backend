@@ -3,24 +3,22 @@ const config = require('../config');
 
 const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
 
-// Primary: gemini-2.5-flash (confirmed working with this API key)
-// Note: 2.5-flash is a "thinking" model — internal reasoning tokens count against
-// maxOutputTokens, so we need a high budget (8192) to avoid truncated responses.
+// Primary: gemini-1.5-flash (stable, fast, good quota)
 const model = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-1.5-flash',
   generationConfig: {
     temperature: 0.75,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 4096,
     topP: 0.9,
   },
 });
 
-// Fallback: gemini-2.5-flash-lite (also confirmed working)
+// Fallback: gemini-1.5-pro (higher quality if flash fails/hits quota)
 const fallbackModel = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash-lite',
+  model: 'gemini-1.5-pro',
   generationConfig: {
     temperature: 0.75,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 4096,
     topP: 0.9,
   },
 });

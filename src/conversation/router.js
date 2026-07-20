@@ -192,9 +192,9 @@ async function handleMainMenu(session, text, msg, savedMedia = null) {
     }
   }
 
-  // Fallback
+  // Fallback — never show the numbered menu; keep it conversational
   await transitionTo(session, 'main_menu', 'show');
-  return withList(MSG.MAIN_MENU, LIST.MAIN_MENU);
+  return "Disculpe, no entendí bien. ¿Podría explicarme de otra forma? Estoy aquí para ayudarle con cualquier asunto legal.";
 }
 
 async function handleMenuChoice(session, choice) {
@@ -266,7 +266,7 @@ async function handleMenuChoice(session, choice) {
         `_Escriba *cancelar* para salir._`;
 
     default:
-      return withList(MSG.INVALID_OPTION + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+      return "Disculpe, no entendí bien esa opción. ¿Podría decirme con sus palabras qué necesita?";
   }
 }
 
@@ -403,7 +403,7 @@ ${hint ? `INSTRUCCIÓN: ${hint}` : ''}
     return kbContext;
   }
 
-  return withList(MSG.INVALID_OPTION + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+  return "Disculpe, no entendí bien. ¿Podría explicarme de otra forma? Estoy aquí para ayudarle con cualquier asunto legal.";
 }
 
 async function handleTalkToLawyer(session, text) {
