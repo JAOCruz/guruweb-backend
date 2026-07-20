@@ -78,6 +78,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
     browser: baileys.Browsers.ubuntu('Chrome'),
     keepAliveIntervalMs: 30000,
     retryRequestDelayMs: 250,
+    // Don't pull the entire message history on every reconnect — it can take
+    // days and re-triggers WhatsApp's "first time" sync prompt. Live messages
+    // still arrive, and existing DB context is used for the bot.
+    syncFullHistory: false,
   });
 
   // Track immediately so stopSession() can kill a still-connecting socket.

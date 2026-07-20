@@ -62,18 +62,54 @@ router.post('/connect', async (req, res) => {
     }
 
     // Kill any half-open socket or pending reconnect chain for this session
-    // before wiping credentials — otherwise the old chain reconnects with the
+    // before touching credentials — otherwise the old chain reconnects with the
     // old creds and fights the new socket (WhatsApp 440 conflict loop).
     stopSession(sessionId);
 
-    // Clear old session files for a fresh QR code
+    // Check if we already have valid stored credentials and the user did not
+    // manually disconnect. If so, reuse them — this avoids WhatsApp treating
+    // the link as a "first time" and asking for a full history sync.
+    let hasSavedCreds = false;
+    let manuallyDisconnected = true;
+    try {
+      const { rows } = await pool.query(
+        `SELECT creds, manual_disconnect FROM wa_credentials WHERE session_id = $1`,
+        [sessionId]
+      );
+      if (rows.length > 0) {
+        manuallyDisconnected = rows[0].manual_disconnect === true;
+        hasSavedCreds = rows[0].creds && rows[0].creds !== '{}' && Object.keys(rows[0].creds).length > 0;
+      }
+    } catch (dbErr) {
+      console.error(`[WA] Failed to check saved credentials for ${sessionId}:`, dbErr.message);
+    }
+
+    if (hasSavedCreds && !manuallyDisconnected) {
+      console.log(`[WA] Reusing saved credentials for ${sessionId} (no QR needed)`);
+      try {
+        await createConnection(
+          sessionId,
+          null, // No QR callback — already authenticated
+          () => {
+            console.log(`[WA] Session ${sessionId} reconnected using saved credentials.`);
+            clearPendingQR(sessionId);
+          },
+          handleIncomingMessage
+        );
+        return res.json({ status: 'reconnecting', sessionId, message: 'Reconectando con credenciales guardadas (sin QR)' });
+      } catch (reconnectErr) {
+        console.error(`[WA] Reconnect with saved creds failed for ${sessionId}:`, reconnectErr.message);
+        // Fall through to fresh QR below
+      }
+    }
+
+    // No saved creds or reconnect failed — start fresh with a QR code
     const sessionDir = path.join(config.wa.sessionDir, sessionId);
     if (fs.existsSync(sessionDir)) {
       fs.rmSync(sessionDir, { recursive: true, force: true });
       console.log(`[WA] Cleared old session files for ${sessionId}`);
     }
 
-    // Clear any old pending QR and stored credentials for a truly fresh session
     await clearPendingQR(sessionId);
     await clearSessionCredentials(sessionId);
 
