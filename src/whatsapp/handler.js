@@ -29,6 +29,14 @@ function bufferMessage(phone, payload, sock) {
   }, MESSAGE_BUFFER_MS);
 }
 
+// Numbers that are ALWAYS manual (bot never auto-responds).
+// Loaded from env and hard-coded defaults. These cannot be switched to bot mode.
+const ALWAYS_MANUAL_PHONES = new Set([
+  ...(process.env.ALWAYS_MANUAL_PHONES || '').split(',').map(p => p.trim()).filter(Boolean),
+  '8099310419',
+  '8095029792',
+]);
+
 // Load persisted settings on startup (async)
 let botActive = true;
 let botMode = 'all';
@@ -44,7 +52,9 @@ const manualPhones = new Set();
     assignmentMode = saved.assignmentMode || 'automatic';
     (saved.enabledPhones || []).forEach(p => enabledPhones.add(p));
     (saved.manualPhones || []).forEach(p => manualPhones.add(p));
-    console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}`);
+    // Ensure always-manual numbers stay manual even if persisted state says otherwise
+    ALWAYS_MANUAL_PHONES.forEach(p => manualPhones.add(p));
+    console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}, alwaysManual=${ALWAYS_MANUAL_PHONES.size}`);
   } catch (err) {
     console.error('[WA] Failed to load settings:', err.message);
   }
@@ -128,6 +138,10 @@ function getEnabledPhones() {
 
 function setManualMode(phone, manual) {
   const clean = normalizePhone(phone);
+  if (!manual && ALWAYS_MANUAL_PHONES.has(clean)) {
+    console.log(`[WA] Phone ${clean} is always manual — cannot switch to bot mode`);
+    return;
+  }
   if (manual) {
     manualPhones.add(clean);
   } else {
@@ -155,9 +169,12 @@ function clearManualPhones() {
 // Determine if bot should respond to a specific phone
 function shouldBotRespond(phone) {
   const clean = normalizePhone(phone);
+  // Groups are always manual (bot never responds)
+  if (clean.endsWith('@g.us')) return false;
   if (!botActive) return false;
   if (botMode === 'selected' && !enabledPhones.has(clean)) return false;
   if (manualPhones.has(clean)) return false;
+  if (ALWAYS_MANUAL_PHONES.has(clean)) return false;
   return true;
 }
 

@@ -397,11 +397,8 @@ ${hint ? `INSTRUCCIÓN: ${hint}` : ''}
     }
   }
 
-  // Fallback: show keyword results directly
-  if (kbContext) {
-    return kbContext;
-  }
-
+  // Fallback: never dump raw knowledge-base snippets — they are often out of context.
+  // Keep the response conversational and ask the user to clarify.
   return "Disculpe, no entendí bien. ¿Podría explicarme de otra forma? Estoy aquí para ayudarle con cualquier asunto legal.";
 }
 
