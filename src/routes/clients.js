@@ -185,6 +185,67 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
   }
 });
 
+// Admin-only: assign (or create-and-assign) a client by phone number.
+// Used when a chat has no client_id yet, e.g. bot is paused and the client
+// was never registered by the intake flow.
+router.post('/assign-by-phone', requireRole('admin'), async (req, res) => {
+  try {
+    const { phone, user_id } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'phone is required' });
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    const isUnassign = user_id === undefined || user_id === null || user_id === '';
+    const targetUserId = isUnassign ? null : parseInt(user_id, 10);
+
+    if (!isUnassign && Number.isNaN(targetUserId)) {
+      return res.status(400).json({ error: 'user_id must be a number' });
+    }
+
+    let assignedToUser = null;
+    if (!isUnassign) {
+      const { rows: userRows } = await pool.query(
+        'SELECT id, role, username, name FROM users WHERE id = $1',
+        [targetUserId]
+      );
+      if (userRows.length === 0) {
+        return res.status(404).json({ error: 'Target user not found' });
+      }
+      assignedToUser = userRows[0];
+    }
+
+    // Find or create client
+    let client = await Client.findByPhone(cleanPhone);
+    if (!client) {
+      // Try to reuse the best known name from messages
+      const { rows: nameRows } = await pool.query(
+        `SELECT push_name FROM messages
+         WHERE phone = $1 AND push_name IS NOT NULL AND push_name <> ''
+         ORDER BY message_timestamp DESC LIMIT 1`,
+        [cleanPhone]
+      );
+      const displayName = nameRows[0]?.push_name || `Cliente ${cleanPhone}`;
+      client = await Client.create({
+        name: displayName,
+        phone: cleanPhone,
+        userId: req.user.id,
+        source: 'whatsapp',
+      });
+      console.log(`[Clients] Auto-created client #${client.id} for ${cleanPhone}`);
+    }
+
+    client = await Client.update(client.id, { assigned_to: targetUserId });
+    await backfillMessagesClientId(client.id, client.phone);
+
+    console.log(`[Clients] Client ${client.id} (${client.phone}) ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser?.username})`} by ${req.user.username}`);
+    res.json({ client, assigned_to_user: assignedToUser });
+  } catch (err) {
+    console.error('Assign by phone error:', err);
+    res.status(500).json({ error: 'Failed to assign client' });
+  }
+});
+
 // Get detailed client information
 router.get('/:id/detail', async (req, res) => {
   try {
