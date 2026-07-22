@@ -222,7 +222,7 @@ router.post('/assign-by-phone', requireRole('admin'), async (req, res) => {
       const { rows: nameRows } = await pool.query(
         `SELECT push_name FROM messages
          WHERE phone = $1 AND push_name IS NOT NULL AND push_name <> ''
-         ORDER BY message_timestamp DESC LIMIT 1`,
+         ORDER BY created_at DESC LIMIT 1`,
         [cleanPhone]
       );
       const displayName = nameRows[0]?.push_name || `Cliente ${cleanPhone}`;
