@@ -113,48 +113,69 @@ const Message = {
   },
 
   // Get all conversations grouped by phone, with latest message and client info.
-  // Uses a FULL OUTER JOIN between clients and messages so that registered clients
-  // without messages still appear in the list (admin sees all, employees see assigned).
+  // Registered clients WITHOUT messages also appear (admin sees all, employees see
+  // assigned). Implemented as a UNION ALL (messages side + clients-without-messages
+  // side) because PostgreSQL rejects FULL OUTER JOIN with an OR join condition
+  // ("FULL JOIN is only supported with merge-joinable or hash-joinable join conditions").
   // If userId provided, only returns conversations from clients OR cases assigned to that user.
   async getConversations(filter = 'all', userId = null) {
-    const conditions = [];
-    if (filter === 'clients') {
-      conditions.push('(m.client_id IS NOT NULL OR c.id IS NOT NULL)');
-    } else if (filter === 'non_clients') {
-      conditions.push('m.client_id IS NULL AND c.id IS NULL AND m.phone IS NOT NULL');
-    }
+    const uid = userId !== null ? parseInt(userId) : null;
 
+    // Conditions for the messages side
+    const msgConditions = [];
+    if (filter === 'clients') {
+      msgConditions.push('(m.client_id IS NOT NULL OR c.id IS NOT NULL)');
+    } else if (filter === 'non_clients') {
+      msgConditions.push('m.client_id IS NULL AND c.id IS NULL AND m.phone IS NOT NULL');
+    }
     // Employee (digitador/auxiliar): only see assigned clients' or assigned cases' conversations.
-    // Non-client phones are hidden for employees.
-    if (userId !== null) {
+    if (uid !== null) {
       if (filter === 'non_clients') {
-        // Employees should never see unregistered chats
-        conditions.push('1=0');
+        msgConditions.push('1=0'); // employees never see unregistered chats
       } else {
-        conditions.push(`(
-          c.assigned_to = ${parseInt(userId)}
-          OR m.case_id IN (SELECT id FROM cases WHERE user_id = ${parseInt(userId)})
+        msgConditions.push(`(
+          c.assigned_to = ${uid}
+          OR m.case_id IN (SELECT id FROM cases WHERE user_id = ${uid})
         )`);
       }
     }
+    const msgWhere = msgConditions.length > 0 ? 'WHERE ' + msgConditions.join(' AND ') : '';
 
-    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+    // Conditions for the clients-without-messages side
+    const cliConditions = ['NOT EXISTS (SELECT 1 FROM messages m2 WHERE m2.phone = c.phone OR m2.client_id = c.id)'];
+    if (filter === 'non_clients') {
+      cliConditions.push('1=0'); // a registered client is never a "non-client"
+    }
+    if (uid !== null) {
+      cliConditions.push(`c.assigned_to = ${uid}`);
+    }
+    const cliWhere = 'WHERE ' + cliConditions.join(' AND ');
 
     const { rows } = await pool.query(`
-      SELECT
-        COALESCE(m.phone, c.phone) AS phone,
-        MAX(COALESCE(m.client_id, c.id)) AS client_id,
-        MAX(c.name) AS client_name,
-        MAX(c.assigned_to) AS client_assigned_to,
-        MAX(c.profile_pic_url) AS profile_pic_url,
-        MAX(m.created_at) AS last_message_at,
-        COUNT(m.id) AS message_count
-      FROM clients c
-      FULL OUTER JOIN messages m ON m.phone = c.phone OR m.client_id = c.id
-      ${whereClause}
-      GROUP BY COALESCE(m.phone, c.phone)
-      HAVING COALESCE(m.phone, c.phone) IS NOT NULL
-      ORDER BY MAX(m.created_at) DESC NULLS LAST
+      SELECT phone, client_id, client_name, client_assigned_to, profile_pic_url, last_message_at, message_count
+      FROM (
+        SELECT
+          COALESCE(m.phone, c.phone) AS phone,
+          MAX(COALESCE(m.client_id, c.id)) AS client_id,
+          MAX(c.name) AS client_name,
+          MAX(c.assigned_to) AS client_assigned_to,
+          MAX(c.profile_pic_url) AS profile_pic_url,
+          MAX(m.created_at) AS last_message_at,
+          COUNT(m.id) AS message_count
+        FROM messages m
+        LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
+        ${msgWhere}
+        GROUP BY COALESCE(m.phone, c.phone)
+
+        UNION ALL
+
+        SELECT
+          c.phone, c.id, c.name, c.assigned_to, c.profile_pic_url, NULL, 0
+        FROM clients c
+        ${cliWhere}
+      ) combined
+      WHERE phone IS NOT NULL
+      ORDER BY last_message_at DESC NULLS LAST
     `);
 
     // Fetch last message for each conversation
