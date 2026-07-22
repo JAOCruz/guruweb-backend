@@ -9,7 +9,7 @@ const config = require('../config');
 // ── Per-phone message buffer (debounce for multi-image bursts) ──
 // When a user sends multiple images at once, WhatsApp fires them as separate
 // message events within ~1s. We buffer them and process as one logical turn.
-const MESSAGE_BUFFER_MS = 2000; // wait 2s after last message before processing
+const MESSAGE_BUFFER_MS = 3000; // wait 3s after last message before processing
 const phoneBuffers = new Map(); // phone → { messages: [], timer, sock }
 
 function bufferMessage(phone, payload, sock) {
@@ -215,9 +215,6 @@ async function processBatch(phone, batch, sock) {
   const firstMsg = batch[0].msg;
   const remoteJid = firstMsg.key.remoteJid;
 
-  const willRespond = batch[0].willRespond;
-  if (!willRespond) return;
-
   if (allMedia.length > 0) {
     console.log(`[WA] Processing batch for ${phone}: ${textParts.length} text msgs + ${allMedia.length} media items`);
   }
@@ -232,6 +229,7 @@ async function processBatch(phone, batch, sock) {
             const transcription = await transcribeAudio(media.file_path, media.mime_type);
             if (transcription) {
               console.log(`[WA] Voice note transcribed:\n${transcription}`);
+              media.transcription = transcription;
               // Audio transcription becomes the combined text
               combinedText = combinedText ? `${combinedText} ${transcription}` : transcription;
             }
@@ -243,10 +241,32 @@ async function processBatch(phone, batch, sock) {
           console.error(`[WA] Media analysis error for ${media.file_path}:`, err.message);
         }
       }));
+
+      // Persist each analysis/transcription onto its saved message so the context
+      // survives across batches (no more "context reset" between consecutive photos)
+      // and employees can read the extracted text in the dashboard.
+      await Promise.all(allMedia.map(async (media) => {
+        try {
+          const label = media.transcription
+            ? `[🎤 Voz transcrita]: ${media.transcription}`
+            : media.analysis
+              ? `[📷 ${media.media_type === 'document' ? 'Documento' : 'Imagen'} analizada]:\n${media.analysis}`
+              : null;
+          if (label) await Message.appendMediaAnalysis(media.wa_message_id, label);
+        } catch (err) {
+          console.error('[WA] Error persisting media analysis:', err.message);
+        }
+      }));
     } catch (err) {
       console.error('[WA] Batch media analysis error:', err.message);
     }
   }
+
+  // Media has been downloaded, analyzed and persisted above. From here on it's
+  // only about REPLYING. In manual mode / bot paused / stale messages we stop
+  // here — the info is already collected for the employee, but the bot stays silent.
+  const willRespond = batch[0].willRespond;
+  if (!willRespond) return;
 
   // Build combined savedMedia: first item as base, allMedia array attached for batch extraction
   let savedMedia = allMedia.length > 0 ? allMedia[0] : null;

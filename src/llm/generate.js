@@ -36,7 +36,7 @@ function activateQuotaBackoff(err) {
 }
 
 // Helper: try primary model, fallback on retriable errors
-const RETRIABLE_CODES = ['429', '500', '503', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'INTERNAL'];
+const RETRIABLE_CODES = ['429', '500', '503', '404', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'INTERNAL', 'NOT_FOUND'];
 
 function isRetriable(err) {
   const msg = err.message || '';

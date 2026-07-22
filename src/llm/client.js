@@ -3,9 +3,10 @@ const config = require('../config');
 
 const genAI = new GoogleGenerativeAI(config.gemini.apiKey);
 
-// Primary: gemini-1.5-flash (stable, fast, good quota)
+// Primary: gemini-2.5-flash (current stable, fast, good quota)
+// NOTE: gemini-1.5-* was retired by Google (Sep 2025) and now 404s.
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
+  model: 'gemini-2.5-flash',
   generationConfig: {
     temperature: 0.75,
     maxOutputTokens: 4096,
@@ -13,9 +14,9 @@ const model = genAI.getGenerativeModel({
   },
 });
 
-// Fallback: gemini-1.5-pro (higher quality if flash fails/hits quota)
+// Fallback: gemini-flash-latest (always points at the newest stable flash)
 const fallbackModel = genAI.getGenerativeModel({
-  model: 'gemini-1.5-pro',
+  model: 'gemini-flash-latest',
   generationConfig: {
     temperature: 0.75,
     maxOutputTokens: 4096,

@@ -72,6 +72,19 @@ const Message = {
     return rows[0] || null;
   },
 
+  // Append media analysis / transcription to an already-saved message's content.
+  // Keeps the bot's conversation context aware of what each image/audio contained
+  // and lets employees read the extracted text in the dashboard. Uses the existing
+  // `content` column — no schema migration required.
+  async appendMediaAnalysis(waMessageId, analysisText) {
+    if (!waMessageId || !analysisText) return null;
+    const { rows } = await pool.query(
+      `UPDATE messages SET content = content || E'\n' || $1 WHERE wa_message_id = $2 RETURNING id`,
+      [analysisText, waMessageId]
+    );
+    return rows[0] || null;
+  },
+
   async updateStatus(id, status) {
     const { rows } = await pool.query(
       'UPDATE messages SET status = $1 WHERE id = $2 RETURNING *',
@@ -99,10 +112,9 @@ const Message = {
     return rows[0] || null;
   },
 
-  // Get all conversations grouped by phone, with latest message and client info
-  // Uses COALESCE to fall back to client.phone for old messages missing the phone column
-  // Joins clients by either client_id OR phone so assignment info is available even when
-  // messages were not yet backfilled with client_id.
+  // Get all conversations grouped by phone, with latest message and client info.
+  // Uses a FULL OUTER JOIN between clients and messages so that registered clients
+  // without messages still appear in the list (admin sees all, employees see assigned).
   // If userId provided, only returns conversations from clients OR cases assigned to that user.
   async getConversations(filter = 'all', userId = null) {
     const conditions = [];
@@ -136,13 +148,13 @@ const Message = {
         MAX(c.assigned_to) AS client_assigned_to,
         MAX(c.profile_pic_url) AS profile_pic_url,
         MAX(m.created_at) AS last_message_at,
-        COUNT(*) AS message_count
-      FROM messages m
-      LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
+        COUNT(m.id) AS message_count
+      FROM clients c
+      FULL OUTER JOIN messages m ON m.phone = c.phone OR m.client_id = c.id
       ${whereClause}
       GROUP BY COALESCE(m.phone, c.phone)
       HAVING COALESCE(m.phone, c.phone) IS NOT NULL
-      ORDER BY MAX(m.created_at) DESC
+      ORDER BY MAX(m.created_at) DESC NULLS LAST
     `);
 
     // Fetch last message for each conversation
