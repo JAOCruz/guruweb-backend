@@ -1,8 +1,17 @@
 const express = require('express');
+const path = require('path');
+const multer = require('multer');
 const Message = require('../models/Message');
+const ClientMedia = require('../models/ClientMedia');
+const storage = require('../utils/storage');
 const { sendMessage, getAnyConnection } = require('../whatsapp/connection');
 const Client = require('../models/Client');
 const { authenticate, requireRole } = require('../middleware/auth');
+
+const uploadMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB (WhatsApp media cap)
+});
 
 function isEmployee(role) {
   return role !== 'admin';
@@ -152,6 +161,90 @@ router.post('/send-direct', async (req, res) => {
   } catch (err) {
     console.error('Send direct message error:', err);
     res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// Send a media file (image/audio/video/document) to a chat by phone number.
+// Used by employees in manual mode to send files from the dashboard chat.
+// multipart/form-data: fields phone, caption? + file
+router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
+  try {
+    const { phone, caption } = req.body;
+    const file = req.file;
+    if (!phone || !file) {
+      return res.status(400).json({ error: 'phone and file are required' });
+    }
+
+    const conn = getAnyConnection();
+    if (!conn) {
+      return res.status(503).json({ error: 'No hay sesion de WhatsApp conectada' });
+    }
+
+    // Resolve real JID (handles @lid privacy accounts)
+    const lastJid = await Message.getLastJid(phone);
+    const jid = lastJid || `${phone}@s.whatsapp.net`;
+
+    // Persist file to the Railway volume so it shows in the media viewer
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname || '') || '';
+    const savedName = `${timestamp}_out${ext}`;
+    const filePath = storage.saveBuffer(file.buffer, `media/${phone}`, savedName);
+
+    const mime = file.mimetype || 'application/octet-stream';
+    const isImage = mime.startsWith('image/');
+    const isAudio = mime.startsWith('audio/');
+    const isVideo = mime.startsWith('video/');
+    const mediaType = isImage ? 'image' : isAudio ? 'audio' : isVideo ? 'video' : 'document';
+
+    // Send via WhatsApp
+    let sent;
+    if (isImage) {
+      sent = await conn.sock.sendMessage(jid, { image: file.buffer, caption: caption || '' });
+    } else if (isVideo) {
+      sent = await conn.sock.sendMessage(jid, { video: file.buffer, caption: caption || '' });
+    } else if (isAudio) {
+      sent = await conn.sock.sendMessage(jid, { audio: file.buffer, mimetype: mime, ptt: false });
+    } else {
+      sent = await conn.sock.sendMessage(jid, { document: file.buffer, fileName: file.originalname, mimetype: mime, caption: caption || '' });
+    }
+
+    const client = await Client.findByPhone(phone);
+
+    // Register media so it appears in the dashboard media viewer
+    const mediaRecord = await ClientMedia.create({
+      phone,
+      clientId: client?.id || null,
+      waMessageId: sent.key.id,
+      mediaType,
+      mimeType: mime,
+      originalName: file.originalname,
+      savedName,
+      filePath,
+      fileSize: file.size,
+      context: 'conversation',
+    });
+
+    const typeLabel = mediaType === 'image' ? 'imagen' : mediaType === 'audio' ? 'audio' : mediaType === 'video' ? 'video' : 'adjunto';
+    const content = caption?.trim()
+      ? `${caption.trim()}\n[📎 ${typeLabel}]`
+      : `[📎 ${typeLabel}]`;
+
+    const message = await Message.create({
+      waMessageId: sent.key.id,
+      phone,
+      clientId: client?.id || null,
+      caseId: null,
+      direction: 'outbound',
+      content,
+      mediaUrl: `/api/media/${mediaRecord.id}/download`,
+      waJid: jid,
+    });
+
+    console.log(`[Messages] Media sent to ${phone}: ${mediaType} (${(file.size / 1024).toFixed(1)}KB) by ${req.user.username}`);
+    res.status(201).json({ message, media: mediaRecord });
+  } catch (err) {
+    console.error('Send media error:', err);
+    res.status(500).json({ error: 'Failed to send media: ' + err.message });
   }
 });
 
