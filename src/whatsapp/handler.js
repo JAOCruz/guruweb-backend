@@ -417,6 +417,7 @@ async function handleIncomingMessage(msg, sock) {
         content: logContent,
         mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
         waJid: remoteJid,  // store real JID (may be @lid for privacy accounts)
+        pushName: !isFromMe ? pushName : null,  // contact's WhatsApp display name
       });
       console.log(`[WA] ✅ Mensaje guardado en BD: ${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
     } catch (saveErr) {

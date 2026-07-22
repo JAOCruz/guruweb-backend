@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Broadcast = require('../models/Broadcast');
 const Message = require('../models/Message');
+const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { sendMessage, getAnyConnection } = require('../whatsapp/connection');
 
@@ -134,6 +135,74 @@ async function sendBroadcast(broadcastId) {
   await Broadcast.markDone(broadcastId);
   console.log(`[Broadcast] #${broadcastId} done — ${successCount}/${recipients.length} sent`);
 }
+
+// ── POST /api/broadcasts/apology ── DORMANT recovery broadcast (admin, manual) ──
+// Feature B: apologize to chats that received the robotic fallback during an AI
+// outage. This is NOT automatic — it only runs when an admin explicitly calls it.
+// Default is DRY-RUN (preview the affected chats). To actually send, the request
+// body must include { "confirm": true }. Optionally scope with ?hours=48.
+router.post('/apology', async (req, res) => {
+  try {
+    const hours = Math.min(Math.max(parseInt(req.query.hours || '48', 10) || 48, 1), 24 * 30);
+    const confirm = req.body && req.body.confirm === true;
+
+    // Find phones that received the robotic fallback in the window (outbound from bot),
+    // excluding always-manual/test. Only chats whose LAST inbound still awaits a real reply.
+    const { rows: affected } = await pool.query(`
+      SELECT phone, MAX(created_at) AS last_fallback_at, COUNT(*) AS fallback_count
+      FROM messages
+      WHERE direction = 'outbound'
+        AND content ILIKE '%no entendí bien%'
+        AND created_at > NOW() - ($1 || ' hours')::interval
+        AND phone IS NOT NULL
+        AND phone NOT LIKE '%@newsletter'
+      GROUP BY phone
+      ORDER BY last_fallback_at DESC
+    `, [String(hours)]);
+
+    const message = req.body.message ||
+      `🦉 *Gurú Soluciones*\n\n` +
+      `Saludos. Le escribimos para ofrecerle una disculpa: tuvimos un inconveniente técnico reciente y es posible que su solicitud anterior no haya sido atendida correctamente.\n\n` +
+      `Ya estamos operando con normalidad. ¿En qué podemos ayudarle hoy?`;
+
+    // DRY-RUN: just report who would receive it
+    if (!confirm) {
+      return res.json({
+        dryRun: true,
+        hours,
+        affectedCount: affected.length,
+        affected,
+        message,
+        note: 'Dry-run. Reenvía con { "confirm": true } para enviar realmente. Requiere WhatsApp conectado.',
+      });
+    }
+
+    // CONFIRMED SEND — requires an active WhatsApp connection (team activates the bot)
+    const conn = getAnyConnection();
+    if (!conn) {
+      return res.status(503).json({ error: 'No hay conexión de WhatsApp activa. Activa el bot primero.' });
+    }
+
+    let sent = 0;
+    const failed = [];
+    for (const r of affected) {
+      try {
+        const lastJid = await Message.getLastJid(r.phone);
+        const jid = lastJid || `${r.phone}@s.whatsapp.net`;
+        await sendMessage(conn.sessionId, jid, { text: message });
+        sent++;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // throttle anti-ban
+      } catch (err) {
+        failed.push({ phone: r.phone, error: err.message });
+      }
+    }
+
+    res.json({ dryRun: false, sent, failedCount: failed.length, failed });
+  } catch (err) {
+    console.error('[Broadcast] Apology error:', err);
+    res.status(500).json({ error: 'Error en broadcast de disculpa' });
+  }
+});
 
 // Export sendBroadcast so scheduler can call it
 module.exports = router;

@@ -1,11 +1,11 @@
 const pool = require('../db/pool');
 
 const Message = {
-  async create({ waMessageId, phone, clientId, caseId, direction, content, mediaUrl, status = 'sent', waJid = null }) {
+  async create({ waMessageId, phone, clientId, caseId, direction, content, mediaUrl, status = 'sent', waJid = null, pushName = null }) {
     const { rows } = await pool.query(
-      `INSERT INTO messages (wa_message_id, phone, client_id, case_id, direction, content, media_url, status, wa_jid)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [waMessageId || null, phone || null, clientId, caseId || null, direction, content, mediaUrl || null, status, waJid]
+      `INSERT INTO messages (wa_message_id, phone, client_id, case_id, direction, content, media_url, status, wa_jid, push_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [waMessageId || null, phone || null, clientId, caseId || null, direction, content, mediaUrl || null, status, waJid, pushName]
     );
     return rows[0];
   },
@@ -157,7 +157,7 @@ const Message = {
         SELECT
           COALESCE(m.phone, c.phone) AS phone,
           MAX(COALESCE(m.client_id, c.id)) AS client_id,
-          MAX(c.name) AS client_name,
+          COALESCE(MAX(c.name), MAX(m.push_name)) AS client_name,
           MAX(c.assigned_to) AS client_assigned_to,
           MAX(c.profile_pic_url) AS profile_pic_url,
           MAX(m.created_at) AS last_message_at,

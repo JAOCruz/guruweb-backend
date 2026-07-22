@@ -520,28 +520,17 @@ if images:
       previewPath = null;
     }
 
-    // Return to menu with PDF link (natural conversation flow, no numbered menu)
+    // Return to menu. The quotation is saved as a DRAFT and the PDF is generated,
+    // but NOTHING is sent to the client automatically — per business rule, an
+    // employee reviews and sends the quotation manually from the dashboard.
     await transitionTo(session, 'main_menu', 'show');
 
-    const responseMsg = `✅ *Factura #${docNum} generada*\n\n` +
+    console.log(`[Billing] Quote ${docNum} saved as draft (NOT sent). Awaiting employee review/send.`);
+
+    return `✅ *Cotización #${docNum} registrada*\n\n` +
       `💰 *Total: RD$ ${session.data.quoteTotal.toLocaleString('es-DO')}*\n\n` +
-      `📥 Descargar PDF:\n${pdfUrl}\n\n` +
-      `Nuestro equipo se pondrá en contacto para procesar el pago.\n\n` +
+      `Un miembro de nuestro equipo la revisará y se la enviará formalmente en breve. 🦉\n\n` +
       `¿En qué más puedo ayudarle?`;
-
-    // Send preview image if available (skip for simulator)
-    if (previewPath && !isSimulator) {
-      try {
-        const { sendImageToChat } = require('../../whatsapp/sender');
-        const jid = `${session.phone}@s.whatsapp.net`;
-        await sendImageToChat(jid, previewPath, responseMsg);
-        console.log(`[Billing] Preview image sent`);
-      } catch (imgErr) {
-        console.warn(`[Billing] Could not send preview:`, imgErr.message);
-      }
-    }
-
-    return responseMsg;
   } catch (err) {
     console.error('[Billing] Invoice generation error:', err.message, err.stack);
     await transitionTo(session, 'main_menu', 'show');

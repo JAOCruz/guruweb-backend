@@ -389,8 +389,21 @@ ${hint ? `INSTRUCCIÓN: ${hint}` : ''}
       console.error('[Router] Error building client context:', err.message);
     }
 
+    // Feature A (recovery): if the bot's last reply was the robotic fallback from the
+    // AI outage, tell the LLM to apologize briefly and refocus. This is PASSIVE — it
+    // only ever runs when the bot is actually replying (i.e. when the team has the
+    // bot active), never while paused or in manual mode.
+    let recoveryContext = '';
+    try {
+      const lastOutbound = [...history].reverse().find(m => m.direction === 'outbound');
+      if (lastOutbound && /no entendí bien/i.test(lastOutbound.content || '')) {
+        recoveryContext = '\n\n[NOTA INTERNA — NO LA REPITAS TEXTUALMENTE AL CLIENTE]: El sistema tuvo un problema técnico reciente y estuvo respondiendo con mensajes genéricos de error. Ofrece UNA disculpa breve y natural al inicio (por la demora/inconveniente), y luego atiende la solicitud actual del cliente con total normalidad y prioridad. No vuelvas a caer en respuestas genéricas.';
+        console.log(`[Router] Recovery mode: last bot reply was the outage fallback for ${session.phone}`);
+      }
+    } catch (_) {}
+
     const query = text || (savedMedia?.analysis ? 'El cliente envió un archivo.' : '');
-    const llmResponse = await generateLegalResponse(query, kbContext + mediaContext + clientContext, history);
+    const llmResponse = await generateLegalResponse(query, kbContext + mediaContext + clientContext + recoveryContext, history);
     if (llmResponse) {
       console.log(`[LLM] Smart fallback responded to: "${(text || '[media]').substring(0, 50)}"`);
       return llmResponse;

@@ -13,6 +13,9 @@ const Invoice = require('../models/Invoice');
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
 const Case = require('../models/Case');
+const Client = require('../models/Client');
+const Message = require('../models/Message');
+const { sendDocumentToChat } = require('../whatsapp/sender');
 
 const router = express.Router();
 
@@ -143,6 +146,15 @@ router.post('/', async (req, res) => {
     const { type, clientId, clientName, clientPhone, items, notes } = req.body;
     if (!clientName || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'clientName and items[] are required' });
+    }
+
+    // Employees can only create invoices for clients assigned to them
+    if (isEmployee(req.user.role) && clientId) {
+      const client = await Client.findById(clientId);
+      if (!client) return res.status(404).json({ error: 'Client not found' });
+      if (client.assigned_to !== req.user.id) {
+        return res.status(403).json({ error: 'Client is not assigned to you' });
+      }
     }
 
     const defaultNotes = 'Pago del 100% al recibir el documento finalizado.\nRetiro en tienda física en horario disponible: 9:00 a.m. a 5:30 p.m. (hora Santo Domingo, RD).';
@@ -311,6 +323,81 @@ router.post('/:id/send', async (req, res) => {
   } catch (err) {
     console.error('Send invoice error:', err);
     res.status(500).json({ error: 'Failed to send invoice' });
+  }
+});
+
+// ── POST /api/invoices/:id/generate-pdf ── generate/regenerate PDF for PREVIEW
+// without changing status to 'sent'. Lets the employee review the document before
+// deciding to send it. Owner (employee) or admin.
+router.post('/:id/generate-pdf', async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const created = new Date(invoice.created_at || Date.now());
+    const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
+    const pdfPath = await generateInvoicePDF({
+      clientName:  invoice.client_name,
+      clientPhone: invoice.client_phone,
+      docNumber:   invoice.doc_number,
+      date:        dateStr,
+      items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
+      notes:       invoice.notes,
+      type:        invoice.type,
+    });
+
+    const updated = await Invoice.update(invoice.id, { pdf_path: pdfPath, pdf_storage_type: 'railway_volume' });
+    res.json({ invoice: updated, pdfPath, message: 'PDF generated (preview, not sent).' });
+  } catch (err) {
+    console.error('Generate PDF error:', err);
+    res.status(500).json({ error: 'Failed to generate PDF: ' + err.message });
+  }
+});
+
+// ── POST /api/invoices/:id/send-whatsapp ── generate PDF (if needed) and send it
+// to the client's WhatsApp chat. This is the manual "employee confirms and sends"
+// step — nothing is sent automatically. Owner (employee) or admin.
+router.post('/:id/send-whatsapp', async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Ensure PDF exists (generate if missing or file gone)
+    let pdfPath = invoice.pdf_path;
+    if (!pdfPath || !fs.existsSync(pdfPath)) {
+      const created = new Date(invoice.created_at || Date.now());
+      const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
+      pdfPath = await generateInvoicePDF({
+        clientName:  invoice.client_name,
+        clientPhone: invoice.client_phone,
+        docNumber:   invoice.doc_number,
+        date:        dateStr,
+        items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
+        notes:       invoice.notes,
+        type:        invoice.type,
+      });
+    }
+
+    // Resolve the chat JID (handles @lid privacy accounts via last known JID)
+    const phone = invoice.client_phone;
+    if (!phone) return res.status(400).json({ error: 'Invoice has no client phone' });
+    const jid = (await Message.getLastJid(phone)) || `${phone}@s.whatsapp.net`;
+
+    await sendDocumentToChat(jid, pdfPath, `${invoice.doc_number}.pdf`);
+
+    const updated = await Invoice.markSent(
+      invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'
+    );
+    res.json({ invoice: updated, message: `Invoice sent via WhatsApp to ${phone}` });
+  } catch (err) {
+    console.error('Send WhatsApp invoice error:', err);
+    res.status(500).json({ error: 'Failed to send invoice via WhatsApp: ' + err.message });
   }
 });
 

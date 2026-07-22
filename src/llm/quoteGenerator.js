@@ -1,21 +1,49 @@
 const { SERVICE_CATEGORIES } = require('../knowledge/services');
 
+// Spanish word numbers → digits, so "dos hojas" / "una impresión" parse like "2 hojas".
+const WORD_NUMBERS = {
+  'un': 1, 'una': 1, 'uno': 1,
+  'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5,
+  'seis': 6, 'siete': 7, 'ocho': 8, 'nueve': 9, 'diez': 10,
+  'once': 11, 'doce': 12, 'trece': 13, 'catorce': 14, 'quince': 15,
+  'dieciseis': 16, 'dieciséis': 16, 'diecisiete': 17, 'dieciocho': 18,
+  'diecinueve': 19, 'veinte': 20,
+};
+
+// Replace leading number-words with digits ONLY when followed by a noun (not words
+// like "cotización"/"factura" where "una" is just an article).
+function normalizeWordNumbers(text) {
+  const stopwords = /^(cotiza|cotización|cotizacion|factura|precio|cuenta|consulta)/i;
+  return text.replace(
+    /\b(una?|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciséis|dieciseis|diecisiete|dieciocho|diecinueve|veinte)\s+([a-záéíóúñü]+)/gi,
+    (m, numWord, nextWord) => {
+      const n = WORD_NUMBERS[numWord.toLowerCase()];
+      if (!n) return m;
+      if (stopwords.test(nextWord) && /^(una?|uno)$/i.test(numWord)) return m; // "una cotización"
+      return `${n} ${nextWord}`;
+    }
+  );
+}
+
 /**
  * Extract quantities and item names from user message
- * Handles patterns like "16 hojas blancas", "5 folders", etc.
+ * Handles patterns like "16 hojas blancas", "5 folders", "dos hojas", "una impresión"
  */
 function extractItemsFromMessage(text) {
   const items = [];
   const seen = new Set(); // Track to avoid duplicates
 
+  const normalized = normalizeWordNumbers(text);
+
   // Pattern: "número item(s)" — matches "16 hojas blancas", "5 folders", "2 sacapuntas"
   // Lookahead to stop before next number or end of message
-  const pattern = /(\d+)\s+(?:de\s+)?([a-záéíóúñüü\s]+?)(?=\s+\d+|$)/gi;
+  const pattern = /(\d+)\s+(?:de\s+)?([a-záéíóúñü\s]+?)(?=\s+\d+|$)/gi;
 
   let match;
-  while ((match = pattern.exec(text)) !== null) {
+  while ((match = pattern.exec(normalized)) !== null) {
     const quantity = parseInt(match[1]);
-    const itemName = match[2].trim().toLowerCase();
+    // Strip trailing connectors/commas ("hojas blancas y" → "hojas blancas")
+    const itemName = match[2].trim().toLowerCase().replace(/[\s,]+(y|e|con)$/i, '').trim();
 
     // Skip duplicates and short items
     if (itemName.length < 2) continue;
@@ -55,40 +83,52 @@ function findCatalogItem(searchTerm) {
     }
   }
 
-  // Search ONLY in tienda_fisica for office supply quote requests
-  const category = SERVICE_CATEGORIES.tienda_fisica;
-  if (!category || !category.items) return null;
+  // Search the store/supplies categories (papelería, impresiones, mensajería).
+  // These are the non-legal "tienda" items a client can quote. Searching all legal
+  // categories would cause false positives (e.g. "carta" matching a legal service).
+  const STORE_CATEGORIES = ['tienda_fisica', 'impresiones', 'mensajeria'];
 
-  // First pass: exact substring match
-  for (const item of category.items) {
-    const itemNameLower = item.name.toLowerCase();
-    for (const variation of searchVariations) {
-      if (itemNameLower.includes(variation)) {
-        return { ...item, category: 'tienda_fisica', categoryName: category.name };
+  const matchIn = (categoryName) => {
+    const category = SERVICE_CATEGORIES[categoryName];
+    if (!category || !category.items) return null;
+
+    // First pass: exact substring match
+    for (const item of category.items) {
+      const itemNameLower = item.name.toLowerCase();
+      for (const variation of searchVariations) {
+        if (itemNameLower.includes(variation)) {
+          return { ...item, category: categoryName, categoryName: category.name };
+        }
       }
     }
-  }
 
-  // Second pass: word-based matching (more lenient)
-  for (const item of category.items) {
-    const itemNameLower = item.name.toLowerCase();
-    const itemWords = itemNameLower.split(/\s+/);
+    // Second pass: word-based matching (more lenient)
+    for (const item of category.items) {
+      const itemNameLower = item.name.toLowerCase();
+      const itemWords = itemNameLower.split(/\s+/);
 
-    for (const variation of searchVariations) {
-      const searchWords = variation.split(/\s+/).filter(w => w.length > 2);
-      if (searchWords.length === 0) continue;
+      for (const variation of searchVariations) {
+        const searchWords = variation.split(/\s+/).filter(w => w.length > 2);
+        if (searchWords.length === 0) continue;
 
-      // Match if ANY search word starts same as ANY item word
-      for (const searchWord of searchWords) {
-        for (const itemWord of itemWords) {
-          // Exact word match or good prefix match
-          if (itemWord === searchWord || (itemWord.length > 3 && searchWord.length > 3 &&
-              itemWord.substring(0, 4) === searchWord.substring(0, 4))) {
-            return { ...item, category: 'tienda_fisica', categoryName: category.name };
+        // Match if ANY search word starts same as ANY item word
+        for (const searchWord of searchWords) {
+          for (const itemWord of itemWords) {
+            // Exact word match or good prefix match
+            if (itemWord === searchWord || (itemWord.length > 3 && searchWord.length > 3 &&
+                itemWord.substring(0, 4) === searchWord.substring(0, 4))) {
+              return { ...item, category: categoryName, categoryName: category.name };
+            }
           }
         }
       }
     }
+    return null;
+  };
+
+  for (const cat of STORE_CATEGORIES) {
+    const found = matchIn(cat);
+    if (found) return found;
   }
 
   return null;
@@ -135,15 +175,12 @@ function generateQuote(userMessage) {
   for (const { quantity, item: itemName } of extracted) {
     const catalogItem = findCatalogItem(itemName);
 
-    if (!catalogItem) {
-      // Item not found - might not be a quote request
-      return { success: false, message: null };
-    }
+    // Skip unrecognized items instead of aborting the whole quote — the message may
+    // mix quotable supplies ("2 hojas") with non-catalog words ("y una cotización").
+    if (!catalogItem) continue;
 
     const itemTotal = getPrice(catalogItem, quantity, userMessage);
-    if (!itemTotal) {
-      return { success: false, message: null };
-    }
+    if (!itemTotal) continue;
 
     // Check if user is asking about item types/options
     const isAskingAboutTypes = /(cual|que tipo|plastico|metal|opciones|tipos)/i.test(userMessage);
