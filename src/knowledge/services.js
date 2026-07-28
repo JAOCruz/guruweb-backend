@@ -361,7 +361,14 @@ const SERVICE_CATEGORIES = {
 // ─── Formatters ──────────────────────────────────────────────────────────────
 
 function formatPrice(item) {
-  return Object.entries(item.prices)
+  const p = item.prices;
+  // Combo redacción + notarización: show the breakdown AND the total (they add up),
+  // so the bot never quotes only one of the two components.
+  if (p.redaccion != null && p.notarizacion != null) {
+    const total = p.redaccion + p.notarizacion;
+    return `Redacción RD$${p.redaccion} + Notarización RD$${p.notarizacion} = *RD$${total}*`;
+  }
+  return Object.entries(p)
     .map(([k, v]) => k === 'unico' ? `RD$${v}` : `${k}: RD$${v}`)
     .join(', ');
 }
