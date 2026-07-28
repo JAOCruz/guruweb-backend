@@ -2,7 +2,8 @@ const Message = require('../models/Message');
 const Client = require('../models/Client');
 const ClientMedia = require('../models/ClientMedia');
 const { saveMediaFromMessage } = require('./mediaService');
-const { routeMessage } = require('../conversation/router');
+const { routeMessage, AI_DEFERRED } = require('../conversation/router');
+const { getQuotaBackoffRemaining } = require('../llm/generate');
 const { load: loadSettings, save: saveSettings } = require('./botSettings');
 const config = require('../config');
 
@@ -27,6 +28,56 @@ function bufferMessage(phone, payload, sock) {
       console.error('[WA] Batch processing error:', err.message)
     );
   }, MESSAGE_BUFFER_MS);
+}
+
+// ── AI quota-backoff retry queue ──
+// When the AI is temporarily rate-limited by Google, we do NOT answer with the
+// robotic error fallback. We hold the message (with its context) and retry once
+// the AI is available again, so the client still gets a proper answer.
+const pendingAIRetries = new Map(); // phone → { text, savedMedia, remoteJid, sock, client, attempts, timer }
+const MAX_AI_RETRY_ATTEMPTS = 6; // ~3 min total before giving up gracefully
+
+function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client) {
+  const backoffMs = getQuotaBackoffRemaining() || 30000;
+  const delayMs = backoffMs + 5000; // small safety margin past the backoff
+
+  const existing = pendingAIRetries.get(phone);
+  if (existing) {
+    // Merge consecutive messages from the same person into one pending turn
+    existing.text = `${existing.text} ${text}`.trim();
+    if (savedMedia) existing.savedMedia = savedMedia;
+    clearTimeout(existing.timer);
+  }
+  const entry = existing || { text, savedMedia, remoteJid, sock, client, attempts: 0 };
+
+  entry.timer = setTimeout(async () => {
+    pendingAIRetries.delete(phone);
+    entry.attempts++;
+    // Safety: only reply if the bot is still active for this chat (not paused/manual since)
+    if (!shouldBotRespond(phone)) {
+      console.log(`[WA] AI retry cancelled — bot no longer responding to ${phone}`);
+      return;
+    }
+    try {
+      const syntheticMsg = { key: { remoteJid: entry.remoteJid } };
+      const response = await routeMessage(phone, entry.text, syntheticMsg, entry.savedMedia);
+      if (response && response !== AI_DEFERRED) {
+        await sendResponse(entry.sock, entry.remoteJid, response, syntheticMsg, phone, entry.client);
+      } else if (response === AI_DEFERRED && entry.attempts < MAX_AI_RETRY_ATTEMPTS) {
+        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client);
+      } else if (response === AI_DEFERRED) {
+        // Exhausted retries — graceful message instead of the robotic fallback
+        await sendResponse(entry.sock, entry.remoteJid,
+          '🦉 Estamos procesando varias solicitudes en este momento. Un miembro de nuestro equipo le atenderá en breve, gracias por su paciencia.',
+          syntheticMsg, phone, entry.client);
+      }
+    } catch (err) {
+      console.error('[WA] AI retry error:', err.message);
+    }
+  }, delayMs);
+
+  pendingAIRetries.set(phone, entry);
+  console.log(`[WA] AI backoff — message from ${phone} deferred, retry in ${Math.round(delayMs / 1000)}s`);
 }
 
 // Numbers that are ALWAYS manual (bot never auto-responds).
@@ -304,7 +355,11 @@ async function processBatch(phone, batch, sock) {
 
   const response = await routeMessage(phone, combinedText, firstMsg, savedMedia);
 
-  if (response) {
+  if (response === AI_DEFERRED) {
+    // AI temporarily rate-limited: hold the message (with context) and retry,
+    // instead of answering with the robotic error fallback.
+    scheduleAIRetry(phone, combinedText, savedMedia, remoteJid, sock, client);
+  } else if (response) {
     await sendResponse(sock, remoteJid, response, firstMsg, phone, client);
   }
 }

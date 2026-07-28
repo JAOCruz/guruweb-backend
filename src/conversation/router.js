@@ -5,7 +5,12 @@ const { MSG, LIST } = require('./messages');
 const { withList } = require('../whatsapp/interactive');
 const { detectIntent, isMenuChoice } = require('./nlp');
 const { searchKnowledge, formatSearchResults } = require('../knowledge/search');
+const { getQuotaBackoffRemaining } = require('../llm/generate');
 const config = require('../config');
+
+// Special marker returned instead of the robotic fallback when the AI is
+// temporarily rate-limited (quota backoff). The handler defers and retries.
+const AI_DEFERRED = '<<AI_DEFERRED>>';
 
 const intakeFlow = require('./flows/intake');
 const appointmentFlow = require('./flows/appointment');
@@ -410,6 +415,13 @@ ${hint ? `INSTRUCCIÓN: ${hint}` : ''}
     }
   }
 
+  // If the AI is temporarily rate-limited by Google (quota backoff), defer and let
+  // the handler retry shortly — do NOT answer with the robotic error fallback.
+  if (config.gemini.enabled && getQuotaBackoffRemaining() > 0) {
+    console.log(`[Router] AI in quota backoff (${Math.ceil(getQuotaBackoffRemaining() / 1000)}s) — deferring message for ${session.phone}`);
+    return AI_DEFERRED;
+  }
+
   // Fallback: never dump raw knowledge-base snippets — they are often out of context.
   // Keep the response conversational and ask the user to clarify.
   return "Disculpe, no entendí bien. ¿Podría explicarme de otra forma? Estoy aquí para ayudarle con cualquier asunto legal.";
@@ -427,4 +439,4 @@ async function handleTalkToLawyer(session, text) {
   return withList('Su mensaje ha sido enviado a nuestro equipo legal. Le contactaremos a la brevedad.\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
 }
 
-module.exports = { routeMessage };
+module.exports = { routeMessage, AI_DEFERRED };

@@ -225,6 +225,14 @@ function getRateLimitStatus() {
   };
 }
 
+// Returns the remaining quota-backoff time in ms (0 if the AI is available).
+// Used to defer (and retry) messages instead of answering with the robotic
+// fallback while the AI is temporarily rate-limited by Google.
+function getQuotaBackoffRemaining() {
+  const remaining = quotaBackoffUntil - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
 async function generateGreeting(type, clientName = null) {
   if (!canMakeRequest()) {
     console.log('[LLM] Rate limited — using static greeting');
@@ -331,7 +339,7 @@ Reglas: español dominicano formal, *negritas* WhatsApp, ${isSingleWord ? 'NO me
 }
 
 module.exports = {
-  detectIntentLLM, generateLegalResponse, generateGreeting, generateIntakeConfirmation, getRateLimitStatus,
+  detectIntentLLM, generateLegalResponse, generateGreeting, generateIntakeConfirmation, getRateLimitStatus, getQuotaBackoffRemaining,
   // Shared rate limiter utilities (used by mediaAnalysis.js)
   canMakeRequest, recordRequest, generateWithFallback,
 };
