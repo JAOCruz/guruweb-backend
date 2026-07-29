@@ -263,7 +263,7 @@ const SERVICE_CATEGORIES = {
       {
         name: 'Certificación de Estatus Jurídico de Inmueble',
         modalidad: 'digital',
-        prices: { 'por inmueble': 500 },
+        prices: { 'por inmueble': 1000 },
         requisitos: [
           'Instancia de solicitud (firmada por el representante o propietario)',
           'Cédula de identidad del representante o propietario',

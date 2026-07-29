@@ -149,7 +149,7 @@ Cuando alguien pregunte por este servicio (nueva solicitud), responde con requis
   2. Cédula de identidad del representante o propietario
   3. Impuesto de Ley
   4. Copia o imagen del Título de Propiedad
-- *Precio*: RD$500 por inmueble
+- *Precio*: RD$1000 por inmueble
 - *Ventaja clave*: "¡Solicitándolo con nosotros lo tiene en menos días!!" 🏠⚖️
 - Una vez el cliente confirme, pídele los documentos y sus datos para procesar.
 IMPORTANTE: Si ya tiene una solicitud EN CURSO y pregunta el estado → aplica Regla 12 (escalación obligatoria).
