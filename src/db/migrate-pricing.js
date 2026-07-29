@@ -219,7 +219,7 @@ async function migrate() {
       // SERVICIOS DIGITALES
       // ═══════════════════════════════════════════════════════
       { name: 'Apostilla en Cancillería', category: 'Solicitud de Certificaciones', digitacion: 300, notarizacion: null, unit: 'por documento' },
-      { name: 'Certificación Estatus Jurídico Inmueble', category: 'Solicitud de Certificaciones', digitacion: 500, notarizacion: null, unit: 'por inmueble' },
+      { name: 'Certificación Estatus Jurídico Inmueble', category: 'Solicitud de Certificaciones', digitacion: 1000, notarizacion: null, unit: 'por inmueble' },
       { name: 'Formulario DS-160 (Visa USA)', category: 'Solicitud de Certificaciones', digitacion: 2000, notarizacion: null, unit: 'por persona' },
       { name: 'Solicitud Pasaporte Dominicano', category: 'Solicitud de Certificaciones', digitacion: 500, notarizacion: null, unit: 'por unidad' },
       { name: 'Solicitud DGII/Tribunales/Poder Judicial', category: 'Solicitud de Certificaciones', digitacion: 500, notarizacion: null, unit: 'por unidad' },
