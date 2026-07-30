@@ -2,12 +2,24 @@ const pool = require('../db/pool');
 
 const Message = {
   async create({ waMessageId, phone, clientId, caseId, direction, content, mediaUrl, status = 'sent', waJid = null, pushName = null }) {
+    // ON CONFLICT with the partial unique index on wa_message_id: Baileys re-delivers
+    // the same message several times (reconnects/media retries), so we skip reinserting.
+    // NULL wa_message_id rows never conflict and always insert.
     const { rows } = await pool.query(
       `INSERT INTO messages (wa_message_id, phone, client_id, case_id, direction, content, media_url, status, wa_jid, push_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (wa_message_id) WHERE wa_message_id IS NOT NULL DO NOTHING
+       RETURNING *`,
       [waMessageId || null, phone || null, clientId, caseId || null, direction, content, mediaUrl || null, status, waJid, pushName]
     );
-    return rows[0];
+    return rows[0] || null; // null when it was a duplicate delivery
+  },
+
+  // Returns the id if a message with this WhatsApp id already exists (dedupe check).
+  async findByWaMessageId(waMessageId) {
+    if (!waMessageId) return null;
+    const { rows } = await pool.query('SELECT id FROM messages WHERE wa_message_id = $1 LIMIT 1', [waMessageId]);
+    return rows[0] || null;
   },
 
   // Get the last known real JID for a phone (handles @lid accounts)

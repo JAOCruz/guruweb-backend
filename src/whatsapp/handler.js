@@ -371,6 +371,14 @@ async function handleIncomingMessage(msg, sock) {
     // Skip group messages and status broadcasts
     if (remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') return;
 
+    // Dedupe: Baileys re-delivers the same message several times (reconnects/media
+    // retries). If we already processed this wa_message_id, skip it entirely so we
+    // don't duplicate the DB row, the saved media, or send a repeated reply.
+    if (msg.key?.id) {
+      const alreadyProcessed = await Message.findByWaMessageId(msg.key.id);
+      if (alreadyProcessed) return;
+    }
+
     const isLid = remoteJid.endsWith('@lid');
     const rawPhone = remoteJid.replace(/@s\.whatsapp\.net$|@lid$/g, '');
 
