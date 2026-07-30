@@ -190,15 +190,22 @@ const Message = {
       ORDER BY last_message_at DESC NULLS LAST
     `);
 
-    // Fetch last message for each conversation
+    // Fetch last message for ALL conversations in ONE query (was N+1: one query per
+    // conversation, which made the message list slow as the number of chats grew).
+    const { rows: lastMsgs } = await pool.query(`
+      SELECT DISTINCT ON (key) key, content, direction
+      FROM (
+        SELECT COALESCE(m.phone, c.phone) AS key, m.content, m.direction, m.created_at
+        FROM messages m
+        LEFT JOIN clients c ON c.id = m.client_id
+      ) sub
+      ORDER BY key, created_at DESC
+    `);
+    const lastByPhone = new Map(lastMsgs.map((r) => [r.key, r]));
     for (const conv of rows) {
-      const { rows: last } = await pool.query(`
-        SELECT content, direction FROM messages
-        WHERE phone = $1 OR (phone IS NULL AND client_id IN (SELECT id FROM clients WHERE phone = $1))
-        ORDER BY created_at DESC LIMIT 1
-      `, [conv.phone]);
-      conv.last_message = last[0]?.content || '';
-      conv.last_direction = last[0]?.direction || '';
+      const last = lastByPhone.get(conv.phone);
+      conv.last_message = last?.content || '';
+      conv.last_direction = last?.direction || '';
     }
 
     return rows;

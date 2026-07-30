@@ -402,6 +402,17 @@ async function handleIncomingMessage(msg, sock) {
       || msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId
       || '';
 
+    // WhatsApp shared location has no downloadable media, so it was being ignored.
+    // Convert it to a text message with a Google Maps link so it shows in the dashboard.
+    const loc = msg.message?.locationMessage;
+    if (loc && !text) {
+      const lat = loc.degreesLatitude;
+      const lng = loc.degreesLongitude;
+      const label = loc.name || loc.address || '';
+      const link = (lat != null && lng != null) ? `https://maps.google.com/?q=${lat},${lng}` : '';
+      text = `📍 Ubicación compartida${label ? `: ${label}` : ''}${link ? `\n${link}` : ''}`.trim();
+    }
+
     // Allow empty text only if there's media (document flow)
     const hasMedia = !!(
       msg.message?.imageMessage

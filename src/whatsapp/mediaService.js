@@ -25,6 +25,14 @@ const MIME_EXTENSIONS = {
   'audio/ogg; codecs=opus': '.ogg',
   'audio/mpeg': '.mp3',
   'video/mp4': '.mp4',
+  'application/zip': '.zip',
+  'application/x-zip-compressed': '.zip',
+  'application/vnd.rar': '.rar',
+  'application/x-rar-compressed': '.rar',
+  'application/x-rar': '.rar',
+  'application/x-7z-compressed': '.7z',
+  'application/gzip': '.gz',
+  'application/x-tar': '.tar',
 };
 
 function getExtension(mimeType, fileName) {
