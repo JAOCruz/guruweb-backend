@@ -364,6 +364,32 @@ async function processBatch(phone, batch, sock) {
   }
 }
 
+// Extract the text/caption of the message a client is replying to (quoted message).
+// WhatsApp nests it under each message type's contextInfo.quotedMessage.
+function extractQuotedText(message) {
+  const m = message || {};
+  const types = ['extendedTextMessage', 'imageMessage', 'documentMessage', 'videoMessage', 'audioMessage', 'conversation'];
+  let quoted = null;
+  for (const t of types) {
+    const ctx = m[t]?.contextInfo || m[t]?.extendedTextMessage?.contextInfo;
+    if (ctx?.quotedMessage) { quoted = ctx.quotedMessage; break; }
+  }
+  if (!quoted) return null;
+  const qtext = quoted.conversation
+    || quoted.extendedTextMessage?.text
+    || quoted.imageMessage?.caption
+    || quoted.documentMessage?.caption
+    || quoted.videoMessage?.caption
+    || quoted.documentMessage?.fileName
+    || (quoted.imageMessage ? '[imagen]' : null)
+    || (quoted.documentMessage ? '[documento]' : null)
+    || (quoted.audioMessage ? '[audio]' : null)
+    || (quoted.videoMessage ? '[video]' : null)
+    || null;
+  if (!qtext) return null;
+  return qtext.length > 80 ? qtext.substring(0, 80) + '…' : qtext;
+}
+
 async function handleIncomingMessage(msg, sock) {
   try {
     const remoteJid = msg.key.remoteJid;
@@ -400,7 +426,18 @@ async function handleIncomingMessage(msg, sock) {
     let text = msg.message?.conversation
       || msg.message?.extendedTextMessage?.text
       || msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId
+      // Caption (comment) attached to an image/document/video — e.g. a client sending
+      // a document with a note like "Asamblea" was showing only "[documento]".
+      || msg.message?.imageMessage?.caption
+      || msg.message?.documentMessage?.caption
+      || msg.message?.videoMessage?.caption
       || '';
+
+    // Quoted / replied-to message: show which message the client is replying to.
+    const quoted = extractQuotedText(msg.message);
+    if (quoted) {
+      text = text ? `↩️ Resp. a: "${quoted}"\n${text}` : `↩️ Resp. a: "${quoted}"`;
+    }
 
     // WhatsApp shared location has no downloadable media, so it was being ignored.
     // Convert it to a text message with a Google Maps link so it shows in the dashboard.
