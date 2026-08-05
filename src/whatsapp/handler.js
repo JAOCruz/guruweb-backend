@@ -408,16 +408,27 @@ async function handleIncomingMessage(msg, sock) {
     const isLid = remoteJid.endsWith('@lid');
     const rawPhone = remoteJid.replace(/@s\.whatsapp\.net$|@lid$/g, '');
 
-    // For privacy @lid accounts, try to reuse the phone we mapped earlier so
-    // the conversation doesn't split into random lid-only threads.
+    // For privacy @lid accounts, resolve the real phone number so the conversation
+    // doesn't split into random lid-only threads.
     let phone = rawPhone;
     if (isLid) {
-      const mappedPhone = await Message.findPhoneByWaJid(remoteJid);
-      if (mappedPhone) {
-        phone = mappedPhone;
-        console.log(`[WA] Mapped @lid ${rawPhone} to known phone ${mappedPhone}`);
+      // 1) Baileys exposes the real number for @lid contacts as senderPn/participantPn
+      const realPn = msg.key?.senderPn || msg.key?.participantPn || null;
+      const realPhone = realPn ? String(realPn).replace(/@s\.whatsapp\.net$|@lid$|@pn$/g, '') : null;
+      const botNumber = (sock?.user?.id || '').replace(/@s\.whatsapp\.net$|:.*/g, '');
+
+      if (realPhone && realPhone !== rawPhone && realPhone !== botNumber) {
+        phone = realPhone;
+        console.log(`[WA] Resolved @lid ${rawPhone} → real phone ${realPhone} via senderPn`);
       } else {
-        console.log(`[WA] New @lid contact ${rawPhone} — conversation will use lid until a real phone is known`);
+        // 2) Fallback: reuse a phone we mapped earlier for this @lid
+        const mappedPhone = await Message.findPhoneByWaJid(remoteJid);
+        if (mappedPhone) {
+          phone = mappedPhone;
+          console.log(`[WA] Mapped @lid ${rawPhone} to known phone ${mappedPhone}`);
+        } else {
+          console.log(`[WA] New @lid contact ${rawPhone} — conversation will use lid until a real phone is known`);
+        }
       }
     }
 

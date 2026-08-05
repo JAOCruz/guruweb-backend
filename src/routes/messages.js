@@ -325,6 +325,36 @@ router.post('/register-client', async (req, res) => {
   }
 });
 
+// Map a privacy @lid chat to a real phone number (admin). Moves all its messages to
+// the real phone, unifying the conversation. Since those messages carry wa_jid=<lid>,
+// future messages from that @lid resolve to the real phone automatically.
+router.post('/map-lid', requireRole('admin'), async (req, res) => {
+  try {
+    const { lidPhone, realPhone } = req.body;
+    if (!lidPhone || !realPhone) {
+      return res.status(400).json({ error: 'lidPhone and realPhone are required' });
+    }
+    const cleanLid = String(lidPhone).replace(/\D/g, '');
+    const cleanReal = String(realPhone).replace(/\D/g, '');
+    if (!cleanLid || !cleanReal) {
+      return res.status(400).json({ error: 'Invalid phone numbers' });
+    }
+    if (cleanLid === cleanReal) {
+      return res.status(400).json({ error: 'lidPhone and realPhone must differ' });
+    }
+    const pool = require('../db/pool');
+    const { rowCount } = await pool.query(
+      'UPDATE messages SET phone = $1 WHERE phone = $2',
+      [cleanReal, cleanLid]
+    );
+    console.log(`[Messages] Mapped @lid ${cleanLid} → ${cleanReal} (${rowCount} messages moved) by ${req.user.username}`);
+    res.json({ lidPhone: cleanLid, realPhone: cleanReal, messagesMoved: rowCount });
+  } catch (err) {
+    console.error('Map lid error:', err);
+    res.status(500).json({ error: 'Failed to map lid' });
+  }
+});
+
 // Search conversations by message content
 router.get('/search', async (req, res) => {
   try {
