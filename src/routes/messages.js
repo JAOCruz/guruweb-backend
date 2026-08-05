@@ -54,6 +54,53 @@ router.get('/conversations', async (req, res) => {
   }
 });
 
+// Count unread inbound messages (drives the "Mensajes" badge).
+// Admin sees all; an employee only counts chats assigned to them.
+router.get('/unread-count', async (req, res) => {
+  try {
+    const pool = require('../db/pool');
+    let result;
+    if (isEmployee(req.user.role)) {
+      result = await pool.query(
+        `SELECT COUNT(*) AS count FROM messages m
+         WHERE m.read = FALSE AND m.direction = 'inbound'
+           AND (
+             m.phone IN (SELECT phone FROM clients WHERE assigned_to = $1)
+             OR m.client_id IN (SELECT id FROM clients WHERE assigned_to = $1)
+             OR m.case_id IN (SELECT id FROM cases WHERE user_id = $1)
+           )`,
+        [req.user.id]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT COUNT(*) AS count FROM messages WHERE read = FALSE AND direction = 'inbound'`
+      );
+    }
+    res.json({ count: parseInt(result.rows[0].count, 10) || 0 });
+  } catch (err) {
+    console.error('Unread count error:', err);
+    res.status(500).json({ error: 'Failed to count unread messages' });
+  }
+});
+
+// Mark all inbound messages of a chat as read (called when the chat is opened).
+router.post('/phone/:phone/mark-read', async (req, res) => {
+  try {
+    const pool = require('../db/pool');
+    const phone = req.params.phone;
+    const { rowCount } = await pool.query(
+      `UPDATE messages SET read = TRUE
+       WHERE read = FALSE AND direction = 'inbound'
+         AND (phone = $1 OR (phone IS NULL AND client_id IN (SELECT id FROM clients WHERE phone = $1)))`,
+      [phone]
+    );
+    res.json({ marked: rowCount });
+  } catch (err) {
+    console.error('Mark read error:', err);
+    res.status(500).json({ error: 'Failed to mark messages as read' });
+  }
+});
+
 // Get messages by phone number
 router.get('/phone/:phone', async (req, res) => {
   try {
