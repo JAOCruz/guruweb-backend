@@ -1,7 +1,26 @@
 const express = require('express');
 const Client = require('../models/Client');
+const Notification = require('../models/Notification');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
+
+// Notify an employee that a chat/client was assigned to them (drives the bell badge).
+async function notifyAssignment(client, assignedToUser) {
+  try {
+    if (!assignedToUser?.id) return;
+    const label = client.name && !/^\d{10,}$/.test(client.name) ? client.name : client.phone;
+    await Notification.create({
+      userId: assignedToUser.id,
+      type: 'assignment',
+      title: '💬 Nuevo chat asignado',
+      message: `Te asignaron el chat de ${label}. Revísalo en Mensajes.`,
+      link: `/bot-messages?phone=${encodeURIComponent(client.phone || '')}`,
+      metadata: { clientId: client.id, phone: client.phone },
+    });
+  } catch (err) {
+    console.error('[Clients] Assignment notification error:', err.message);
+  }
+}
 
 function isEmployee(role) {
   return role !== 'admin';
@@ -177,6 +196,11 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
     // Make sure messages for this phone know about the client so assignment shows up in chats
     await backfillMessagesClientId(client.id, client.phone);
 
+    // Notify the employee that a chat was assigned to them
+    if (!isUnassign && assignedToUser) {
+      await notifyAssignment(client, assignedToUser);
+    }
+
     console.log(`[Clients] Client ${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser.username})`} by ${req.user.username}`);
     res.json({ client, assigned_to_user: assignedToUser });
   } catch (err) {
@@ -237,6 +261,11 @@ router.post('/assign-by-phone', requireRole('admin'), async (req, res) => {
 
     client = await Client.update(client.id, { assigned_to: targetUserId });
     await backfillMessagesClientId(client.id, client.phone);
+
+    // Notify the employee that a chat was assigned to them
+    if (!isUnassign && assignedToUser) {
+      await notifyAssignment(client, assignedToUser);
+    }
 
     console.log(`[Clients] Client ${client.id} (${client.phone}) ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser?.username})`} by ${req.user.username}`);
     res.json({ client, assigned_to_user: assignedToUser });
@@ -307,6 +336,12 @@ router.put('/:id/assign', requireRole('admin'), async (req, res) => {
     );
 
     await backfillMessagesClientId(updated.id, updated.phone);
+
+    // Notify the employee that a chat was assigned to them
+    if (user_id) {
+      const { rows: targetRows } = await pool.query('SELECT id, username, name FROM users WHERE id = $1', [user_id]);
+      if (targetRows[0]) await notifyAssignment(updated, targetRows[0]);
+    }
 
     console.log(`[Clients] Client #${clientId} assigned to user ${user_id} by ${req.user.username}`);
     res.json({ client: updated, message: 'Client assigned successfully' });

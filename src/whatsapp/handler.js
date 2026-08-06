@@ -1,6 +1,7 @@
 const Message = require('../models/Message');
 const Client = require('../models/Client');
 const ClientMedia = require('../models/ClientMedia');
+const Notification = require('../models/Notification');
 const { saveMediaFromMessage } = require('./mediaService');
 const { routeMessage, AI_DEFERRED } = require('../conversation/router');
 const { getQuotaBackoffRemaining } = require('../llm/generate');
@@ -364,6 +365,33 @@ async function processBatch(phone, batch, sock) {
   }
 }
 
+// Notify the assigned employee when a client sends a new message to their chat.
+// Dedupes: only one unread "new message" notification per chat, so the bell doesn't flood.
+async function notifyNewMessage(client, phone, text) {
+  try {
+    if (!client?.assigned_to) return;
+    const pool = require('../db/pool');
+    const { rows } = await pool.query(
+      `SELECT id FROM notifications
+       WHERE user_id = $1 AND read = false AND type = 'message' AND metadata->>'phone' = $2 LIMIT 1`,
+      [client.assigned_to, phone]
+    );
+    if (rows.length > 0) return; // already an unread one for this chat
+    const label = client.name && !/^\d{10,}$/.test(client.name) ? client.name : phone;
+    const preview = (text || '[media]').substring(0, 60);
+    await Notification.create({
+      userId: client.assigned_to,
+      type: 'message',
+      title: `💬 Nuevo mensaje de ${label}`,
+      message: preview,
+      link: `/bot-messages?phone=${encodeURIComponent(phone)}`,
+      metadata: { phone, clientId: client.id },
+    });
+  } catch (err) {
+    console.error('[WA] New-message notification error:', err.message);
+  }
+}
+
 // Extract the text/caption of the message a client is replying to (quoted message).
 // WhatsApp nests it under each message type's contextInfo.quotedMessage.
 function extractQuotedText(message) {
@@ -542,6 +570,10 @@ async function handleIncomingMessage(msg, sock) {
         pushName: !isFromMe ? pushName : null,  // contact's WhatsApp display name
       });
       console.log(`[WA] ✅ Mensaje guardado en BD: ${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
+      // Notify the assigned employee about the new client message (drives the bell badge)
+      if (!isFromMe && client) {
+        notifyNewMessage(client, phone, text).catch(() => {});
+      }
     } catch (saveErr) {
       console.error(`[WA] ❌ Error guardando mensaje phone=${phone} jid=${remoteJid}:`, saveErr.message);
     }
