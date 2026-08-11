@@ -33,6 +33,13 @@ const connections = new Map();
 // Event handlers from older sockets check it and stop, so stale reconnect
 // chains die instead of reconnecting on top of the current socket.
 const generations = new Map();
+// Last time ANY inbound message event arrived per session. WhatsApp can leave
+// the socket "open" (sends still work) while silently stopping delivery of
+// inbound messages — a zombie state only a full reconnect fixes.
+const lastActivity = new Map();
+// Handlers from the latest createConnection per session, so the watchdog can
+// rebuild the socket with the same callbacks.
+const sessionHandlers = new Map();
 const BAILEYS_MISSING_ERROR = 'WhatsApp/Baileys is not available in this environment';
 
 function ensureBaileys() {
@@ -58,6 +65,8 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
   stopSession(sessionId);
   const gen = generations.get(sessionId);
   const isCurrent = () => generations.get(sessionId) === gen;
+  sessionHandlers.set(sessionId, { onQR, onConnected, onMessage });
+  lastActivity.set(sessionId, Date.now());
 
   console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
   const { state, saveCreds } = await usePostgresAuthState(sessionId);
@@ -124,7 +133,13 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
       connections.delete(sessionId);
 
       if (shouldReconnect) {
-        console.log(`[WA] Reconnecting session ${sessionId} in 3s...`);
+        // 440 (conflict) means another socket with the same creds owns the
+        // session — typically the NEW container during a Railway rolling
+        // deploy. Give the platform time to kill this old container before
+        // retrying, otherwise both containers fight in a connect/disconnect
+        // war and the session ends up corrupted.
+        const delayMs = statusCode === 440 ? 60000 : 3000;
+        console.log(`[WA] Reconnecting session ${sessionId} in ${delayMs / 1000}s...`);
         setTimeout(async () => {
           if (!isCurrent()) return; // replaced/stopped meanwhile
           // Respect manual disconnect: if the user explicitly stopped the session,
@@ -144,7 +159,7 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
           createConnection(sessionId, onQR, onConnected, onMessage).catch(err => {
             console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message);
           });
-        }, 3000);
+        }, delayMs);
       } else {
         console.log(`[WA] Session ${sessionId} logged out. Generate new QR to reconnect.`);
         // Dead creds: wipe them so startup auto-reconnect doesn't try them again
@@ -164,6 +179,7 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
   });
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
+    lastActivity.set(sessionId, Date.now());
     if (type !== 'notify') return;
     if (!isCurrent()) return; // stale socket must not process messages
     for (const msg of messages) {
@@ -173,6 +189,59 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
 
   return sock;
 }
+
+async function isManuallyDisconnected(sessionId) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT manual_disconnect FROM wa_credentials WHERE session_id = $1`,
+      [sessionId]
+    );
+    return rows[0]?.manual_disconnect === true;
+  } catch (err) {
+    console.error(`[WA] Failed to check manual_disconnect for ${sessionId}:`, err.message);
+    return false;
+  }
+}
+
+// Force-drop the current socket and rebuild it with the stored handlers.
+// Used by the watchdog when a session goes zombie (open but silent).
+async function forceReconnect(sessionId) {
+  const handlers = sessionHandlers.get(sessionId);
+  if (!handlers) {
+    console.log(`[WA] forceReconnect skipped for ${sessionId} — no stored handlers`);
+    return false;
+  }
+  if (await isManuallyDisconnected(sessionId)) {
+    console.log(`[WA] forceReconnect skipped for ${sessionId} — manual disconnect is set`);
+    return false;
+  }
+  console.log(`[WA] Force-reconnecting session ${sessionId}...`);
+  try {
+    await createConnection(sessionId, handlers.onQR, handlers.onConnected, handlers.onMessage);
+    return true;
+  } catch (err) {
+    console.error(`[WA] Force-reconnect failed for ${sessionId}:`, err.message);
+    return false;
+  }
+}
+
+// Watchdog: if an open session has delivered NO inbound message events for
+// QUIET_THRESHOLD_MS, the connection is considered zombie (WhatsApp stopped
+// routing messages to it even though sends still work). Rebuild it. A quiet
+// but healthy session simply gets a harmless refresh with saved creds
+// (syncFullHistory is off, so this takes seconds).
+const QUIET_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12h
+const WATCHDOG_INTERVAL_MS = 15 * 60 * 1000; // check every 15 min
+setInterval(() => {
+  for (const [sessionId, entry] of connections) {
+    if (!entry || !entry.open) continue;
+    const quietFor = Date.now() - (lastActivity.get(sessionId) || 0);
+    if (quietFor > QUIET_THRESHOLD_MS) {
+      console.log(`[WA] Watchdog: session ${sessionId} silent for ${Math.round(quietFor / 3600000)}h — treating as zombie, force-reconnecting`);
+      forceReconnect(sessionId);
+    }
+  }
+}, WATCHDOG_INTERVAL_MS).unref();
 
 function getConnection(sessionId) {
   const entry = connections.get(sessionId);
@@ -231,4 +300,12 @@ function getAnyConnection() {
   return null;
 }
 
-module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, reconnectSavedSessions };
+// Drop every live socket immediately (used on SIGTERM so a dying container
+// releases the session instead of fighting the new one with 440 conflicts).
+function stopAllSessions() {
+  for (const sessionId of [...connections.keys()]) {
+    try { stopSession(sessionId); } catch (_) { /* already closed */ }
+  }
+}
+
+module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, stopAllSessions, forceReconnect, reconnectSavedSessions };

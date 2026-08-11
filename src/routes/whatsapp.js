@@ -55,9 +55,10 @@ async function savePendingQR(sessionId, qr) {
 router.post('/connect', async (req, res) => {
   try {
     const sessionId = `user_${req.user.id}`;
+    const force = req.query.force === '1' || req.body?.force === true;
 
     const existing = getConnection(sessionId);
-    if (existing) {
+    if (existing && !force) {
       return res.json({ status: 'already_connected', sessionId });
     }
 

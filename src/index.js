@@ -38,13 +38,24 @@ const config = require("./config");
 
 // WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
 let reconnectSavedSessions = null;
+let stopAllSessions = null;
 let handleIncomingMessage = null;
 try {
-  ({ reconnectSavedSessions } = require("./whatsapp/connection"));
+  ({ reconnectSavedSessions, stopAllSessions } = require("./whatsapp/connection"));
   ({ handleIncomingMessage } = require("./whatsapp/handler"));
 } catch (err) {
   console.warn("[WA] Could not load WhatsApp reconnect helpers:", err.message);
 }
+
+// Railway sends SIGTERM to the old container during a rolling deploy. Drop our
+// WhatsApp sockets right away so the NEW container owns the session cleanly —
+// otherwise both fight over the same credentials (WhatsApp 440 conflict loop).
+process.once("SIGTERM", () => {
+  console.log("[WA] SIGTERM received — closing WhatsApp sessions before shutdown");
+  if (stopAllSessions) stopAllSessions();
+  // Give sockets a moment to close, then exit so the platform can proceed.
+  setTimeout(() => process.exit(0), 1500).unref();
+});
 
 const app = express();
 
