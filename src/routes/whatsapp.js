@@ -187,6 +187,9 @@ router.post('/bot-mode', requireAdmin, (req, res) => {
   if (mode !== 'all' && mode !== 'selected') {
     return res.status(400).json({ error: 'Mode must be "all" or "selected"' });
   }
+  // Audit trail: "selected" with an empty enabled list mutes the bot for
+  // everyone, so we want to know exactly who flipped it and when.
+  console.log(`[WA] BOT MODE CHANGE → "${mode}" by user ${req.user?.username || req.user?.id} (${req.user?.email || 'no-email'}) at ${new Date().toISOString()}`);
   setBotMode(mode);
   res.json({ botMode: mode });
 });

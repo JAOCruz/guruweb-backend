@@ -106,6 +106,14 @@ const manualPhones = new Set();
     (saved.manualPhones || []).forEach(p => manualPhones.add(p));
     // Ensure always-manual numbers stay manual even if persisted state says otherwise
     ALWAYS_MANUAL_PHONES.forEach(p => manualPhones.add(p));
+    // Self-heal: "selected" mode with an EMPTY enabled list means the bot
+    // answers nobody — a mute state that has bitten us repeatedly after
+    // accidental clicks. If that state is ever persisted, recover to "all".
+    if (botMode === 'selected' && enabledPhones.size === 0) {
+      console.warn('[WA] Persisted mode was "selected" with empty enabled list (bot muted) — auto-recovering to "all"');
+      botMode = 'all';
+      persist().catch(() => {});
+    }
     console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}, alwaysManual=${ALWAYS_MANUAL_PHONES.size}`);
   } catch (err) {
     console.error('[WA] Failed to load settings:', err.message);
