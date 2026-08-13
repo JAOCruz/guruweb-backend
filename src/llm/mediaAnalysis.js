@@ -20,6 +20,7 @@ Responde SIEMPRE en este formato exacto:
 
 TIPO: [una de estas categorías exactas: CÉDULA, PASAPORTE, CONTRATO, NOTIFICACIÓN, ACTA, PODER_NOTARIAL, CERTIFICADO_TÍTULO, RECIBO, FACTURA, CARTA, FOTO_INMUEBLE, FOTO_VEHÍCULO, OTRO]
 DATOS_VISIBLES: [lista los datos que puedas leer: nombres, números, fechas, montos, direcciones — solo lo visible]
+EXTENSION: [cantidad de páginas visibles/estimadas y si el texto es simple o denso — ej: "1 página, texto simple" / "4 páginas, cláusulas densas"]
 ESTADO: [LEGIBLE / BORROSO / INCOMPLETO / FIRMADO / SIN_FIRMAR]
 NOTAS: [máximo una línea con algo técnico relevante, o "ninguna"]
 
