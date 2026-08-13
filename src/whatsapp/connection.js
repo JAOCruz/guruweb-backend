@@ -58,14 +58,14 @@ function stopSession(sessionId) {
   }
 }
 
-async function createConnection(sessionId, onQR, onConnected, onMessage) {
+async function createConnection(sessionId, onQR, onConnected, onMessage, onHistory) {
   ensureBaileys();
 
   // Kill any previous socket (open or still connecting) for this session.
   stopSession(sessionId);
   const gen = generations.get(sessionId);
   const isCurrent = () => generations.get(sessionId) === gen;
-  sessionHandlers.set(sessionId, { onQR, onConnected, onMessage });
+  sessionHandlers.set(sessionId, { onQR, onConnected, onMessage, onHistory });
   lastActivity.set(sessionId, Date.now());
 
   console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
@@ -156,7 +156,7 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
           } catch (dbErr) {
             console.error(`[WA] Failed to check manual_disconnect for ${sessionId}:`, dbErr.message);
           }
-          createConnection(sessionId, onQR, onConnected, onMessage).catch(err => {
+          createConnection(sessionId, onQR, onConnected, onMessage, onHistory).catch(err => {
             console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message);
           });
         }, delayMs);
@@ -184,6 +184,19 @@ async function createConnection(sessionId, onQR, onConnected, onMessage) {
     if (!isCurrent()) return; // stale socket must not process messages
     for (const msg of messages) {
       if (onMessage) onMessage(msg, sock);
+    }
+  });
+
+  // History sync (sent by the phone after a fresh link, or on demand): recent
+  // messages per chat. We used to DROP these — that's why conversations looked
+  // frozen after every re-link. Now we store them (no replies, no notifications).
+  sock.ev.on('messaging-history.set', ({ messages: historyMessages }) => {
+    lastActivity.set(sessionId, Date.now());
+    if (!isCurrent()) return;
+    if (!onHistory) return;
+    console.log(`[WA] History sync for ${sessionId}: ${historyMessages.length} messages received — storing`);
+    for (const msg of historyMessages) {
+      try { onHistory(msg); } catch (err) { console.error('[WA] History message error:', err.message); }
     }
   });
 
@@ -217,7 +230,7 @@ async function forceReconnect(sessionId) {
   }
   console.log(`[WA] Force-reconnecting session ${sessionId}...`);
   try {
-    await createConnection(sessionId, handlers.onQR, handlers.onConnected, handlers.onMessage);
+    await createConnection(sessionId, handlers.onQR, handlers.onConnected, handlers.onMessage, handlers.onHistory);
     return true;
   } catch (err) {
     console.error(`[WA] Force-reconnect failed for ${sessionId}:`, err.message);
@@ -260,7 +273,7 @@ function disconnectSession(sessionId) {
   stopSession(sessionId);
 }
 
-async function reconnectSavedSessions(onMessage) {
+async function reconnectSavedSessions(onMessage, onHistory) {
   if (!baileys) {
     console.log('[WA] Skipping auto-reconnect — Baileys not available');
     return;
@@ -282,7 +295,8 @@ async function reconnectSavedSessions(onMessage) {
           sessionId,
           null, // No QR callback — already authenticated
           () => console.log(`[WA] ✅ Auto-reconnected session: ${sessionId}`),
-          onMessage
+          onMessage,
+          onHistory
         );
       } catch (err) {
         console.error(`[WA] Failed to auto-reconnect ${sessionId}:`, err.message);

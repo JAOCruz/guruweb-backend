@@ -426,7 +426,7 @@ function extractQuotedText(message) {
   return qtext.length > 80 ? qtext.substring(0, 80) + '…' : qtext;
 }
 
-async function handleIncomingMessage(msg, sock) {
+async function processMessage(msg, sock, isHistory) {
   try {
     const remoteJid = msg.key.remoteJid;
 
@@ -538,8 +538,10 @@ async function handleIncomingMessage(msg, sock) {
 
     // Auto-save media (file download only — no Gemini analysis yet)
     // Analysis happens in processBatch AFTER buffer window closes, so all images arrive together
+    // History-sync messages skip the download: their media URLs are often expired and
+    // bulk-downloading weeks of media would take forever — we store a placeholder instead.
     let savedMedia = null;
-    if (hasMedia) {
+    if (hasMedia && !isHistory) {
       try {
         const mediaResult = await saveMediaFromMessage(msg, phone);
         if (mediaResult) {
@@ -562,9 +564,13 @@ async function handleIncomingMessage(msg, sock) {
     }
 
     // Log message (inbound from client or outbound direct from bot's phone)
+    const mediaLabel = msg.message?.imageMessage ? 'foto'
+      : msg.message?.documentMessage ? 'documento'
+      : msg.message?.audioMessage ? 'audio'
+      : msg.message?.videoMessage ? 'video' : 'archivo';
     const logContent = text
-      ? (savedMedia ? `${text}\n[📎 adjunto]` : text)
-      : (savedMedia ? `[📎 ${savedMedia.media_type || 'archivo'}]` : '[mensaje]');
+      ? (savedMedia ? `${text}\n[📎 adjunto]` : (hasMedia && isHistory ? `[📎 ${mediaLabel}]\n${text}` : text))
+      : (savedMedia ? `[📎 ${savedMedia.media_type || 'archivo'}]` : (hasMedia ? `[📎 ${mediaLabel}]` : '[mensaje]'));
 
     try {
       await Message.create({
@@ -577,9 +583,9 @@ async function handleIncomingMessage(msg, sock) {
         waJid: remoteJid,  // store real JID (may be @lid for privacy accounts)
         pushName: !isFromMe ? pushName : null,  // contact's WhatsApp display name
       });
-      console.log(`[WA] ✅ Mensaje guardado en BD: ${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
+      console.log(`[WA] ✅ Mensaje guardado en BD: ${isHistory ? 'HISTORY ' : ''}${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
       // Notify the assigned employee about the new client message (drives the bell badge)
-      if (!isFromMe && client) {
+      if (!isFromMe && !isHistory && client) {
         notifyNewMessage(client, phone, text).catch(() => {});
       }
     } catch (saveErr) {
@@ -587,7 +593,7 @@ async function handleIncomingMessage(msg, sock) {
     }
 
     // Only buffer for processing if it's an inbound message that should get a bot response
-    if (!isFromMe) {
+    if (!isFromMe && !isHistory) {
       bufferMessage(phone, { msg, text, savedMedia, willRespond }, sock);
     }
 
@@ -599,8 +605,19 @@ async function handleIncomingMessage(msg, sock) {
   }
 }
 
+function handleIncomingMessage(msg, sock) {
+  return processMessage(msg, sock, false);
+}
+
+// History-sync messages (messaging-history.set after a fresh link): store only.
+// No bot replies, no employee notifications, no media downloads.
+function handleHistoryMessage(msg) {
+  return processMessage(msg, null, true);
+}
+
 module.exports = {
   handleIncomingMessage,
+  handleHistoryMessage,
   setBotActive, isBotActive,
   setBotMode, getBotMode,
   setAssignmentMode, getAssignmentMode,

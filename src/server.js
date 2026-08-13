@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const config = require('./config');
 const { reconnectSavedSessions } = require('./whatsapp/connection');
-const { handleIncomingMessage } = require('./whatsapp/handler');
+const { handleIncomingMessage, handleHistoryMessage } = require('./whatsapp/handler');
 
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -128,7 +128,7 @@ app.listen(config.port, host, () => {
   console.log(`Server running on http://${host}:${config.port} [${config.nodeEnv}]`);
 
   // Auto-reconnect saved WhatsApp sessions
-  reconnectSavedSessions(handleIncomingMessage).catch(err => {
+  reconnectSavedSessions(handleIncomingMessage, handleHistoryMessage).catch(err => {
     console.error('[WA] Auto-reconnect error:', err.message);
   });
 });

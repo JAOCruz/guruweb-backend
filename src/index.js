@@ -40,9 +40,10 @@ const config = require("./config");
 let reconnectSavedSessions = null;
 let stopAllSessions = null;
 let handleIncomingMessage = null;
+let handleHistoryMessage = null;
 try {
   ({ reconnectSavedSessions, stopAllSessions } = require("./whatsapp/connection"));
-  ({ handleIncomingMessage } = require("./whatsapp/handler"));
+  ({ handleIncomingMessage, handleHistoryMessage } = require("./whatsapp/handler"));
 } catch (err) {
   console.warn("[WA] Could not load WhatsApp reconnect helpers:", err.message);
 }
@@ -316,7 +317,7 @@ app.listen(PORT, "0.0.0.0", () => {
 
   // Auto-reconnect saved WhatsApp sessions (credentials live in PostgreSQL)
   if (reconnectSavedSessions) {
-    reconnectSavedSessions(handleIncomingMessage).catch(err => {
+    reconnectSavedSessions(handleIncomingMessage, handleHistoryMessage).catch(err => {
       console.error('[WA] Auto-reconnect error:', err.message);
     });
   }

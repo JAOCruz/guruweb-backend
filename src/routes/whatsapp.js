@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession } = require('../whatsapp/connection');
-const { handleIncomingMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones } = require('../whatsapp/handler');
+const { handleIncomingMessage, handleHistoryMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
 const pool = require('../db/pool');
@@ -95,7 +95,8 @@ router.post('/connect', async (req, res) => {
             console.log(`[WA] Session ${sessionId} reconnected using saved credentials.`);
             clearPendingQR(sessionId);
           },
-          handleIncomingMessage
+          handleIncomingMessage,
+          handleHistoryMessage
         );
         return res.json({ status: 'reconnecting', sessionId, message: 'Reconectando con credenciales guardadas (sin QR)' });
       } catch (reconnectErr) {
@@ -126,7 +127,8 @@ router.post('/connect', async (req, res) => {
         console.log(`[WA] Session ${sessionId} connected! Clearing QR.`);
         clearPendingQR(sessionId);
       },
-      handleIncomingMessage
+      handleIncomingMessage,
+      handleHistoryMessage
     );
 
     res.json({ status: 'connecting', sessionId, message: 'Use GET /api/whatsapp/qr to retrieve QR code' });
