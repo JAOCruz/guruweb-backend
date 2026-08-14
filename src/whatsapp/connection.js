@@ -13,6 +13,16 @@ try {
   console.warn('[WA] pino not installed — using silent logger');
 }
 
+// libsignal prints a FULL SessionEntry dump via console.info every time a
+// session is replaced ("Closing session: {...}") — hundreds of lines per
+// message during churn, which floods Railway's log pipeline (500 logs/sec
+// cap) and drowns real logs. Filter just that one message.
+const _origConsoleInfo = console.info.bind(console);
+console.info = (...args) => {
+  if (typeof args[0] === 'string' && args[0].startsWith('Closing session')) return;
+  _origConsoleInfo(...args);
+};
+
 // Baileys is an optional dependency. In production (Railway) we may not have
 // WhatsApp connected, but we still need to be able to load conversation flows
 // for the dashboard simulator and other non-WhatsApp features.

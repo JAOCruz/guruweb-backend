@@ -58,43 +58,42 @@ function makeKeyStore(sessionId) {
 
     // Baileys calls set() with a NESTED structure: { [type]: { [id]: value } }.
     // Flatten it into `${type}:${id}` entries so get() can find them.
+    //
+    // ATOMIC jsonb merge — NO read-modify-write. The old implementation read the
+    // whole keys blob, merged in memory, and wrote it back; concurrent set() calls
+    // (bursts of session/pre-key writes during message storms) clobbered each
+    // other, silently losing Signal sessions → endless Bad MAC / "Closing session"
+    // churn. A single UPDATE with `||` is row-locked and race-free, even across
+    // overlapping containers during deploys.
     async set(data) {
-      const { rows } = await pool.query(
-        'SELECT keys FROM wa_credentials WHERE session_id = $1',
-        [sessionId]
-      );
-      const existing = deserialize(rows[0]?.keys) || {};
+      const flat = {};
       for (const [type, entries] of Object.entries(data || {})) {
         for (const [id, value] of Object.entries(entries || {})) {
-          existing[`${type}:${id}`] = value;
+          if (value === undefined || value === null) continue;
+          flat[`${type}:${id}`] = value;
         }
       }
+      if (Object.keys(flat).length === 0) return;
       await pool.query(
         `INSERT INTO wa_credentials (session_id, creds, keys, updated_at)
-         VALUES ($1, $2, $3, NOW())
+         VALUES ($1, '{}', $2, NOW())
          ON CONFLICT (session_id) DO UPDATE SET
-           keys = EXCLUDED.keys,
+           keys = COALESCE(wa_credentials.keys, '{}'::jsonb) || EXCLUDED.keys,
            updated_at = NOW()`,
-        [sessionId, JSON.stringify({}), serialize(existing)]
+        [sessionId, serialize(flat)]
       );
     },
 
     async del(type, ids) {
-      const { rows } = await pool.query(
-        'SELECT keys FROM wa_credentials WHERE session_id = $1',
-        [sessionId]
-      );
-      const existing = deserialize(rows[0]?.keys) || {};
-      for (const id of ids) {
-        delete existing[`${type}:${id}`];
-      }
+      // Atomic jsonb key removal: `keys - 'k1' - 'k2' ...` (no read needed).
+      const removals = ids.map((id) => `${type}:${id}`);
+      if (removals.length === 0) return;
       await pool.query(
-        `INSERT INTO wa_credentials (session_id, creds, keys, updated_at)
-         VALUES ($1, $2, $3, NOW())
-         ON CONFLICT (session_id) DO UPDATE SET
-           keys = EXCLUDED.keys,
-           updated_at = NOW()`,
-        [sessionId, JSON.stringify({}), serialize(existing)]
+        `UPDATE wa_credentials
+         SET keys = COALESCE(keys, '{}'::jsonb) - $2::text[],
+           updated_at = NOW()
+         WHERE session_id = $1`,
+        [sessionId, removals]
       );
     },
 
