@@ -130,7 +130,7 @@ async function handleSearch(session, text) {
   if (results.length === 0) {
     await transitionTo(session, 'legal_info', 'post_topic', {});
     return `No encontramos resultados para "${text}".\n\n` +
-      `Le recomendamos seleccionar un tema del menú o comunicarse con uno de nuestros abogados para una consulta personalizada.\n\n` +
+      `Le recomendamos seleccionar un tema del menú o comunicarse con nuestro equipo para una atención personalizada.\n\n` +
       POST_TOPIC_MENU;
   }
 

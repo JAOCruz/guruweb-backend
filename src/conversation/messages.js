@@ -25,7 +25,7 @@ const MSG = {
     `4️⃣ Consultar estado de mi caso\n` +
     `5️⃣ Información legal (Leyes RD)\n` +
     `6️⃣ Servicios y precios\n` +
-    `7️⃣ Hablar con un abogado\n` +
+    `7️⃣ Hablar con el equipo\n` +
     `8️⃣ Generar Factura\n` +
     `0️⃣ Finalizar conversación`,
 
@@ -81,14 +81,14 @@ const MSG = {
   INTAKE_SUCCESS: (caseNumber) =>
     `✅ Su consulta ha sido registrada exitosamente.\n\n` +
     `📋 *Número de expediente:* ${caseNumber}\n\n` +
-    `Un abogado especializado revisará su caso y se pondrá en contacto con usted a la brevedad.\n\n` +
+    `Un miembro de nuestro equipo revisará su caso y se pondrá en contacto con usted a la brevedad.\n\n` +
     `Guarde su número de expediente para futuras consultas.`,
 
   INTAKE_QUICK_QUESTION:
-    `Con gusto le atendemos. Por favor, escriba su *consulta* y un abogado le responderá a la brevedad.`,
+    `Con gusto le atendemos. Por favor, escriba su *consulta* y alguien de nuestro equipo le responderá a la brevedad.`,
 
   INTAKE_QUICK_RECEIVED:
-    `Hemos recibido su consulta. Un miembro de nuestro equipo legal le responderá lo antes posible.\n\nSi desea registrarse para un seguimiento más detallado, escriba *"registrarme"*.`,
+    `Hemos recibido su consulta. Un miembro de nuestro equipo le responderá lo antes posible.\n\nSi desea registrarse para un seguimiento más detallado, escriba *"registrarme"*.`,
 
   // ── Appointment Flow ──
   APPOINTMENT_INTRO:
@@ -202,14 +202,14 @@ const MSG = {
     ).join('\n\n') +
     `\n\nIngrese el número de expediente que desea consultar, o escriba *"menu"* para regresar.`,
 
-  // ── Talk to Lawyer ──
+  // ── Talk to Team ──
   TALK_TO_LAWYER:
-    `Un abogado de nuestro equipo se comunicará con usted a la brevedad.\n\n` +
+    `Un miembro de nuestro equipo se comunicará con usted a la brevedad.\n\n` +
     `⏰ Horario de atención: Lunes a Viernes, 9:00 a 18:00 hrs.\n\n` +
     `Si su asunto es urgente fuera de horario, por favor indíquelo escribiendo *"urgente"*.`,
 
   TALK_TO_LAWYER_URGENT:
-    `Hemos marcado su solicitud como *urgente*. Un abogado de guardia se pondrá en contacto con usted lo antes posible.`,
+    `Hemos marcado su solicitud como *urgente*. Un miembro de nuestro equipo se pondrá en contacto con usted lo antes posible.`,
 
   // ── Session / General ──
   SESSION_EXPIRED:
@@ -317,12 +317,12 @@ const LIST = {
       title: 'Servicios',
       rows: [
         { title: 'Nueva consulta legal', rowId: '1', description: 'Iniciar un caso o consulta' },
-        { title: 'Agendar una cita', rowId: '2', description: 'Programar cita con abogado' },
+        { title: 'Agendar una cita', rowId: '2', description: 'Programar su cita' },
         { title: 'Enviar documentos', rowId: '3', description: 'Subir documentos al sistema' },
         { title: 'Estado de mi caso', rowId: '4', description: 'Consultar expediente activo' },
         { title: 'Información legal (RD)', rowId: '5', description: 'Leyes y normativas' },
         { title: 'Servicios y precios', rowId: '6', description: 'Tarifario de servicios' },
-        { title: 'Hablar con un abogado', rowId: '7', description: 'Contactar a un profesional' },
+        { title: 'Hablar con el equipo', rowId: '7', description: 'Contactar a un profesional' },
         { title: 'Finalizar conversación', rowId: '0', description: 'Cerrar esta sesión' },
       ],
     }]

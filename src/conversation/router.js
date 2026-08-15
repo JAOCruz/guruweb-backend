@@ -436,7 +436,7 @@ async function handleTalkToLawyer(session, text) {
 
   // Any other message — log it and go back to menu
   await transitionTo(session, 'main_menu', 'show', {});
-  return withList('Su mensaje ha sido enviado a nuestro equipo legal. Le contactaremos a la brevedad.\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+  return withList('Su mensaje ha sido enviado a nuestro equipo. Le contactaremos a la brevedad.\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
 }
 
 module.exports = { routeMessage, AI_DEFERRED };
