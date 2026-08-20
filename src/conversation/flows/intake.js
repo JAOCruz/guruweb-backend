@@ -40,7 +40,7 @@ async function handle(session, text, msg) {
   // Detect escape intent during data collection steps
   if (ESCAPABLE_STEPS.has(step) && isEscapeIntent(text)) {
     await transitionTo(session, 'main_menu', 'show');
-    return withList('🦉 Entendido, hemos cancelado el proceso de registro. ¿En qué más puedo ayudarle?\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+    return '🦉 Entendido, hemos cancelado el proceso de registro. ' + MSG.CLOSING;
   }
 
   switch (step) {
@@ -82,9 +82,7 @@ async function handle(session, text, msg) {
         return await routeMessage(session.phone, text, msg);
       }
       if (intent === 'greeting') {
-        return `🦉 ¡Hola! ¿En qué podemos ayudarle?\n\n` +
-          `1️⃣ Registrarme para atención personalizada\n` +
-          `2️⃣ Solo tengo una consulta rápida`;
+        return `🦉 ¡Hola! ¿En qué podemos ayudarle?`;
       }
       if (intent === 'goodbye') {
         const ConversationSession = require('../../models/ConversationSession');
@@ -106,9 +104,7 @@ async function handle(session, text, msg) {
         }
       }
 
-      return `Disculpe, no comprendí su selección. Por favor, elija:\n\n` +
-        `1️⃣ Registrarme para atención personalizada\n` +
-        `2️⃣ Solo tengo una consulta rápida`;
+      return MSG.INVALID_OPTION;
     }
 
     case 'quick_question': {
@@ -143,7 +139,7 @@ async function handle(session, text, msg) {
 
       // Fallback — go to menu:show (NOT init) so next message doesn't restart welcome
       await transitionTo(session, 'main_menu', 'show');
-      return MSG.INTAKE_QUICK_RECEIVED + '\n\n' + MSG.MAIN_MENU;
+      return MSG.INTAKE_QUICK_RECEIVED + '\n\n' + MSG.CLOSING;
     }
 
     case 'ask_name': {
@@ -184,7 +180,7 @@ async function handle(session, text, msg) {
           }
         }
         await transitionTo(session, 'main_menu', 'show');
-        return 'Parece que tiene una consulta. Le regresamos al menú principal para asistirle mejor.\n\n' + MSG.MAIN_MENU;
+        return 'Parece que tiene una consulta. ' + MSG.CLOSING;
       }
 
       // Reject strings that clearly aren't names (too many numbers, special chars, etc.)
@@ -257,7 +253,7 @@ async function handle(session, text, msg) {
           }
         }
         await transitionTo(session, 'main_menu', 'show');
-        return 'Parece que tiene una consulta. Le regresamos al menú principal.\n\n' + MSG.MAIN_MENU;
+        return 'Parece que tiene una consulta. ' + MSG.CLOSING;
       }
 
       // Input has no @ and is substantial → clearly not an email attempt
@@ -419,7 +415,7 @@ async function handle(session, text, msg) {
       }
       // No, gracias — return to main menu
       await transitionTo(session, 'main_menu', 'show', {});
-      return withList(MSG.MAIN_MENU, LIST.MAIN_MENU);
+      return MSG.CLOSING;
     }
 
     default:

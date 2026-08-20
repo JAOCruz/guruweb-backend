@@ -431,12 +431,12 @@ async function handleTalkToLawyer(session, text) {
   const intent = detectIntent(text);
   if (intent === 'urgent') {
     await transitionTo(session, 'main_menu', 'show', {});
-    return withList(MSG.TALK_TO_LAWYER_URGENT + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+    return MSG.TALK_TO_LAWYER_URGENT + '\n\n' + MSG.CLOSING;
   }
 
   // Any other message — log it and go back to menu
   await transitionTo(session, 'main_menu', 'show', {});
-  return withList('Su mensaje ha sido enviado a nuestro equipo. Le contactaremos a la brevedad.\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+  return 'Su mensaje ha sido enviado a nuestro equipo. Le contactaremos a la brevedad.\n\n' + MSG.CLOSING;
 }
 
 module.exports = { routeMessage, AI_DEFERRED };

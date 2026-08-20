@@ -40,7 +40,7 @@ async function handle(session, text, msg, savedMedia = null) {
         // User sent text instead of file
         if (text.trim() === '0' || text.trim().toLowerCase() === 'cancelar') {
           await transitionTo(session, 'main_menu', 'show', {});
-          return MSG.APPOINTMENT_CANCELLED + '\n\n' + MSG.MAIN_MENU;
+          return MSG.APPOINTMENT_CANCELLED + '\n\n' + MSG.CLOSING;
         }
         return MSG.DOCUMENT_INVALID_FILE;
       }

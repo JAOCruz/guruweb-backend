@@ -130,7 +130,7 @@ async function handle(session, text, msg) {
     const { isEscapeIntent } = require('../nlp');
     if (isEscapeIntent(text)) {
       await transitionTo(session, 'main_menu', 'show');
-      return withList('🦉 Proceso de facturación cancelado. ¿En qué más puedo ayudarle?\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+      return '🦉 Proceso de facturación cancelado. ' + MSG.CLOSING;
     }
   }
 
@@ -150,7 +150,7 @@ async function handle(session, text, msg) {
 
     default:
       await transitionTo(session, 'main_menu', 'show');
-      return withList(MSG.MAIN_MENU, LIST.MAIN_MENU);
+      return MSG.CLOSING;
   }
 }
 
@@ -334,13 +334,13 @@ async function generateAndSendInvoice(session) {
       (isSimulator
         ? `La factura quedó guardada en el sistema para revisión.\n\n`
         : `Su factura ha sido enviada a este chat.\nNuestro equipo se pondrá en contacto para procesar el pago.\n\n`) +
-      `¿En qué más puedo ayudarle?\n\n` + MSG.MAIN_MENU;
+      `¿En qué más puedo ayudarle? ` + MSG.CLOSING;
 
   } catch (err) {
     console.error('[Billing] Invoice generation error:', err);
     await transitionTo(session, 'main_menu', 'show', {});
     return `❌ Ocurrió un error al generar la factura.\n\n` +
-      `Por favor contacte a nuestro equipo o escriba *"menu"* para volver al inicio.\n\n` + MSG.MAIN_MENU;
+      `Por favor contacte a nuestro equipo o escriba *"menu"* para volver al inicio.\n\n` + MSG.CLOSING;
   }
 }
 
@@ -396,7 +396,7 @@ async function handleQuoteConfirm(session, text) {
   if (!isConfirm) {
     // User wants to modify or cancel
     await transitionTo(session, 'main_menu', 'show');
-    return withList('🦉 Cotización cancelada. ¿En qué más puedo ayudarle?\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+    return '🦉 Cotización cancelada. ' + MSG.CLOSING;
   }
 
   // User confirmed — generate invoice from quote

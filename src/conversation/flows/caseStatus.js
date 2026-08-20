@@ -18,7 +18,7 @@ async function handle(session, text) {
         const cases = await Case.findAll({ clientId: session.client_id });
         if (cases.length === 0) {
           await transitionTo(session, 'main_menu', 'show', {});
-          return withList(MSG.STATUS_NO_CASES + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+          return MSG.STATUS_NO_CASES + '\n\n' + MSG.CLOSING;
         }
 
         await updateData(session, { clientCases: cases.map(c => c.case_number) });

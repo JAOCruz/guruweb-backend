@@ -15,7 +15,7 @@ const MSG = {
   WELCOME_BACK: (name) =>
     `🦉 ¡Buenas *${name}*! Qué bueno verle de nuevo.\n\n¿En qué le ayudamos hoy?`,
 
-  // ── Main Menu ──
+  // ── Main Menu (only for explicit "menu" requests) ──
   MAIN_MENU:
     `🦉 *Menú Principal — Gurú Soluciones*\n\n` +
     `¿En qué puedo orientarle?\n\n` +
@@ -29,11 +29,15 @@ const MSG = {
     `8️⃣ Generar Factura\n` +
     `0️⃣ Finalizar conversación`,
 
+  // ── Natural closing (use instead of automatic menus) ──
+  CLOSING:
+    `Estamos a sus órdenes! 🦉`,
+
   MENU_HINT:
     `_Escriba *"menu"* para ver las opciones disponibles._`,
 
   INVALID_OPTION:
-    `Disculpe, no he comprendido su selección. Por favor, elija una de las opciones indicadas con el número correspondiente.`,
+    `Disculpe, no entendí bien. ¿Podría explicarme de otra forma? Estoy aquí para ayudarle.`,
 
   // ── Intake Flow ──
   INTAKE_ASK_NAME:

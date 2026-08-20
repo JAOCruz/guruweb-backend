@@ -105,7 +105,7 @@ async function completeAppointment(session) {
     };
 
     await transitionTo(session, 'main_menu', 'show', {});
-    return withList(MSG.APPOINTMENT_SUCCESS(confirmData) + '\n\n' + MSG.MAIN_MENU, LIST.MAIN_MENU);
+    return MSG.APPOINTMENT_SUCCESS(confirmData) + '\n\n' + MSG.CLOSING;
   } catch (err) {
     console.error('[Appointment] Error creating appointment:', err);
     return MSG.ERROR_GENERAL;
