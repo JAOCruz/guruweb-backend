@@ -45,7 +45,7 @@ async function routeMessage(phone, text, msg, savedMedia = null) {
   if (globalCmd && session.flow !== 'main_menu') {
     const response = await handleGlobalCommand(globalCmd, session);
     if (response) {
-      if (globalCmd === 'menu') return withList(response, LIST.MAIN_MENU);
+      if (globalCmd === 'menu') return response;
       return response;
     }
   }

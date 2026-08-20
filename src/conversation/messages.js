@@ -16,18 +16,10 @@ const MSG = {
     `🦉 ¡Buenas *${name}*! Qué bueno verle de nuevo.\n\n¿En qué le ayudamos hoy?`,
 
   // ── Main Menu (only for explicit "menu" requests) ──
+  // NOTE: We intentionally do NOT show a numbered list here. The bot is
+  // conversational; users can simply say what they need.
   MAIN_MENU:
-    `🦉 *Menú Principal — Gurú Soluciones*\n\n` +
-    `¿En qué puedo orientarle?\n\n` +
-    `1️⃣ Nueva consulta legal\n` +
-    `2️⃣ Agendar una cita\n` +
-    `3️⃣ Enviar documentos\n` +
-    `4️⃣ Consultar estado de mi caso\n` +
-    `5️⃣ Información legal (Leyes RD)\n` +
-    `6️⃣ Servicios y precios\n` +
-    `7️⃣ Hablar con el equipo\n` +
-    `8️⃣ Generar Factura\n` +
-    `0️⃣ Finalizar conversación`,
+    `🦉 Estoy aquí para lo que necesite. ¿En qué puedo orientarle hoy?`,
 
   // ── Natural closing (use instead of automatic menus) ──
   CLOSING:
@@ -314,24 +306,6 @@ const DOCUMENT_TYPES = {
 
 // Interactive list message definitions (WhatsApp native list pickers)
 const LIST = {
-  MAIN_MENU: buildListMessage(
-    '🦉 *Menú Principal — Gurú Soluciones*\n\n¿En qué puedo orientarle?',
-    'Ver opciones',
-    [{
-      title: 'Servicios',
-      rows: [
-        { title: 'Nueva consulta legal', rowId: '1', description: 'Iniciar un caso o consulta' },
-        { title: 'Agendar una cita', rowId: '2', description: 'Programar su cita' },
-        { title: 'Enviar documentos', rowId: '3', description: 'Subir documentos al sistema' },
-        { title: 'Estado de mi caso', rowId: '4', description: 'Consultar expediente activo' },
-        { title: 'Información legal (RD)', rowId: '5', description: 'Leyes y normativas' },
-        { title: 'Servicios y precios', rowId: '6', description: 'Tarifario de servicios' },
-        { title: 'Hablar con el equipo', rowId: '7', description: 'Contactar a un profesional' },
-        { title: 'Finalizar conversación', rowId: '0', description: 'Cerrar esta sesión' },
-      ],
-    }]
-  ),
-
   CASE_TYPE: buildListMessage(
     '¿Qué *tipo de asunto legal* necesita atender?',
     'Seleccionar tipo',

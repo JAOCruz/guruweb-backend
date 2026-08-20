@@ -83,7 +83,7 @@ async function handle(session, text, msg, savedMedia = null) {
       }
       if (choice === '2') {
         await transitionTo(session, 'main_menu', 'show', {});
-        return withList(MSG.MAIN_MENU, LIST.MAIN_MENU);
+        return MSG.MAIN_MENU;
       }
       return MSG.INVALID_OPTION;
     }
