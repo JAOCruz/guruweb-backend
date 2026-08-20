@@ -112,11 +112,41 @@ router.get('/pdf/:filename', authenticate, (req, res) => {
 router.use(authenticate);
 
 // ── GET /api/invoices ── list (admin: all | digitador/auxiliar: assigned clients or own)
+// Query params: type, status, q (search doc_number/client_name/client_phone), created_by, from, to
 router.get('/', async (req, res) => {
   try {
-    const invoices = !isEmployee(req.user.role)
-      ? await Invoice.findAll()
-      : await Invoice.findByAssignedTo(req.user.id);
+    const { type, status, q, created_by, from, to } = req.query;
+    const isAdmin = !isEmployee(req.user.role);
+    let invoices = isAdmin ? await Invoice.findAll() : await Invoice.findByAssignedTo(req.user.id);
+
+    if (type) invoices = invoices.filter((i) => i.type === type);
+    if (status) invoices = invoices.filter((i) => i.status === status);
+    if (created_by && isAdmin) {
+      invoices = invoices.filter((i) => String(i.created_by) === String(created_by));
+    }
+    if (from || to) {
+      const fromDate = from ? new Date(from) : null;
+      const toDate = to ? new Date(to) : null;
+      invoices = invoices.filter((i) => {
+        const created = new Date(i.created_at);
+        if (fromDate && created < fromDate) return false;
+        if (toDate) {
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+          if (created > end) return false;
+        }
+        return true;
+      });
+    }
+    if (q && q.trim()) {
+      const term = q.trim().toLowerCase();
+      invoices = invoices.filter((i) =>
+        (i.doc_number && i.doc_number.toLowerCase().includes(term)) ||
+        (i.client_name && i.client_name.toLowerCase().includes(term)) ||
+        (i.client_phone && i.client_phone.toLowerCase().includes(term))
+      );
+    }
+
     res.json({ invoices });
   } catch (err) {
     console.error('List invoices error:', err);
@@ -184,7 +214,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ── PUT /api/invoices/:id ── edit (draft only, own or admin)
+// ── PUT /api/invoices/:id ── edit (admin: any status/owner | employee: own draft only)
 router.put('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
@@ -193,6 +223,10 @@ router.put('/:id', async (req, res) => {
     if (isEmployee(req.user.role)) {
       if (invoice.created_by !== req.user.id) return res.status(403).json({ error: 'Access denied' });
       if (invoice.status !== 'draft') return res.status(400).json({ error: 'Cannot edit a non-draft invoice' });
+    }
+
+    if (invoice.status === 'rejected') {
+      return res.status(400).json({ error: 'Cannot edit a rejected invoice' });
     }
 
     const { type, clientName, clientPhone, items, notes } = req.body;
@@ -225,16 +259,18 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// ── DELETE /api/invoices/:id ── (draft only, admin or creator)
+// ── DELETE /api/invoices/:id ── (admin: any | employee: own non-sent draft)
 router.delete('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    if (invoice.status === 'sent') {
-      return res.status(400).json({ error: 'Cannot delete a sent invoice' });
+    if (isEmployee(req.user.role)) {
+      if (invoice.created_by !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      if (invoice.status === 'sent') {
+        return res.status(400).json({ error: 'Cannot delete a sent invoice' });
+      }
     }
     await Invoice.delete(invoice.id);
     res.json({ message: 'Invoice deleted' });
@@ -257,6 +293,24 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
   } catch (err) {
     console.error('Approve invoice error:', err);
     res.status(500).json({ error: 'Failed to approve invoice' });
+  }
+});
+
+// ── POST /api/invoices/:id/reject ── admin only
+router.post('/:id/reject', requireRole('admin'), async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status !== 'draft') {
+      return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
+    }
+    const updated = await Invoice.reject(invoice.id, req.user.id, reason);
+    if (!updated) return res.status(400).json({ error: 'Failed to reject invoice' });
+    res.json({ invoice: updated, message: 'Invoice rejected' });
+  } catch (err) {
+    console.error('Reject invoice error:', err);
+    res.status(500).json({ error: 'Failed to reject invoice' });
   }
 });
 

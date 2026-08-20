@@ -17,10 +17,12 @@ const Invoice = {
     const { rows } = await pool.query(`
       SELECT i.*,
              cb.name AS created_by_name,
-             ab.name AS approved_by_name
+             ab.name AS approved_by_name,
+             rb.name AS rejected_by_name
       FROM invoices i
       LEFT JOIN users cb ON cb.id = i.created_by
       LEFT JOIN users ab ON ab.id = i.approved_by
+      LEFT JOIN users rb ON rb.id = i.rejected_by
       ORDER BY i.created_at DESC
     `);
     return rows;
@@ -30,10 +32,12 @@ const Invoice = {
     const { rows } = await pool.query(`
       SELECT i.*,
              cb.name AS created_by_name,
-             ab.name AS approved_by_name
+             ab.name AS approved_by_name,
+             rb.name AS rejected_by_name
       FROM invoices i
       LEFT JOIN users cb ON cb.id = i.created_by
       LEFT JOIN users ab ON ab.id = i.approved_by
+      LEFT JOIN users rb ON rb.id = i.rejected_by
       WHERE i.created_by = $1
       ORDER BY i.created_at DESC
     `, [userId]);
@@ -44,10 +48,12 @@ const Invoice = {
     const { rows } = await pool.query(`
       SELECT i.*,
              cb.name AS created_by_name,
-             ab.name AS approved_by_name
+             ab.name AS approved_by_name,
+             rb.name AS rejected_by_name
       FROM invoices i
       LEFT JOIN users cb ON cb.id = i.created_by
       LEFT JOIN users ab ON ab.id = i.approved_by
+      LEFT JOIN users rb ON rb.id = i.rejected_by
       WHERE i.client_id IN (SELECT id FROM clients WHERE assigned_to = $1)
          OR i.created_by = $1
       ORDER BY i.created_at DESC
@@ -59,10 +65,12 @@ const Invoice = {
     const { rows } = await pool.query(`
       SELECT i.*,
              cb.name AS created_by_name,
-             ab.name AS approved_by_name
+             ab.name AS approved_by_name,
+             rb.name AS rejected_by_name
       FROM invoices i
       LEFT JOIN users cb ON cb.id = i.created_by
       LEFT JOIN users ab ON ab.id = i.approved_by
+      LEFT JOIN users rb ON rb.id = i.rejected_by
       WHERE i.id = $1
     `, [id]);
     return rows[0] || null;
@@ -97,6 +105,17 @@ const Invoice = {
        WHERE id=$4 AND status IN ('approved', 'sent')
        RETURNING *`,
       [paidBy, paymentMethod || null, paymentReference || null, id]
+    );
+    return rows[0] || null;
+  },
+
+  async reject(id, adminId, reason = null) {
+    const { rows } = await pool.query(
+      `UPDATE invoices
+       SET status='rejected', rejected_by=$1, rejected_at=NOW(), updated_at=NOW(), notes = COALESCE(notes, '') || E'\n\n[RECHAZADO] ' || $2
+       WHERE id=$3 AND status='draft'
+       RETURNING *`,
+      [adminId, reason || 'Rechazado por administrador', id]
     );
     return rows[0] || null;
   },
