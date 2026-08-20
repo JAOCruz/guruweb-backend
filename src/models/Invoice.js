@@ -80,11 +80,29 @@ const Invoice = {
     const { rows } = await pool.query(
       `UPDATE invoices
        SET status='approved', approved_by=$1, approved_at=NOW(), updated_at=NOW()
-       WHERE id=$2 AND status='draft'
+       WHERE id=$2 AND status IN ('draft', 'pending_approval')
        RETURNING *`,
       [adminId, id]
     );
     return rows[0] || null;
+  },
+
+  async requestApproval(id) {
+    const { rows } = await pool.query(
+      `UPDATE invoices
+       SET status='pending_approval', updated_at=NOW()
+       WHERE id=$1 AND status='draft'
+       RETURNING *`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+
+  async countPendingApproval() {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM invoices WHERE status='pending_approval'`
+    );
+    return rows[0]?.count || 0;
   },
 
   async markSent(id, pdfPath, pdfS3Key = null, storageType = 'local') {
@@ -113,7 +131,7 @@ const Invoice = {
     const { rows } = await pool.query(
       `UPDATE invoices
        SET status='rejected', rejected_by=$1, rejected_at=NOW(), updated_at=NOW(), notes = COALESCE(notes, '') || E'\n\n[RECHAZADO] ' || $2
-       WHERE id=$3 AND status='draft'
+       WHERE id=$3 AND status IN ('draft', 'pending_approval')
        RETURNING *`,
       [adminId, reason || 'Rechazado por administrador', id]
     );

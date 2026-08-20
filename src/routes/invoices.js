@@ -111,6 +111,17 @@ router.get('/pdf/:filename', authenticate, (req, res) => {
 
 router.use(authenticate);
 
+// ── GET /api/invoices/pending-approval-count ── admin only
+router.get('/pending-approval-count', requireRole('admin'), async (req, res) => {
+  try {
+    const count = await Invoice.countPendingApproval();
+    res.json({ count });
+  } catch (err) {
+    console.error('Pending approval count error:', err);
+    res.status(500).json({ error: 'Failed to get pending approval count' });
+  }
+});
+
 // ── GET /api/invoices ── list (admin: all | digitador/auxiliar: assigned clients or own)
 // Query params: type, status, q (search doc_number/client_name/client_phone), created_by, from, to
 router.get('/', async (req, res) => {
@@ -285,7 +296,7 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (invoice.status !== 'draft') {
+    if (!['draft', 'pending_approval'].includes(invoice.status)) {
       return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
     }
     const updated = await Invoice.approve(invoice.id, req.user.id);
@@ -302,7 +313,7 @@ router.post('/:id/reject', requireRole('admin'), async (req, res) => {
     const { reason } = req.body;
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (invoice.status !== 'draft') {
+    if (!['draft', 'pending_approval'].includes(invoice.status)) {
       return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
     }
     const updated = await Invoice.reject(invoice.id, req.user.id, reason);
@@ -314,7 +325,9 @@ router.post('/:id/reject', requireRole('admin'), async (req, res) => {
   }
 });
 
-// ── POST /api/invoices/:id/send ── admin can always; digitador only if approved
+// ── POST /api/invoices/:id/send ──
+// Admin can send draft/approved/pending_approval invoices directly.
+// Employees: draft -> request admin approval; approved -> send; pending_approval -> wait.
 router.post('/:id/send', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
@@ -325,13 +338,26 @@ router.post('/:id/send', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Employee can only send approved invoices
-    if (isEmployee(req.user.role) && invoice.status !== 'approved') {
-      return res.status(403).json({ error: 'Invoice must be approved by admin before sending' });
-    }
-
     if (invoice.status === 'sent') {
       return res.status(400).json({ error: 'Invoice already sent' });
+    }
+
+    // Employees must request admin approval before sending
+    if (isEmployee(req.user.role)) {
+      if (invoice.status === 'pending_approval') {
+        return res.status(400).json({ error: 'Invoice is pending admin approval' });
+      }
+      if (invoice.status === 'draft') {
+        const updated = await Invoice.requestApproval(invoice.id);
+        if (!updated) return res.status(400).json({ error: 'Failed to request approval' });
+        return res.json({ invoice: updated, message: 'Invoice submitted for admin approval before sending' });
+      }
+      // approved -> proceed to send below
+    }
+
+    // Admin sending a pending_approval invoice implicitly approves it
+    if (!isEmployee(req.user.role) && invoice.status === 'pending_approval') {
+      await Invoice.approve(invoice.id, req.user.id);
     }
 
     // Generate PDF
