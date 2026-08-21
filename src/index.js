@@ -48,15 +48,32 @@ try {
   console.warn("[WA] Could not load WhatsApp reconnect helpers:", err.message);
 }
 
-// Railway sends SIGTERM to the old container during a rolling deploy. Drop our
-// WhatsApp sockets right away so the NEW container owns the session cleanly —
-// otherwise both fight over the same credentials (WhatsApp 440 conflict loop).
-process.once("SIGTERM", () => {
-  console.log("[WA] SIGTERM received — closing WhatsApp sessions before shutdown");
-  if (stopAllSessions) stopAllSessions();
+// Railway sends SIGTERM to the old container during a rolling deploy. We must
+// NOT drop the socket while Baileys is in the middle of a key exchange, or the
+// saved Signal sessions get corrupted (Bad MAC / "No matching sessions" later).
+// Wait for critical operations to finish, then close sessions cleanly.
+let waitForCriticalOperations = null;
+try {
+  ({ waitForCriticalOperations } = require("./whatsapp/connection"));
+} catch (err) {
+  console.warn("[WA] Could not load critical-operation helper:", err.message);
+}
+
+async function gracefulShutdown(signal) {
+  console.log(`[WA] ${signal} received — starting graceful shutdown`);
+  if (waitForCriticalOperations) {
+    const waited = await waitForCriticalOperations(15000);
+    console.log(`[WA] Critical operations ${waited ? 'finished' : 'timed out'} before shutdown`);
+  }
+  if (stopAllSessions) {
+    stopAllSessions();
+  }
   // Give sockets a moment to close, then exit so the platform can proceed.
   setTimeout(() => process.exit(0), 1500).unref();
-});
+}
+
+process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 
 const app = express();
 

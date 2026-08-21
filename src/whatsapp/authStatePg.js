@@ -105,16 +105,22 @@ function makeKeyStore(sessionId) {
 
 async function usePostgresAuthState(sessionId) {
   const { rows } = await pool.query(
-    'SELECT creds, keys FROM wa_credentials WHERE session_id = $1',
+    'SELECT creds, creds_backup, keys FROM wa_credentials WHERE session_id = $1',
     [sessionId]
   );
 
   let creds = rows[0]?.creds ? deserialize(rows[0].creds) : null;
   if (!isCredsUsable(creds)) {
-    if (rows[0]) {
-      console.warn(`[WA] Stored creds for ${sessionId} are incomplete — reinitializing`);
+    const backup = rows[0]?.creds_backup ? deserialize(rows[0].creds_backup) : null;
+    if (isCredsUsable(backup)) {
+      console.warn(`[WA] Stored creds for ${sessionId} are incomplete — restoring from backup`);
+      creds = backup;
+    } else {
+      if (rows[0]) {
+        console.warn(`[WA] Stored creds and backup for ${sessionId} are incomplete — reinitializing`);
+      }
+      creds = initCreds();
     }
-    creds = initCreds();
   }
   const keys = makeKeyStore(sessionId);
 
@@ -123,13 +129,19 @@ async function usePostgresAuthState(sessionId) {
   // (keys are managed by the key store; overwriting them with a stale snapshot
   // loses sessions/pre-keys).
   const saveCreds = async () => {
+    if (!isCredsUsable(creds)) {
+      console.warn(`[WA] Refusing to persist incomplete creds for ${sessionId}`);
+      return;
+    }
+    const serialized = serialize(creds);
     await pool.query(
-      `INSERT INTO wa_credentials (session_id, creds, keys, updated_at)
-       VALUES ($1, $2, $3, NOW())
+      `INSERT INTO wa_credentials (session_id, creds, creds_backup, keys, updated_at)
+       VALUES ($1, $2, $2, $3, NOW())
        ON CONFLICT (session_id) DO UPDATE SET
+         creds_backup = COALESCE(wa_credentials.creds, EXCLUDED.creds_backup),
          creds = EXCLUDED.creds,
          updated_at = NOW()`,
-      [sessionId, serialize(creds), JSON.stringify({})]
+      [sessionId, serialized, JSON.stringify({})]
     );
   };
 

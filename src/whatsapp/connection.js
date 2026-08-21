@@ -50,10 +50,46 @@ const lastActivity = new Map();
 // Handlers from the latest createConnection per session, so the watchdog can
 // rebuild the socket with the same callbacks.
 const sessionHandlers = new Map();
+// Active critical operations per session (connection setup, key exchanges,
+// credential writes). SIGTERM waits for these to finish before shutting down
+// so Railway cannot restart the container mid-handshake and corrupt keys.
+const criticalOps = new Map();
 const BAILEYS_MISSING_ERROR = 'WhatsApp/Baileys is not available in this environment';
 
 function ensureBaileys() {
   if (!baileys) throw new Error(BAILEYS_MISSING_ERROR);
+}
+
+function beginCritical(sessionId, label) {
+  const count = (criticalOps.get(sessionId) || 0) + 1;
+  criticalOps.set(sessionId, count);
+  console.log(`[WA] Critical operation started for ${sessionId}: ${label} (count=${count})`);
+}
+
+function endCritical(sessionId, label) {
+  const count = (criticalOps.get(sessionId) || 0) - 1;
+  if (count <= 0) criticalOps.delete(sessionId);
+  else criticalOps.set(sessionId, count);
+  console.log(`[WA] Critical operation ended for ${sessionId}: ${label} (count=${Math.max(0, count)})`);
+}
+
+function hasAnyCriticalOperation() {
+  for (const count of criticalOps.values()) {
+    if (count > 0) return true;
+  }
+  return false;
+}
+
+function waitForCriticalOperations(timeoutMs = 10000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      if (!hasAnyCriticalOperation()) return resolve(true);
+      if (Date.now() - start > timeoutMs) return resolve(false);
+      setTimeout(check, 100);
+    };
+    check();
+  });
 }
 
 // Stop any live socket for a session and invalidate its reconnect chain.
@@ -70,15 +106,17 @@ function stopSession(sessionId) {
 
 async function createConnection(sessionId, onQR, onConnected, onMessage, onHistory) {
   ensureBaileys();
+  beginCritical(sessionId, 'createConnection');
 
-  // Kill any previous socket (open or still connecting) for this session.
-  stopSession(sessionId);
-  const gen = generations.get(sessionId);
-  const isCurrent = () => generations.get(sessionId) === gen;
-  sessionHandlers.set(sessionId, { onQR, onConnected, onMessage, onHistory });
-  lastActivity.set(sessionId, Date.now());
+  try {
+    // Kill any previous socket (open or still connecting) for this session.
+    stopSession(sessionId);
+    const gen = generations.get(sessionId);
+    const isCurrent = () => generations.get(sessionId) === gen;
+    sessionHandlers.set(sessionId, { onQR, onConnected, onMessage, onHistory });
+    lastActivity.set(sessionId, Date.now());
 
-  console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
+    console.log(`[WA] Loading auth state from PostgreSQL for session: ${sessionId}`);
   const { state, saveCreds } = await usePostgresAuthState(sessionId);
   console.log(`[WA] Auth state loaded. Has creds: ${!!state.creds}, registered: ${state.creds?.registered || false}`);
 
@@ -166,9 +204,10 @@ async function createConnection(sessionId, onQR, onConnected, onMessage, onHisto
           } catch (dbErr) {
             console.error(`[WA] Failed to check manual_disconnect for ${sessionId}:`, dbErr.message);
           }
-          createConnection(sessionId, onQR, onConnected, onMessage, onHistory).catch(err => {
-            console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message);
-          });
+          beginCritical(sessionId, 'autoReconnect');
+          createConnection(sessionId, onQR, onConnected, onMessage, onHistory)
+            .catch(err => console.error(`[WA] Reconnect failed for ${sessionId}:`, err.message))
+            .finally(() => endCritical(sessionId, 'autoReconnect'));
         }, delayMs);
       } else {
         console.log(`[WA] Session ${sessionId} logged out. Generate new QR to reconnect.`);
@@ -210,7 +249,13 @@ async function createConnection(sessionId, onQR, onConnected, onMessage, onHisto
     }
   });
 
-  return sock;
+    return sock;
+  } finally {
+    // createConnection itself is done; the socket continues to live, but the
+    // initial handshake/key exchange window is over. Reconnect chains spawned
+    // inside the handlers begin/end their own critical markers.
+    endCritical(sessionId, 'createConnection');
+  }
 }
 
 async function isManuallyDisconnected(sessionId) {
@@ -239,12 +284,15 @@ async function forceReconnect(sessionId) {
     return false;
   }
   console.log(`[WA] Force-reconnecting session ${sessionId}...`);
+  beginCritical(sessionId, 'forceReconnect');
   try {
     await createConnection(sessionId, handlers.onQR, handlers.onConnected, handlers.onMessage, handlers.onHistory);
     return true;
   } catch (err) {
     console.error(`[WA] Force-reconnect failed for ${sessionId}:`, err.message);
     return false;
+  } finally {
+    endCritical(sessionId, 'forceReconnect');
   }
 }
 
@@ -328,6 +376,7 @@ async function reconnectSavedSessions(onMessage, onHistory) {
     for (const row of rows) {
       const sessionId = row.session_id;
       console.log(`[WA] Auto-reconnecting session: ${sessionId}`);
+      beginCritical(sessionId, 'startupAutoReconnect');
       try {
         await createConnection(
           sessionId,
@@ -338,6 +387,8 @@ async function reconnectSavedSessions(onMessage, onHistory) {
         );
       } catch (err) {
         console.error(`[WA] Failed to auto-reconnect ${sessionId}:`, err.message);
+      } finally {
+        endCritical(sessionId, 'startupAutoReconnect');
       }
     }
   } catch (err) {
@@ -360,4 +411,4 @@ function stopAllSessions() {
   }
 }
 
-module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, stopAllSessions, forceReconnect, reconnectSavedSessions, resyncSession };
+module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, stopAllSessions, forceReconnect, reconnectSavedSessions, resyncSession, waitForCriticalOperations, hasAnyCriticalOperation };
