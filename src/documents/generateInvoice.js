@@ -28,12 +28,15 @@ function toBase64(filePath) {
 /**
  * Genera un PDF de cotización/factura con estilo FACTURA_DEFINITIVA
  */
-async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, items, notes, type = 'COTIZACIÓN' }) {
+async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, items, notes, type = 'COTIZACIÓN', discountType = null, discountValue = 0, discountAmount = 0, discountCode = null }) {
   const subtotal = items.reduce((s, i) => s + (i.cantidad * i.precio), 0);
   const itbis = items.some(i => i.itbis)
     ? items.reduce((s, i) => s + (i.itbis ? i.cantidad * i.precio * 0.18 : 0), 0)
     : 0;
-  const total = subtotal + itbis;
+  const discountLabel = discountType
+    ? `DESCUENTO${discountType === 'percentage' ? ` (${discountValue}%)` : discountType === 'coupon' && discountCode ? ` (cupón ${discountCode})` : ''}`
+    : 'DESCUENTO';
+  const total = Math.max(0, subtotal + itbis - Number(discountAmount || 0));
 
   // Build item rows — pad to at least 6 rows like the template
   const paddedItems = [...items];
@@ -316,8 +319,8 @@ async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, it
               <td class="t-value">${fmt(itbis)}</td>
             </tr>
             <tr class="row-credito">
-              <td class="t-label">CREDITO</td>
-              <td class="t-value">${fmt(0)}</td>
+              <td class="t-label">${discountLabel}</td>
+              <td class="t-value">${fmt(Number(discountAmount) || 0)}</td>
             </tr>
             <tr class="row-total">
               <td class="t-label">TOTAL GENERAL</td>

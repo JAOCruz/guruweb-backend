@@ -19,6 +19,21 @@ const { sendDocumentToChat } = require('../whatsapp/sender');
 
 const router = express.Router();
 
+// ── helper: calculate discount (admin-only feature) ──
+function calculateDiscount({ subtotal, discountType, discountValue }) {
+  if (!discountType) return { discountAmount: 0, discountType: null, discountValue: 0 };
+  const value = Number(discountValue) || 0;
+  let amount = 0;
+  if (discountType === 'percentage') {
+    amount = subtotal * (value / 100);
+  } else if (discountType === 'fixed' || discountType === 'coupon') {
+    amount = value;
+  }
+  // Discount cannot make the net total negative
+  if (amount > subtotal) amount = subtotal;
+  return { discountAmount: Math.round(amount * 100) / 100, discountType, discountValue: value };
+}
+
 // ── get all quotations (auth required) ──
 router.get('/quotations', authenticate, async (req, res) => {
   try {
@@ -60,6 +75,10 @@ router.post('/admin/regenerate-pdfs', authenticate, requireRole('admin'), async 
           items: typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
           notes: invoice.notes,
           type: invoice.type,
+          discountType: invoice.discount_type,
+          discountValue: invoice.discount_value,
+          discountAmount: invoice.discount_amount,
+          discountCode: invoice.discount_code,
         });
         results.ok++;
       } catch (err) {
@@ -206,7 +225,19 @@ router.post('/', async (req, res) => {
     const itbis    = items.some(i => i.itbis)
       ? items.reduce((s, i) => s + (i.itbis ? Number(i.cantidad) * Number(i.precio) * 0.18 : 0), 0)
       : 0;
-    const total = subtotal + itbis;
+
+    // Discounts are admin-only
+    let discount = { discountAmount: 0, discountType: null, discountValue: 0 };
+    if (!isEmployee(req.user.role)) {
+      const { discountType, discountValue, discountCode, discountReason } = req.body;
+      discount = calculateDiscount({ subtotal, discountType, discountValue });
+      if (discount.discountType) {
+        discount.discountCode = discountCode || null;
+        discount.discountReason = discountReason || null;
+      }
+    }
+
+    const total = Math.max(0, subtotal + itbis - discount.discountAmount);
 
     const docNumber = generateDocNumber(type === 'FACTURA' ? 'FAC' : 'COT');
 
@@ -215,6 +246,11 @@ router.post('/', async (req, res) => {
       clientId: clientId || null, clientName, clientPhone,
       items, notes: finalNotes, subtotal, itbis, total,
       createdBy: req.user.id,
+      discountType: discount.discountType,
+      discountValue: discount.discountValue,
+      discountCode: discount.discountCode,
+      discountAmount: discount.discountAmount,
+      discountReason: discount.discountReason,
     });
 
     res.status(201).json({ invoice });
@@ -256,10 +292,38 @@ router.put('/:id', async (req, res) => {
       const itbis    = items.some(i => i.itbis)
         ? items.reduce((s, i) => s + (i.itbis ? Number(i.cantidad) * Number(i.precio) * 0.18 : 0), 0)
         : 0;
-      fields.items    = JSON.stringify(items);
-      fields.subtotal = subtotal;
-      fields.itbis    = itbis;
-      fields.total    = subtotal + itbis;
+
+      // Discounts are admin-only
+      let discount = { discountAmount: 0, discountType: null, discountValue: 0 };
+      if (!isEmployee(req.user.role)) {
+        const { discountType, discountValue, discountCode, discountReason } = req.body;
+        discount = calculateDiscount({ subtotal, discountType, discountValue });
+        if (discount.discountType) {
+          discount.discountCode = discountCode || null;
+          discount.discountReason = discountReason || null;
+        }
+      }
+
+      fields.items           = JSON.stringify(items);
+      fields.subtotal        = subtotal;
+      fields.itbis           = itbis;
+      fields.discount_type   = discount.discountType;
+      fields.discount_value  = discount.discountValue;
+      fields.discount_code   = discount.discountCode || null;
+      fields.discount_amount = discount.discountAmount;
+      fields.discount_reason = discount.discountReason || null;
+      fields.total           = Math.max(0, subtotal + itbis - discount.discountAmount);
+    } else if (!isEmployee(req.user.role)) {
+      // Admin can update discount without changing items
+      const { discountType, discountValue, discountCode, discountReason } = req.body;
+      const subtotal = Number(invoice.subtotal) || 0;
+      const discount = calculateDiscount({ subtotal, discountType, discountValue });
+      fields.discount_type   = discount.discountType;
+      fields.discount_value  = discount.discountValue;
+      fields.discount_code   = discountCode || null;
+      fields.discount_amount = discount.discountAmount;
+      fields.discount_reason = discountReason || null;
+      fields.total           = Math.max(0, subtotal + Number(invoice.itbis || 0) - discount.discountAmount);
     }
 
     const updated = await Invoice.update(invoice.id, fields);
@@ -374,6 +438,10 @@ router.post('/:id/send', async (req, res) => {
         items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
         notes:       invoice.notes,
         type:        invoice.type,
+        discountType: invoice.discount_type,
+        discountValue: invoice.discount_value,
+        discountAmount: invoice.discount_amount,
+        discountCode: invoice.discount_code,
       });
       console.log(`[Invoice] PDF generated: ${pdfPath}`);
 
@@ -427,6 +495,10 @@ router.post('/:id/generate-pdf', async (req, res) => {
       items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
       notes:       invoice.notes,
       type:        invoice.type,
+      discountType: invoice.discount_type,
+      discountValue: invoice.discount_value,
+      discountAmount: invoice.discount_amount,
+      discountCode: invoice.discount_code,
     });
 
     const updated = await Invoice.update(invoice.id, { pdf_path: pdfPath, pdf_storage_type: 'railway_volume' });
@@ -461,6 +533,10 @@ router.post('/:id/send-whatsapp', async (req, res) => {
         items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
         notes:       invoice.notes,
         type:        invoice.type,
+        discountType: invoice.discount_type,
+        discountValue: invoice.discount_value,
+        discountAmount: invoice.discount_amount,
+        discountCode: invoice.discount_code,
       });
     }
 
