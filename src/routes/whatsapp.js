@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession } = require('../whatsapp/connection');
+const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession, resyncSession, forceReconnect } = require('../whatsapp/connection');
 const { handleIncomingMessage, handleHistoryMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
@@ -219,6 +219,42 @@ router.post('/disconnect', async (req, res) => {
   } catch (err) {
     console.error('[WA] Disconnect error:', err.message);
     res.status(500).json({ error: 'Failed to disconnect' });
+  }
+});
+
+// ── POST /api/whatsapp/resync ── admin only
+// Soft refresh: re-sync app state and wake the message pipe without dropping
+// the socket. Safe to use when chats look frozen but the socket still says "connected".
+router.post('/resync', requireAdmin, async (req, res) => {
+  try {
+    const sessionId = `user_${req.user.id}`;
+    const result = await resyncSession(sessionId);
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    res.json({ success: true, message: result.message });
+  } catch (err) {
+    console.error('[WA] Resync error:', err.message);
+    res.status(500).json({ error: 'Failed to resync session' });
+  }
+});
+
+// ── POST /api/whatsapp/reconnect ── admin only
+// Hard refresh: drop the current socket and rebuild it using saved credentials.
+// Use this when resync is not enough. WhatsApp will re-deliver pending messages.
+router.post('/reconnect', requireAdmin, async (req, res) => {
+  try {
+    const sessionId = `user_${req.user.id}`;
+    const anyConn = getAnyConnection();
+    const targetSession = getConnection(sessionId) ? sessionId : (anyConn?.sessionId || sessionId);
+    const ok = await forceReconnect(targetSession);
+    if (!ok) {
+      return res.status(400).json({ error: 'No active session to reconnect. Try /connect first.' });
+    }
+    res.json({ success: true, message: 'Reconnecting session', sessionId: targetSession });
+  } catch (err) {
+    console.error('[WA] Reconnect error:', err.message);
+    res.status(500).json({ error: 'Failed to reconnect session' });
   }
 });
 

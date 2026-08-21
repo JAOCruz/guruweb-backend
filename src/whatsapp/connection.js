@@ -253,7 +253,7 @@ async function forceReconnect(sessionId) {
 // routing messages to it even though sends still work). Rebuild it. A quiet
 // but healthy session simply gets a harmless refresh with saved creds
 // (syncFullHistory is off, so this takes seconds).
-const QUIET_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12h
+const QUIET_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3h
 const WATCHDOG_INTERVAL_MS = 15 * 60 * 1000; // check every 15 min
 setInterval(() => {
   for (const [sessionId, entry] of connections) {
@@ -269,6 +269,34 @@ setInterval(() => {
 function getConnection(sessionId) {
   const entry = connections.get(sessionId);
   return entry && entry.open ? entry.sock : null;
+}
+
+// Soft refresh: nudge the open socket so WhatsApp re-syncs app state and
+// re-opens the message pipe. Does NOT drop the socket, so it is safe to call
+// from the dashboard when chats look frozen but status says connected.
+async function resyncSession(sessionId) {
+  const entry = connections.get(sessionId);
+  if (!entry || !entry.open) {
+    return { success: false, message: 'No active session to resync' };
+  }
+  const { sock } = entry;
+  try {
+    // 1) Re-sync app state (chats, contacts, archive, etc.)
+    if (typeof sock.resyncAppState === 'function') {
+      await sock.resyncAppState(baileys.ALL_WA_PATCH_NAMES, false);
+      console.log(`[WA] resyncAppState completed for ${sessionId}`);
+    }
+    // 2) Send an available presence update to wake up the message stream
+    if (typeof sock.sendPresenceUpdate === 'function') {
+      await sock.sendPresenceUpdate('available');
+      console.log(`[WA] sendPresenceUpdate('available') completed for ${sessionId}`);
+    }
+    lastActivity.set(sessionId, Date.now());
+    return { success: true, message: 'Sesión refrescada' };
+  } catch (err) {
+    console.error(`[WA] resyncSession failed for ${sessionId}:`, err.message);
+    return { success: false, message: err.message };
+  }
 }
 
 async function sendMessage(sessionId, jid, content) {
@@ -332,4 +360,4 @@ function stopAllSessions() {
   }
 }
 
-module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, stopAllSessions, forceReconnect, reconnectSavedSessions };
+module.exports = { createConnection, getConnection, getAnyConnection, sendMessage, disconnectSession, stopSession, stopAllSessions, forceReconnect, reconnectSavedSessions, resyncSession };
