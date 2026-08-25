@@ -327,6 +327,34 @@ router.put('/:id', async (req, res) => {
     }
 
     const updated = await Invoice.update(invoice.id, fields);
+
+    // If this invoice already had a PDF, regenerate it with the new data so the
+    // preview/download always reflects the latest edit. generateInvoicePDF writes
+    // to a deterministic path (<docNumber>.pdf), so the stored pdf_path stays valid.
+    if (invoice.pdf_path) {
+      try {
+        const created = new Date(invoice.created_at || Date.now());
+        const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
+        await generateInvoicePDF({
+          clientName:  updated.client_name,
+          clientPhone: updated.client_phone,
+          docNumber:   updated.doc_number,
+          date:        dateStr,
+          items:       typeof updated.items === 'string' ? JSON.parse(updated.items) : updated.items,
+          notes:       updated.notes,
+          type:        updated.type,
+          discountType: updated.discount_type,
+          discountValue: updated.discount_value,
+          discountAmount: updated.discount_amount,
+          discountCode: updated.discount_code,
+        });
+        console.log(`[Invoice] PDF regenerated after edit: ${updated.doc_number}`);
+      } catch (pdfErr) {
+        console.error(`[Invoice] Failed to regenerate PDF after edit for ${updated.doc_number}:`, pdfErr.message);
+        // Don't fail the edit if PDF regeneration fails
+      }
+    }
+
     res.json({ invoice: updated });
   } catch (err) {
     console.error('Update invoice error:', err);
