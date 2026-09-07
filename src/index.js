@@ -272,6 +272,17 @@ try {
   console.error("[Routes] Skipping /api/whatsapp:", err.message);
 }
 
+// --- WHATSAPP CLOUD API WEBHOOK (Meta official API) ---
+// Public endpoint — Meta calls this directly for verification and message events.
+// This is SEPARATE from the Baileys-based /api/whatsapp routes above.
+try {
+  const whatsappWebhookRoutes = require("./routes/whatsappWebhook");
+  app.use("/webhook/whatsapp", whatsappWebhookRoutes);
+  console.log("[Routes] Mounted /webhook/whatsapp (Cloud API webhook)");
+} catch (err) {
+  console.error("[Routes] Skipping /webhook/whatsapp:", err.message);
+}
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });
