@@ -35,6 +35,7 @@ const serviceCatalogRoutes = require("./routes/serviceCatalog");
 const ServiceCatalog = require("./models/serviceCatalog");
 const { authenticate } = require("./middleware/auth");
 const config = require("./config");
+const cloudApi = require("./whatsapp/cloudApi");
 
 // WhatsApp auto-reconnect on startup (safe-require so Railway works without Baileys)
 let reconnectSavedSessions = null;
@@ -139,6 +140,11 @@ app.use(
     credentials: true,
   })
 );
+
+// Webhook route needs the raw body to verify Meta's X-Hub-Signature-256.
+// This parser runs only for /webhook/whatsapp and prevents the later express.json()
+// middleware from reparsing the same request.
+app.use('/webhook/whatsapp', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -344,7 +350,10 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
 
   // Auto-reconnect saved WhatsApp sessions (credentials live in PostgreSQL)
-  if (reconnectSavedSessions) {
+  // Skip when Cloud API is enabled to avoid having two active sessions for the same number.
+  if (cloudApi.isCloudEnabled()) {
+    console.log('[WA] Cloud API enabled — skipping Baileys auto-reconnect');
+  } else if (reconnectSavedSessions) {
     reconnectSavedSessions(handleIncomingMessage, handleHistoryMessage).catch(err => {
       console.error('[WA] Auto-reconnect error:', err.message);
     });

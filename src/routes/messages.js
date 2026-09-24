@@ -4,8 +4,8 @@ const multer = require('multer');
 const Message = require('../models/Message');
 const ClientMedia = require('../models/ClientMedia');
 const storage = require('../utils/storage');
-const { sendMessage, getAnyConnection } = require('../whatsapp/connection');
 const Client = require('../models/Client');
+const outgoing = require('../whatsapp/outgoing');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 const uploadMedia = multer({
@@ -154,11 +154,10 @@ router.post('/send', async (req, res) => {
     const client = await Client.findById(client_id);
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
-    const jid = `${client.phone}@s.whatsapp.net`;
-    const sent = await sendMessage(session_id, jid, { text: content });
+    const sent = await outgoing.sendText(client.phone, content);
 
     const message = await Message.create({
-      waMessageId: sent.key.id,
+      waMessageId: sent.key?.id || null,
       phone: client.phone,
       clientId: client_id,
       caseId: case_id || null,
@@ -181,27 +180,26 @@ router.post('/send-direct', async (req, res) => {
       return res.status(400).json({ error: 'phone and content are required' });
     }
 
-    const conn = getAnyConnection();
-    if (!conn) {
-      return res.status(503).json({ error: 'No hay sesion de WhatsApp conectada' });
+    if (!outgoing.isAvailable()) {
+      return res.status(503).json({ error: 'No hay sesión de WhatsApp conectada' });
     }
 
     // Use the real JID from last inbound message (handles @lid privacy accounts)
     const lastJid = await Message.getLastJid(phone);
-    const jid = lastJid || `${phone}@s.whatsapp.net`;
-    const sent = await sendMessage(conn.sessionId, jid, { text: content });
+    const target = lastJid || phone;
+    const sent = await outgoing.sendText(target, content);
 
     // Find client_id if this phone is a registered client
     const client = await Client.findByPhone(phone);
 
     const message = await Message.create({
-      waMessageId: sent.key.id,
+      waMessageId: sent.key?.id || null,
       phone,
       clientId: client?.id || null,
       caseId: null,
       direction: 'outbound',
       content,
-      waJid: jid,
+      waJid: target,
     });
 
     res.status(201).json({ message });
@@ -222,14 +220,13 @@ router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'phone and file are required' });
     }
 
-    const conn = getAnyConnection();
-    if (!conn) {
-      return res.status(503).json({ error: 'No hay sesion de WhatsApp conectada' });
+    if (!outgoing.isAvailable()) {
+      return res.status(503).json({ error: 'No hay sesión de WhatsApp conectada' });
     }
 
     // Resolve real JID (handles @lid privacy accounts)
     const lastJid = await Message.getLastJid(phone);
-    const jid = lastJid || `${phone}@s.whatsapp.net`;
+    const target = lastJid || phone;
 
     // Persist file to the Railway volume so it shows in the media viewer
     const timestamp = Date.now();
@@ -243,17 +240,13 @@ router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
     const isVideo = mime.startsWith('video/');
     const mediaType = isImage ? 'image' : isAudio ? 'audio' : isVideo ? 'video' : 'document';
 
-    // Send via WhatsApp
-    let sent;
-    if (isImage) {
-      sent = await conn.sock.sendMessage(jid, { image: file.buffer, caption: caption || '' });
-    } else if (isVideo) {
-      sent = await conn.sock.sendMessage(jid, { video: file.buffer, caption: caption || '' });
-    } else if (isAudio) {
-      sent = await conn.sock.sendMessage(jid, { audio: file.buffer, mimetype: mime, ptt: false });
-    } else {
-      sent = await conn.sock.sendMessage(jid, { document: file.buffer, fileName: file.originalname, mimetype: mime, caption: caption || '' });
-    }
+    // Send via the unified outgoing layer (Cloud API or Baileys)
+    const sent = await outgoing.sendMedia(target, filePath, {
+      mime,
+      fileName: file.originalname,
+      caption: caption || '',
+      mediaType,
+    });
 
     const client = await Client.findByPhone(phone);
 
@@ -261,7 +254,7 @@ router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
     const mediaRecord = await ClientMedia.create({
       phone,
       clientId: client?.id || null,
-      waMessageId: sent.key.id,
+      waMessageId: sent.key?.id || null,
       mediaType,
       mimeType: mime,
       originalName: file.originalname,
@@ -277,14 +270,14 @@ router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
       : `[📎 ${typeLabel}]`;
 
     const message = await Message.create({
-      waMessageId: sent.key.id,
+      waMessageId: sent.key?.id || null,
       phone,
       clientId: client?.id || null,
       caseId: null,
       direction: 'outbound',
       content,
       mediaUrl: `/api/media/${mediaRecord.id}/download`,
-      waJid: jid,
+      waJid: target,
     });
 
     console.log(`[Messages] Media sent to ${phone}: ${mediaType} (${(file.size / 1024).toFixed(1)}KB) by ${req.user.username}`);

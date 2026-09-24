@@ -4,7 +4,7 @@ const Broadcast = require('../models/Broadcast');
 const Message = require('../models/Message');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
-const { sendMessage, getAnyConnection } = require('../whatsapp/connection');
+const outgoing = require('../whatsapp/outgoing');
 
 // All broadcast routes: admin only
 router.use(authenticate, requireRole('admin'));
@@ -96,8 +96,7 @@ async function sendBroadcast(broadcastId) {
 
   await Broadcast.markSending(broadcastId);
 
-  const conn = getAnyConnection();
-  if (!conn) {
+  if (!outgoing.isAvailable()) {
     await Broadcast.markFailed(broadcastId);
     throw new Error('No WhatsApp connection');
   }
@@ -109,17 +108,13 @@ async function sendBroadcast(broadcastId) {
     try {
       // Use real JID if available (handles @lid accounts)
       const lastJid = await Message.getLastJid(r.phone);
-      const jid = lastJid || `${r.phone}@s.whatsapp.net`;
+      const target = lastJid || r.phone;
 
-      // Build message payload
-      let payload;
       if (broadcast.media_url) {
-        payload = { image: { url: broadcast.media_url }, caption: broadcast.message };
+        await outgoing.sendImage(target, broadcast.media_url, broadcast.message);
       } else {
-        payload = { text: broadcast.message };
+        await outgoing.sendText(target, broadcast.message);
       }
-
-      await sendMessage(conn.sessionId, jid, payload);
       await Broadcast.markRecipientSent(r.id);
       successCount++;
 
@@ -178,8 +173,7 @@ router.post('/apology', async (req, res) => {
     }
 
     // CONFIRMED SEND — requires an active WhatsApp connection (team activates the bot)
-    const conn = getAnyConnection();
-    if (!conn) {
+    if (!outgoing.isAvailable()) {
       return res.status(503).json({ error: 'No hay conexión de WhatsApp activa. Activa el bot primero.' });
     }
 
@@ -188,8 +182,8 @@ router.post('/apology', async (req, res) => {
     for (const r of affected) {
       try {
         const lastJid = await Message.getLastJid(r.phone);
-        const jid = lastJid || `${r.phone}@s.whatsapp.net`;
-        await sendMessage(conn.sessionId, jid, { text: message });
+        const target = lastJid || r.phone;
+        await outgoing.sendText(target, message);
         sent++;
         await new Promise(resolve => setTimeout(resolve, 2000)); // throttle anti-ban
       } catch (err) {

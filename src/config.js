@@ -47,6 +47,13 @@ module.exports = {
   // WhatsApp config
   wa: {
     sessionDir: process.env.WA_SESSION_DIR || './wa_sessions',
+    cloud: {
+      accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
+      phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+      appSecret: process.env.WHATSAPP_APP_SECRET || '',
+      apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0',
+    },
+    cloudEnabled: process.env.WHATSAPP_CLOUD_ENABLED === 'true' || (!!process.env.WHATSAPP_ACCESS_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID),
   },
 
   // Uploads config

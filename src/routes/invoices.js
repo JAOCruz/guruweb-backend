@@ -15,7 +15,7 @@ const { generateInvoicePDF, generateDocNumber } = require('../documents/generate
 const Case = require('../models/Case');
 const Client = require('../models/Client');
 const Message = require('../models/Message');
-const { sendDocumentToChat } = require('../whatsapp/sender');
+const outgoing = require('../whatsapp/outgoing');
 
 const router = express.Router();
 
@@ -568,12 +568,12 @@ router.post('/:id/send-whatsapp', async (req, res) => {
       });
     }
 
-    // Resolve the chat JID (handles @lid privacy accounts via last known JID)
+    // Resolve the chat target (handles @lid privacy accounts via last known JID)
     const phone = invoice.client_phone;
     if (!phone) return res.status(400).json({ error: 'Invoice has no client phone' });
-    const jid = (await Message.getLastJid(phone)) || `${phone}@s.whatsapp.net`;
+    const target = (await Message.getLastJid(phone)) || phone;
 
-    await sendDocumentToChat(jid, pdfPath, `${invoice.doc_number}.pdf`);
+    await outgoing.sendDocument(target, pdfPath, `${invoice.doc_number}.pdf`);
 
     const updated = await Invoice.markSent(
       invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'
