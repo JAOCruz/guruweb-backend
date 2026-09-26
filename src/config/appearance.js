@@ -1,9 +1,10 @@
 // Keys only — hex values and emoji live in the frontend (dashboard src/lib/userColors.ts).
 const COLOR_KEYS = ['green', 'yellow', 'red', 'purple', 'orange', 'pink', 'teal', 'cyan', 'blue', 'indigo', 'lime', 'brown'];
 
+// Animal faces (the owl has no face emoji; it's the admin's)
 const AVATAR_KEYS = [
-  'cow', 'cat', 'dog', 'horse', 'pig', 'sheep', 'goat', 'rooster', 'duck', 'rabbit', 'turtle', 'dolphin',
-  'lion', 'tiger', 'bear', 'panda', 'fox', 'frog', 'penguin', 'parrot', 'bee', 'butterfly', 'elephant', 'giraffe',
+  'cow', 'cat', 'dog', 'horse', 'pig', 'rabbit', 'rooster', 'lion', 'tiger', 'bear', 'panda', 'fox',
+  'frog', 'giraffe', 'koala', 'monkey', 'hamster', 'mouse', 'wolf', 'boar', 'unicorn', 'dragon', 'raccoon', 'zebra',
   'owl',
 ];
 

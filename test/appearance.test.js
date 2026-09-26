@@ -33,7 +33,7 @@ test('null color → 400', () => {
 });
 
 test('unknown avatar → 400 INVALID_AVATAR', () => {
-  assert.equal(validateAppearance({ role: 'digitador', avatar: 'unicorn' }).code, 'INVALID_AVATAR');
+  assert.equal(validateAppearance({ role: 'digitador', avatar: 'dinosaur' }).code, 'INVALID_AVATAR');
 });
 
 test('avatar null clears → ok', () => {
@@ -49,4 +49,13 @@ test('owl for non-admin → 403 OWL_RESERVED', () => {
 
 test('owl for admin → ok', () => {
   assert.deepEqual(validateAppearance({ role: 'admin', avatar: 'owl' }), { ok: true });
+});
+
+test('avatars are animal faces (removed full-body animals are rejected)', () => {
+  for (const key of ['koala', 'monkey', 'hamster', 'mouse', 'wolf', 'boar', 'unicorn', 'dragon', 'raccoon', 'zebra']) {
+    assert.ok(AVATAR_KEYS.includes(key), key);
+  }
+  for (const key of ['sheep', 'goat', 'duck', 'turtle', 'dolphin', 'penguin', 'parrot', 'bee', 'butterfly', 'elephant']) {
+    assert.equal(validateAppearance({ role: 'digitador', avatar: key }).code, 'INVALID_AVATAR', key);
+  }
 });
