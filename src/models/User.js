@@ -2,6 +2,7 @@ const pool = require('../db/pool');
 const bcrypt = require('bcrypt');
 
 const SALT_ROUNDS = 10;
+const { COLOR_KEYS } = require('../config/appearance');
 
 const User = {
   async create({ email, password, name, role = 'digitador', username, data_column }) {
@@ -9,10 +10,16 @@ const User = {
     const { rows } = await pool.query(
       `INSERT INTO users (email, password_hash, name, role, username, data_column)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, email, name, role, username, data_column, created_at`,
+       RETURNING id, email, name, role, username, data_column, color, avatar, created_at`,
       [email, passwordHash, name, role, username || null, data_column || null]
     );
-    return rows[0];
+    const user = rows[0];
+    try {
+      user.color = await User.assignFirstFreeColor(user.id);
+    } catch (err) {
+      console.error('[User.create] could not auto-assign color:', err.message);
+    }
+    return user;
   },
 
   async findByEmail(email) {
@@ -126,6 +133,57 @@ const User = {
     } catch (err) {
       throw err;
     }
+  },
+
+  toPublicUser(user) {
+    return {
+      id: user.id,
+      username: user.username || user.email,
+      email: user.email || user.username,
+      name: user.name || user.username,
+      role: user.role,
+      dataColumn: user.data_column,
+      color: user.color || null,
+      avatar: user.avatar || null,
+    };
+  },
+
+  async assignFirstFreeColor(id) {
+    const { rows } = await pool.query(
+      `UPDATE users SET color = (
+         SELECT p.c FROM unnest($2::text[]) WITH ORDINALITY AS p(c, ord)
+         WHERE p.c NOT IN (SELECT color FROM users WHERE color IS NOT NULL)
+         ORDER BY p.ord LIMIT 1)
+       WHERE id = $1 AND color IS NULL
+       RETURNING color`,
+      [id, COLOR_KEYS]
+    );
+    return rows[0]?.color ?? null;
+  },
+
+  async updateAppearance(id, { color, avatar }) {
+    const sets = [];
+    const values = [];
+    if (color !== undefined) { values.push(color); sets.push(`color = $${values.length}`); }
+    if (avatar !== undefined) { values.push(avatar); sets.push(`avatar = $${values.length}`); }
+    if (sets.length === 0) return User.findById(id);
+    values.push(id);
+    const { rows } = await pool.query(
+      `UPDATE users SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${values.length} RETURNING *`,
+      values
+    );
+    return rows[0] || null;
+  },
+
+  async listDirectory() {
+    const { rows } = await pool.query(
+      `SELECT id,
+              COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
+              username, data_column, role, color, avatar
+       FROM users
+       ORDER BY id`
+    );
+    return rows;
   },
 };
 
