@@ -116,6 +116,7 @@ app.use(
 const allowedOrigins = [
   "https://gurusoluciones.netlify.app",
   "https://guruweb-dashboard-prod.netlify.app",
+  "https://guruweb-development.netlify.app",
   "https://papaya-kangaroo-b789f3.netlify.app",
   "https://6ab57be44eee966f948b918d--papaya-kangaroo-b789f3.netlify.app",
   "https://gurusolucionesrd.com",
