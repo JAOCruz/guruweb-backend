@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const config = require('../config');
 const { generateToken, authenticate, requireRole } = require('../middleware/auth');
+const { validateAppearance } = require('../config/appearance');
 
 const router = express.Router();
 
@@ -102,14 +103,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     res.cookie('access_token', token, cookieOptions(rememberMe));
 
     res.json({
-      user: {
-        id: user.id,
-        username: user.username || user.email,
-        email: user.email || user.username,
-        name: user.name || user.username,
-        role: user.role,
-        dataColumn: user.data_column,
-      },
+      user: User.toPublicUser(user),
       token, // Kept for backward-compat during transition; frontend should ignore
       rememberMe: !!rememberMe,
     });
@@ -123,16 +117,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username || user.email,
-        email: user.email || user.username,
-        name: user.name || user.username,
-        role: user.role,
-        dataColumn: user.data_column,
-      },
-    });
+    res.json({ user: User.toPublicUser(user) });
   } catch (err) {
     console.error('Get user error:', err);
     res.status(500).json({ error: 'Failed to get user' });
@@ -197,7 +182,8 @@ router.put('/change-password', authenticate, async (req, res) => {
 
     const valid = await User.verifyPassword(currentPassword, user.password_hash);
     if (!valid) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
+      // 400, not 401: the dashboard treats 401 as an expired session and logs the user out
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta', code: 'WRONG_CURRENT_PASSWORD' });
     }
 
     await User.updatePassword(user.id, newPassword);
@@ -205,6 +191,32 @@ router.put('/change-password', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+router.put('/me/appearance', authenticate, async (req, res) => {
+  try {
+    const me = await User.findById(req.user.id);
+    if (!me) return res.status(404).json({ error: 'User not found' });
+
+    const { color, avatar } = req.body || {};
+    const check = validateAppearance({ role: me.role, color, avatar });
+    if (!check.ok) {
+      return res.status(check.status).json({ error: check.error, code: check.code });
+    }
+
+    const updated = await User.updateAppearance(me.id, { color, avatar });
+    res.json({ user: User.toPublicUser(updated) });
+  } catch (err) {
+    if (err.code === '23505') {
+      const isAvatar = err.constraint === 'users_avatar_unique';
+      return res.status(409).json({
+        error: isAvatar ? 'Ese animal lo acaba de tomar otro usuario' : 'Ese color lo acaba de tomar otro usuario',
+        code: isAvatar ? 'AVATAR_TAKEN' : 'COLOR_TAKEN',
+      });
+    }
+    console.error('Update appearance error:', err);
+    res.status(500).json({ error: 'No se pudo guardar' });
   }
 });
 

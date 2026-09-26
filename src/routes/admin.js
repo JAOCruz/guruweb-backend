@@ -58,7 +58,7 @@ router.get('/users', requireRole('admin'), async (req, res) => {
     const { rows } = await pool.query(
       `SELECT id, username, email,
               COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
-              role, created_at
+              role, data_column, color, avatar, created_at
        FROM users
        ORDER BY COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) ASC`
     );
