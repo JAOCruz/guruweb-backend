@@ -186,7 +186,7 @@ const User = {
     const { rows } = await pool.query(
       `SELECT id,
               COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
-              username, data_column, role, color, avatar
+              username, data_column, role, color, avatar, is_active, in_payroll
        FROM users
        ORDER BY id`
     );
@@ -216,7 +216,8 @@ const User = {
       : status === 'inactive' ? 'WHERE is_active = FALSE'
       : '';
     const { rows } = await pool.query(
-      `SELECT id, name, username, email, role, data_column, color, avatar,
+      `SELECT id, COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
+              username, email, role, data_column, color, avatar,
               is_active, in_payroll, must_change_password, last_seen, created_at, deactivated_at
        FROM users ${where}
        ORDER BY is_active DESC, COALESCE(NULLIF(name, ''), username) ASC`

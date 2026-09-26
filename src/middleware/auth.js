@@ -21,9 +21,9 @@ async function getUserStatus(id) {
   if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit.status;
   let status = { is_active: true, must_change_password: false };
   try {
-    const { rows } = await pool.query('SELECT is_active, must_change_password FROM users WHERE id = $1', [id]);
+    const { rows } = await pool.query('SELECT is_active, must_change_password, role FROM users WHERE id = $1', [id]);
     status = rows[0]
-      ? { is_active: rows[0].is_active !== false, must_change_password: rows[0].must_change_password === true }
+      ? { is_active: rows[0].is_active !== false, must_change_password: rows[0].must_change_password === true, role: rows[0].role }
       : { is_active: false, must_change_password: false };
   } catch (err) {
     // 42703 = column missing (user-management migration not run yet): treat as active
@@ -69,6 +69,8 @@ async function authenticate(req, res, next) {
     console.error('[auth] status lookup failed:', err.message);
     return res.status(503).json({ error: 'Servicio no disponible, intenta de nuevo' });
   }
+  // The DB role wins over the token's, so a demotion takes effect right away
+  if (status.role) req.user.role = status.role;
   if (!status.is_active) {
     return res.status(401).json({ error: 'Usuario desactivado. Contacta al administrador.', code: 'USER_INACTIVE' });
   }

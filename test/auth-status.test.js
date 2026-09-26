@@ -52,3 +52,18 @@ test('pending password change still allows /me and change-password', async () =>
   assert.equal((await get('/api/auth/me', 'temp')).status, 200);
   assert.equal((await get('/api/auth/change-password', 'temp', 'PUT')).status, 200);
 });
+
+test('role comes from the database, not the token', async () => {
+  const app2 = express();
+  app2.use(cookieParser());
+  app2.get('/whoami', authenticate, (req, res) => res.json({ role: req.user.role }));
+  const srv = await new Promise((r) => { const x = app2.listen(0, () => r(x)); });
+  try {
+    await pool.query(`UPDATE users SET role = 'auxiliar' WHERE username = 'ana'`);
+    invalidateUserStatus(tok.ana.id);
+    const res = await fetch(`http://127.0.0.1:${srv.address().port}/whoami`, { headers: { Authorization: `Bearer ${tok.ana.t}` } });
+    assert.equal((await res.json()).role, 'auxiliar');
+  } finally {
+    srv.close();
+  }
+});
