@@ -22,4 +22,13 @@ async function verifyTurnstile(token, ip, { secret = process.env.TURNSTILE_SECRE
   }
 }
 
-module.exports = { verifyTurnstile };
+// Each dashboard has its own Turnstile widget (and secret). Tokens are single-use,
+// so we pick the right secret up front instead of trying several.
+function secretForOrigin(origin, env = process.env) {
+  if (/guruweb-development\.netlify\.app/.test(origin || '')) {
+    return env.TURNSTILE_SECRET_KEY_DEV || env.TURNSTILE_SECRET_KEY;
+  }
+  return env.TURNSTILE_SECRET_KEY;
+}
+
+module.exports = { verifyTurnstile, secretForOrigin };

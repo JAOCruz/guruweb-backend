@@ -42,3 +42,17 @@ test('Cloudflare unreachable → not ok (fail closed)', async () => {
   const boom = async () => { throw new Error('network'); };
   assert.deepEqual(await verifyTurnstile('tok', null, { secret: 's', fetchImpl: boom }), { ok: false });
 });
+
+const { secretForOrigin } = require('../src/services/turnstile');
+
+test('the development dashboard uses its own widget secret', () => {
+  const env = { TURNSTILE_SECRET_KEY: 'prod', TURNSTILE_SECRET_KEY_DEV: 'dev' };
+  assert.equal(secretForOrigin('https://guruweb-development.netlify.app', env), 'dev');
+  assert.equal(secretForOrigin('https://guruweb-dashboard-prod.netlify.app', env), 'prod');
+  assert.equal(secretForOrigin('https://gurusolucionesrd.com', env), 'prod');
+  assert.equal(secretForOrigin(undefined, env), 'prod');
+});
+
+test('without a dev secret the development dashboard falls back to the main one', () => {
+  assert.equal(secretForOrigin('https://guruweb-development.netlify.app', { TURNSTILE_SECRET_KEY: 'prod' }), 'prod');
+});
