@@ -66,6 +66,18 @@ test('create validations', async () => {
   assert.equal(res.status, 400); assert.equal(await code(res), 'NAME_REQUIRED');
 });
 
+test('exact duplicate username (production constraint) → 409 USERNAME_TAKEN', async () => {
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'pedro', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  assert.equal(res.status, 409);
+  assert.equal(await code(res), 'USERNAME_TAKEN');
+});
+
+test('duplicate email → 409 EMAIL_TAKEN', async () => {
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'otro', email: 'hengi@x.com', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  assert.equal(res.status, 409);
+  assert.deepEqual(await res.json(), { error: 'Ese email ya está en uso', code: 'EMAIL_TAKEN' });
+});
+
 test('new user is gated until they change the password', async () => {
   const res = await call('GET', '/api/admin/users', 'pedro');
   assert.equal(res.status, 403);

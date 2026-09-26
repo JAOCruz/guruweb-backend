@@ -1,7 +1,7 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  username VARCHAR(100),
-  email VARCHAR(255),
+  username VARCHAR(100) UNIQUE,
+  email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255),
   role VARCHAR(20) NOT NULL DEFAULT 'digitador',

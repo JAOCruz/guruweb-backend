@@ -81,8 +81,12 @@ function validateUserInput(body, { requirePassword }) {
 }
 
 function handleDbError(res, err, context) {
-  if (err.code === '23505' && err.constraint === 'users_username_lower_unique') {
+  // Production has both the case-insensitive index and the original UNIQUE(username)/UNIQUE(email)
+  if (err.code === '23505' && /username/.test(err.constraint || '')) {
     return sendError(res, 409, 'USERNAME_TAKEN', 'Ese usuario ya existe');
+  }
+  if (err.code === '23505' && /email/.test(err.constraint || '')) {
+    return sendError(res, 409, 'EMAIL_TAKEN', 'Ese email ya está en uso');
   }
   if (err.code === 'INVALID_REASSIGN') {
     return sendError(res, 400, 'INVALID_REASSIGN', 'Elige un usuario activo distinto para reasignar');
