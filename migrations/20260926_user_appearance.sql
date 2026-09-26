@@ -5,11 +5,16 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(20);
 CREATE UNIQUE INDEX IF NOT EXISTS users_color_unique ON users (color) WHERE color IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_avatar_unique ON users (avatar) WHERE avatar IS NOT NULL;
 
--- 1) Keep today's hardcoded colors
+-- 1) Keep today's hardcoded colors (one user per data_column: the lowest id, in case of duplicates)
 UPDATE users u SET color = s.color
 FROM (VALUES ('HENGI','green'), ('MARLENI','yellow'), ('ISRAEL','red'),
-             ('THAICAR','purple'), ('AUXILIAR_I','orange'), ('AUXILIAR_II','pink')) AS s(col, color)
-WHERE UPPER(u.data_column) = s.col
+             ('THAICAR','purple'), ('AUXILIAR_I','orange'), ('AUXILIAR_II','pink')) AS s(col, color),
+     (SELECT DISTINCT ON (UPPER(data_column)) id, UPPER(data_column) AS col
+      FROM users
+      WHERE data_column IS NOT NULL
+      ORDER BY UPPER(data_column), id) AS first_user
+WHERE u.id = first_user.id
+  AND first_user.col = s.col
   AND u.color IS NULL
   AND NOT EXISTS (SELECT 1 FROM users x WHERE x.color = s.color);
 

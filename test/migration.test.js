@@ -53,3 +53,13 @@ test('unique indexes reject duplicate color and avatar', async () => {
   await assert.rejects(pool.query(`UPDATE users SET color = 'green' WHERE username = 'israel'`), { code: '23505', constraint: 'users_color_unique' });
   await assert.rejects(pool.query(`UPDATE users SET avatar = 'owl' WHERE username = 'hengi'`), { code: '23505', constraint: 'users_avatar_unique' });
 });
+
+test('duplicate data_column ignoring case does not abort; lowest id keeps the seed color', async () => {
+  await pool.query(`INSERT INTO users (username, password_hash, name, role, data_column) VALUES ('hengi_old', 'x', 'Hengi viejo', 'digitador', 'hengi')`);
+  await runSqlFile(MIGRATION);
+  const { rows } = await pool.query(`SELECT username, color FROM users WHERE UPPER(data_column) = 'HENGI' ORDER BY id`);
+  assert.equal(rows[0].username, 'hengi');
+  assert.equal(rows[0].color, 'green');
+  assert.notEqual(rows[1].color, 'green');
+  assert.ok(rows[1].color);
+});
