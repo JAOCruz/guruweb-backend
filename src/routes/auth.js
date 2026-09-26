@@ -4,6 +4,7 @@ const User = require('../models/User');
 const config = require('../config');
 const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
 const { validateAppearance } = require('../config/appearance');
+const turnstile = require('../services/turnstile');
 
 const router = express.Router();
 
@@ -80,6 +81,13 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (!identifier || !password) {
       return res.status(400).json({ error: 'email/username and password are required' });
+    }
+
+    const human = await turnstile.verifyTurnstile(req.body.turnstileToken, req.ip, {
+      secret: turnstile.secretForOrigin(req.headers.origin),
+    });
+    if (!human.ok) {
+      return res.status(400).json({ error: 'Verificación de seguridad fallida. Intenta de nuevo.', code: 'CAPTCHA_FAILED' });
     }
 
     const user = await User.findByUsernameOrEmail(identifier);
