@@ -2,7 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const config = require('../config');
-const { generateToken, authenticate, requireRole } = require('../middleware/auth');
+const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
 const { validateAppearance } = require('../config/appearance');
 
 const router = express.Router();
@@ -51,7 +51,8 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/register', registerLimiter, async (req, res) => {
+// Admin-only: accounts are created by an admin (public sign-up let anyone become admin)
+router.post('/register', authenticate, requireRole('admin'), registerLimiter, async (req, res) => {
   try {
     const { email, password, name, username, role, data_column } = req.body;
     if (!email || !password || !name) {
@@ -88,6 +89,9 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 
     const valid = await User.verifyPassword(password, user.password_hash);
+    if (valid && user.is_active === false) {
+      return res.status(403).json({ error: 'Usuario desactivado. Contacta al administrador.', code: 'USER_INACTIVE' });
+    }
     if (!valid) {
       console.log('[login] Password mismatch for user:', user.username, 'hash starts with:', user.password_hash?.slice(0, 10));
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -203,6 +207,8 @@ router.put('/change-password', authenticate, async (req, res) => {
     }
 
     await User.updatePassword(user.id, newPassword);
+    await User.clearMustChangePassword(user.id);
+    invalidateUserStatus(user.id);
     res.json({ ok: true, message: 'Password updated successfully' });
   } catch (err) {
     console.error('Change password error:', err);

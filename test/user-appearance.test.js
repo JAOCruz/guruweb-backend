@@ -8,6 +8,7 @@ test.beforeEach(async () => {
   await pool.query(`INSERT INTO users (username, password_hash, name, role, data_column) VALUES
     ('admin','x','Admin','admin',NULL), ('hengi','x','Hengi','digitador','HENGI'), ('israel','x','Israel','digitador','ISRAEL')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
+  await runSqlFile('migrations/20260926_user_management.sql');
 });
 test.after(async () => { await pool.end(); });
 
@@ -40,7 +41,7 @@ test('re-saving own color is fine', async () => {
 test('listDirectory exposes public fields only', async () => {
   const users = await User.listDirectory();
   assert.equal(users.length, 3);
-  assert.deepEqual(Object.keys(users[0]).sort(), ['avatar', 'color', 'data_column', 'id', 'name', 'role', 'username']);
+  assert.deepEqual(Object.keys(users[0]).sort(), ['avatar', 'color', 'data_column', 'id', 'in_payroll', 'is_active', 'name', 'role', 'username']);
 });
 
 test('create auto-assigns first free color', async () => {
@@ -50,5 +51,5 @@ test('create auto-assigns first free color', async () => {
 
 test('toPublicUser shape', () => {
   const pub = User.toPublicUser({ id: 1, username: 'h', email: null, name: null, role: 'digitador', data_column: 'HENGI', color: 'green', avatar: null, password_hash: 'x' });
-  assert.deepEqual(pub, { id: 1, username: 'h', email: 'h', name: 'h', role: 'digitador', dataColumn: 'HENGI', color: 'green', avatar: null });
+  assert.deepEqual(pub, { id: 1, username: 'h', email: 'h', name: 'h', role: 'digitador', dataColumn: 'HENGI', color: 'green', avatar: null, isActive: true, mustChangePassword: false, inPayroll: false });
 });

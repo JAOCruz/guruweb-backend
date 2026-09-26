@@ -52,20 +52,149 @@ router.post('/assign-client', requireRole('admin'), async (req, res) => {
   }
 });
 
-// ── Admin-only: Get all users (for assignment dropdown) ──
+// ── Admin-only: user management ──
+const User = require('../models/User');
+const { invalidateUserStatus } = require('../middleware/auth');
+
+const ROLES = ['admin', 'digitador', 'auxiliar'];
+
+function sendError(res, status, code, error) {
+  return res.status(status).json({ error, code });
+}
+
+function toAdminUser(u) {
+  if (!u) return u;
+  const { password_hash, ...rest } = u;
+  return rest;
+}
+
+function validateUserInput(body, { requirePassword }) {
+  const { name, username, role, temp_password } = body || {};
+  if (!name || !String(name).trim() || !username || !String(username).trim()) {
+    return ['NAME_REQUIRED', 'Nombre y usuario son obligatorios'];
+  }
+  if (!ROLES.includes(role)) return ['INVALID_ROLE', 'Rol no válido'];
+  if (requirePassword && (!temp_password || String(temp_password).length < 6)) {
+    return ['PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres'];
+  }
+  return null;
+}
+
+function handleDbError(res, err, context) {
+  // Production has both the case-insensitive index and the original UNIQUE(username)/UNIQUE(email)
+  if (err.code === '23505' && /username/.test(err.constraint || '')) {
+    return sendError(res, 409, 'USERNAME_TAKEN', 'Ese usuario ya existe');
+  }
+  if (err.code === '23505' && /email/.test(err.constraint || '')) {
+    return sendError(res, 409, 'EMAIL_TAKEN', 'Ese email ya está en uso');
+  }
+  if (err.code === 'INVALID_REASSIGN') {
+    return sendError(res, 400, 'INVALID_REASSIGN', 'Elige un usuario activo distinto para reasignar');
+  }
+  console.error(`${context} error:`, err);
+  return res.status(500).json({ error: 'No se pudo completar la operación' });
+}
+
 router.get('/users', requireRole('admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT id, username, email,
-              COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
-              role, data_column, color, avatar, created_at
-       FROM users
-       ORDER BY COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) ASC`
-    );
-    res.json({ users: rows });
+    // Default 'active': existing assignment dropdowns call this without a status
+    const status = ['active', 'inactive', 'all'].includes(req.query.status) ? req.query.status : 'active';
+    const users = await User.adminList(status);
+    res.json({ users });
   } catch (err) {
-    console.error('Admin users list error:', err);
-    res.status(500).json({ error: 'Failed to list users' });
+    handleDbError(res, err, 'Admin users list');
+  }
+});
+
+router.post('/users', requireRole('admin'), async (req, res) => {
+  const invalid = validateUserInput(req.body, { requirePassword: true });
+  if (invalid) return sendError(res, 400, ...invalid);
+  try {
+    const { name, username, email, role, in_payroll, temp_password } = req.body;
+    const user = await User.adminCreate({
+      name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll, temp_password,
+    });
+    res.status(201).json({ user: toAdminUser(user) });
+  } catch (err) {
+    handleDbError(res, err, 'Admin create user');
+  }
+});
+
+router.put('/users/:id', requireRole('admin'), async (req, res) => {
+  const invalid = validateUserInput(req.body, { requirePassword: false });
+  if (invalid) return sendError(res, 400, ...invalid);
+  try {
+    const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    const { name, username, email, role, in_payroll } = req.body;
+    if (target.role === 'admin' && role !== 'admin') {
+      if (id === req.user.id) return sendError(res, 400, 'CANNOT_DEMOTE_SELF', 'No puedes quitarte el rol de administrador');
+      if (target.is_active && (await User.countActiveAdmins(id)) === 0) {
+        return sendError(res, 400, 'LAST_ADMIN', 'Debe quedar al menos un administrador activo');
+      }
+    }
+    const user = await User.adminUpdate(id, {
+      name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll,
+    });
+    invalidateUserStatus(id);
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    handleDbError(res, err, 'Admin update user');
+  }
+});
+
+router.post('/users/:id/temp-password', requireRole('admin'), async (req, res) => {
+  const { temp_password } = req.body || {};
+  if (!temp_password || String(temp_password).length < 6) {
+    return sendError(res, 400, 'PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres');
+  }
+  try {
+    const id = Number(req.params.id);
+    const user = await User.setTempPassword(id, temp_password);
+    if (!user) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    invalidateUserStatus(id);
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    handleDbError(res, err, 'Admin temp password');
+  }
+});
+
+router.get('/users/:id/assignments', requireRole('admin'), async (req, res) => {
+  try {
+    res.json(await User.countAssignments(Number(req.params.id)));
+  } catch (err) {
+    handleDbError(res, err, 'Admin assignments');
+  }
+});
+
+router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    if (id === req.user.id) return sendError(res, 400, 'CANNOT_DEACTIVATE_SELF', 'No puedes desactivarte a ti mismo');
+    if (target.role === 'admin' && (await User.countActiveAdmins(id)) === 0) {
+      return sendError(res, 400, 'LAST_ADMIN', 'Debe quedar al menos un administrador activo');
+    }
+    const reassignTo = req.body?.reassign_to == null || req.body.reassign_to === '' ? null : Number(req.body.reassign_to);
+    const user = await User.deactivate(id, reassignTo, req.user.id);
+    invalidateUserStatus(id);
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    handleDbError(res, err, 'Admin deactivate user');
+  }
+});
+
+router.post('/users/:id/reactivate', requireRole('admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const user = await User.reactivate(id);
+    if (!user) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    invalidateUserStatus(id);
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    handleDbError(res, err, 'Admin reactivate user');
   }
 });
 
@@ -73,7 +202,7 @@ router.get('/users', requireRole('admin'), async (req, res) => {
 router.get('/digitadores', requireRole('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT id, username, email, name, role FROM users WHERE role = 'digitador' ORDER BY COALESCE(name, username) ASC"
+      "SELECT id, username, email, name, role FROM users WHERE role = 'digitador' AND is_active = TRUE ORDER BY COALESCE(name, username) ASC"
     );
     res.json({ digitadores: rows });
   } catch (err) {
