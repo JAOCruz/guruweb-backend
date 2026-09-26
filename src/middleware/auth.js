@@ -24,6 +24,7 @@ function authenticate(req, res, next) {
   try {
     const payload = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
     req.user = { id: payload.id, email: payload.email, username: payload.username, role: payload.role };
+    req.auth = { iat: payload.iat, exp: payload.exp, rm: payload.rm };
 
     // Update last_seen (throttled — max 1 write per 60s per user)
     const now = Date.now();
@@ -40,9 +41,9 @@ function authenticate(req, res, next) {
   }
 }
 
-function generateToken(user, expiresIn = config.jwt.expiresIn) {
+function generateToken(user, expiresIn = config.jwt.expiresIn, extra = {}) {
   return jwt.sign(
-    { id: user.id, email: user.email, username: user.username, role: user.role },
+    { id: user.id, email: user.email, username: user.username, role: user.role, ...extra },
     config.jwt.secret,
     { expiresIn, algorithm: 'HS256' }
   );

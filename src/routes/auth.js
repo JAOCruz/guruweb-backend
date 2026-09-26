@@ -11,6 +11,7 @@ const router = express.Router();
 const isProduction = process.env.NODE_ENV === 'production';
 const SESSION_MAX_AGE = 24 * 60 * 60 * 1000;     // 24 hours
 const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+const RENEW_AFTER_SECONDS = 24 * 60 * 60;          // renew tokens older than 1 day
 
 function cookieOptions(rememberMe = false) {
   return {
@@ -97,7 +98,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       ...user,
       email: user.email || user.username,
       name: user.name || user.username,
-    }, tokenExpiresIn);
+    }, tokenExpiresIn, { rm: !!rememberMe });
 
     // Set HttpOnly cookie (primary auth method — prevents XSS theft)
     res.cookie('access_token', token, cookieOptions(rememberMe));
@@ -117,7 +118,22 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ user: User.toPublicUser(user) });
+
+    // Sliding session: renew tokens older than a day so active users never get
+    // logged out; an unused session still expires after its lifetime.
+    let token;
+    const { iat, exp, rm } = req.auth || {};
+    if (iat && Date.now() / 1000 - iat > RENEW_AFTER_SECONDS) {
+      const rememberMe = rm ?? (exp - iat > 8 * 24 * 60 * 60); // legacy tokens: 30d ⇒ remembered
+      token = generateToken(
+        { ...user, email: user.email || user.username },
+        rememberMe ? '30d' : config.jwt.expiresIn,
+        { rm: rememberMe }
+      );
+      res.cookie('access_token', token, cookieOptions(rememberMe));
+    }
+
+    res.json({ user: User.toPublicUser(user), ...(token && { token }) });
   } catch (err) {
     console.error('Get user error:', err);
     res.status(500).json({ error: 'Failed to get user' });
