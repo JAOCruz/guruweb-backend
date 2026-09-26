@@ -20,6 +20,7 @@ test.before(async () => {
   await pool.query(`INSERT INTO users (username, email, password_hash, name, role, data_column)
                     VALUES ('hengi','hengi@x.com',$1,'Hengi','digitador','HENGI')`, [hash]);
   await runSqlFile('migrations/20260926_user_appearance.sql');
+  await runSqlFile('migrations/20260926_user_management.sql');
   hengi = (await pool.query(`SELECT id, username, email, role FROM users WHERE username = 'hengi'`)).rows[0];
 
   const app = express();

@@ -145,7 +145,14 @@ const User = {
       dataColumn: user.data_column,
       color: user.color || null,
       avatar: user.avatar || null,
+      isActive: user.is_active !== false,
+      mustChangePassword: user.must_change_password === true,
+      inPayroll: user.in_payroll === true,
     };
+  },
+
+  async clearMustChangePassword(id) {
+    await pool.query('UPDATE users SET must_change_password = FALSE, updated_at = NOW() WHERE id = $1', [id]);
   },
 
   async assignFirstFreeColor(id) {
