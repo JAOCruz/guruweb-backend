@@ -18,6 +18,7 @@ test.beforeEach(async () => {
   ids = Object.fromEntries(rows.map((r) => [r.username, r.id]));
   await pool.query('INSERT INTO clients (phone, assigned_to) VALUES ($1,$2), ($3,$2)', ['1', ids.marleni, '2']);
   await pool.query('INSERT INTO cases (title, user_id) VALUES ($1,$2)', ['c1', ids.marleni]);
+  await pool.query(`INSERT INTO cases (title, user_id, status) VALUES ('viejo', $1, 'closed')`, [ids.marleni]);
 });
 test.after(async () => { await pool.end(); });
 
@@ -107,4 +108,21 @@ test('adminList filters by status', async () => {
   assert.equal((await User.adminList('active')).length, 2);
   assert.equal((await User.adminList('all')).length, 3);
   assert.equal((await User.adminList('all'))[0].password_hash, undefined);
+});
+
+test('closed cases stay with their author and are not counted', async () => {
+  await User.deactivate(ids.marleni, ids.hengi, ids.admin);
+  const { rows } = await pool.query(`SELECT user_id FROM cases WHERE title = 'viejo'`);
+  assert.equal(rows[0].user_id, ids.marleni);
+});
+
+test('deactivation writes assignment history', async () => {
+  await User.deactivate(ids.marleni, ids.hengi, ids.admin);
+  const clients = (await pool.query('SELECT from_user_id, to_user_id, assigned_by, notes FROM client_assignment_history')).rows;
+  const cases = (await pool.query('SELECT from_user_id, to_user_id, assigned_by, notes FROM case_assignment_history')).rows;
+  assert.equal(clients.length, 2);
+  assert.equal(cases.length, 1);
+  for (const h of [...clients, ...cases]) {
+    assert.deepEqual(h, { from_user_id: ids.marleni, to_user_id: ids.hengi, assigned_by: ids.admin, notes: 'Desactivación' });
+  }
 });

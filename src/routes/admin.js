@@ -178,7 +178,7 @@ router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
       return sendError(res, 400, 'LAST_ADMIN', 'Debe quedar al menos un administrador activo');
     }
     const reassignTo = req.body?.reassign_to == null || req.body.reassign_to === '' ? null : Number(req.body.reassign_to);
-    const user = await User.deactivate(id, reassignTo);
+    const user = await User.deactivate(id, reassignTo, req.user.id);
     invalidateUserStatus(id);
     res.json({ user: toAdminUser(user) });
   } catch (err) {

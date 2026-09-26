@@ -4,6 +4,9 @@ const bcrypt = require('bcrypt');
 const SALT_ROUNDS = 10;
 const { COLOR_KEYS } = require('../config/appearance');
 
+// Cases still in progress; resolved/closed/paid/cancelled ones keep their author
+const OPEN_CASE = `status NOT IN ('resolved', 'closed', 'paid', 'cancelled')`;
+
 const User = {
   async create({ email, password, name, role = 'digitador', username, data_column }) {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
@@ -271,7 +274,7 @@ const User = {
   async countAssignments(id) {
     const { rows } = await pool.query(
       `SELECT (SELECT COUNT(*) FROM clients WHERE assigned_to = $1)::int AS clients,
-              (SELECT COUNT(*) FROM cases WHERE user_id = $1)::int AS cases`,
+              (SELECT COUNT(*) FROM cases WHERE user_id = $1 AND ${OPEN_CASE})::int AS cases`,
       [id]
     );
     return rows[0];
@@ -286,8 +289,9 @@ const User = {
     return rows[0].n;
   },
 
-  // One transaction: move assignments, then lock the account and free color/avatar
-  async deactivate(id, reassignTo) {
+  // One transaction: move clients and open cases (with history), then lock the
+  // account and free color/avatar. Finished cases keep their author.
+  async deactivate(id, reassignTo, actorId = null) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -302,8 +306,19 @@ const User = {
           throw err;
         }
       }
-      await client.query('UPDATE clients SET assigned_to = $1 WHERE assigned_to = $2', [reassignTo ?? null, id]);
-      await client.query('UPDATE cases SET user_id = $1 WHERE user_id = $2', [reassignTo ?? null, id]);
+      const to = reassignTo ?? null;
+      await client.query(
+        `INSERT INTO client_assignment_history (client_id, from_user_id, to_user_id, assigned_by, notes)
+         SELECT id, $1, $2, $3, 'Desactivación' FROM clients WHERE assigned_to = $1`,
+        [id, to, actorId]
+      );
+      await client.query('UPDATE clients SET assigned_to = $1 WHERE assigned_to = $2', [to, id]);
+      await client.query(
+        `INSERT INTO case_assignment_history (case_id, from_user_id, to_user_id, assigned_by, notes)
+         SELECT id, $1, $2, $3, 'Desactivación' FROM cases WHERE user_id = $1 AND ${OPEN_CASE}`,
+        [id, to, actorId]
+      );
+      await client.query(`UPDATE cases SET user_id = $1 WHERE user_id = $2 AND ${OPEN_CASE}`, [to, id]);
       const { rows } = await client.query(
         `UPDATE users SET is_active = FALSE, deactivated_at = NOW(), color = NULL, avatar = NULL, updated_at = NOW()
          WHERE id = $1 RETURNING *`,
