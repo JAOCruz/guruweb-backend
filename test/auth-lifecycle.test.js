@@ -65,3 +65,31 @@ test('register requires an admin', async () => {
   assert.equal((await call('POST', '/api/auth/register', body, 'ana')).status, 403);
   assert.equal((await call('POST', '/api/auth/register', body, 'admin')).status, 201);
 });
+
+test('login is rejected when the human check fails', async () => {
+  const turnstile = require('../src/services/turnstile');
+  const original = turnstile.verifyTurnstile;
+  turnstile.verifyTurnstile = async () => ({ ok: false });
+  try {
+    const res = await call('POST', '/api/auth/login', { username: 'ana', password: 'secret1', turnstileToken: 'bad' });
+    assert.equal(res.status, 400);
+    assert.deepEqual(await res.json(), { error: 'Verificación de seguridad fallida. Intenta de nuevo.', code: 'CAPTCHA_FAILED' });
+  } finally {
+    turnstile.verifyTurnstile = original;
+  }
+});
+
+test('login passes the token and client ip to the human check', async () => {
+  const turnstile = require('../src/services/turnstile');
+  const original = turnstile.verifyTurnstile;
+  let seen;
+  turnstile.verifyTurnstile = async (token, ip) => { seen = { token, ip }; return { ok: true }; };
+  try {
+    const res = await call('POST', '/api/auth/login', { username: 'ana', password: 'secret1', turnstileToken: 'good' });
+    assert.equal(res.status, 200);
+    assert.equal(seen.token, 'good');
+    assert.ok(seen.ip);
+  } finally {
+    turnstile.verifyTurnstile = original;
+  }
+});
