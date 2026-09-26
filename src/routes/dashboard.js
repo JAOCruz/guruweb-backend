@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
+const User = require('../models/User');
 const Appointment = require('../models/Appointment');
 const DocumentRequest = require('../models/DocumentRequest');
 const LEGAL_TOPICS = require('../knowledge/legalTopics');
@@ -102,8 +103,8 @@ router.put('/documents/:id', async (req, res) => {
 // ── Users list ──
 router.get('/users', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC');
-    res.json({ users: rows });
+    const users = await User.listDirectory();
+    res.json({ users });
   } catch (err) {
     console.error('Users list error:', err);
     res.status(500).json({ error: 'Failed to load users' });
