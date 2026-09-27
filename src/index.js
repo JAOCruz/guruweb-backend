@@ -294,7 +294,8 @@ try {
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ status: "OK", timestamp: new Date().toISOString() });
+  // Yes/no configuration flags (no secret values) to check Railway setup from outside
+  res.json({ status: "OK", timestamp: new Date().toISOString(), config: require("./utils/diagnostics").configDiagnostics() });
 });
 
 // Root endpoint
