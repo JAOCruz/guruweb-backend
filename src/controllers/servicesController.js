@@ -1,5 +1,6 @@
 const EmployeeService = require("../models/EmployeeService");
 const User = require("../models/User");
+const { logActivity, rd, safeLog } = require("../services/activityLog");
 
 const servicesController = {
   async getServices(req, res) {
@@ -66,6 +67,13 @@ const servicesController = {
         date || null,
       );
 
+      await safeLog(async () => {
+        await logActivity(req, {
+          category: "servicios", action: "service.create", entityType: "service", entityId: service.id,
+          summary: `Agregó el servicio "${serviceName}" a ${employee.name || employee.username} por ${rd(earnings)}${client ? ` (cliente: ${client})` : ""}`,
+          details: { employee_id: employee.id, service_name: serviceName, earnings: parseFloat(earnings), client: client || null, date: date || null },
+        });
+      });
       res.status(201).json(service);
     } catch (error) {
       console.error("Create service error:", error);
@@ -120,6 +128,14 @@ const servicesController = {
         return res.status(404).json({ error: "Service not found" });
       }
 
+      await safeLog(async () => {
+        const owner = deletedService.user_id ? await User.findById(deletedService.user_id) : null;
+        await logActivity(req, {
+          category: "servicios", action: "service.delete", entityType: "service", entityId: id,
+          summary: `Eliminó el servicio "${deletedService.service_name}" de ${owner ? owner.name || owner.username : "un empleado"} por ${rd(deletedService.earnings)}`,
+          details: { employee_id: deletedService.user_id, service_name: deletedService.service_name, earnings: deletedService.earnings, client: deletedService.client || null },
+        });
+      });
       res.json({ message: "Service deleted successfully" });
     } catch (error) {
       console.error("Delete service error:", error);
@@ -138,6 +154,13 @@ const servicesController = {
         return res.status(404).json({ error: "Service not found" });
       }
 
+      await safeLog(async () => {
+        await logActivity(req, {
+          category: "servicios", action: "service.comment", entityType: "service", entityId: id,
+          summary: `Cambió la nota del servicio "${updatedService.service_name}"`,
+          details: { comment: comment || null },
+        });
+      });
       res.json(updatedService);
     } catch (error) {
       console.error("Update comment error:", error);

@@ -57,6 +57,11 @@ const User = require('../models/User');
 const { invalidateUserStatus } = require('../middleware/auth');
 
 const ROLES = ['admin', 'digitador', 'auxiliar'];
+const { validatePassword } = require('../config/passwordPolicy');
+const { logActivity, listActivity, safeLog } = require('../services/activityLog');
+
+const ROLE_LABEL = { admin: 'Admin', digitador: 'Digitador', auxiliar: 'Auxiliar', employee: 'Digitador' };
+const displayName = (u) => (u && (u.name || u.username)) || 'usuario';
 
 function sendError(res, status, code, error) {
   return res.status(status).json({ error, code });
@@ -74,8 +79,9 @@ function validateUserInput(body, { requirePassword }) {
     return ['NAME_REQUIRED', 'Nombre y usuario son obligatorios'];
   }
   if (!ROLES.includes(role)) return ['INVALID_ROLE', 'Rol no válido'];
-  if (requirePassword && (!temp_password || String(temp_password).length < 6)) {
-    return ['PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres'];
+  if (requirePassword) {
+    const weak = validatePassword(temp_password, { username, name });
+    if (weak) return [weak.code, weak.error];
   }
   return null;
 }
@@ -114,6 +120,11 @@ router.post('/users', requireRole('admin'), async (req, res) => {
     const user = await User.adminCreate({
       name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll, temp_password,
     });
+    await logActivity(req, {
+      category: 'usuarios', action: 'user.create', entityType: 'user', entityId: user.id,
+      summary: `Creó el usuario ${user.username} (${displayName(user)}, ${ROLE_LABEL[user.role] || user.role})`,
+      details: { username: user.username, name: user.name, role: user.role, in_payroll: user.in_payroll },
+    });
     res.status(201).json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin create user');
@@ -138,6 +149,17 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
       name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll,
     });
     invalidateUserStatus(id);
+    await safeLog(async () => {
+      const changes = {};
+      for (const key of ['name', 'username', 'email', 'role', 'in_payroll']) {
+        if ((target[key] ?? null) !== (user[key] ?? null)) changes[key] = { antes: target[key] ?? null, despues: user[key] ?? null };
+      }
+      const roleNote = changes.role ? ` — rol: ${ROLE_LABEL[target.role] || target.role} → ${ROLE_LABEL[user.role] || user.role}` : '';
+      await logActivity(req, {
+        category: 'usuarios', action: 'user.update', entityType: 'user', entityId: id,
+        summary: `Editó el usuario ${displayName(user)}${roleNote}`, details: { cambios: changes },
+      });
+    });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin update user');
@@ -146,17 +168,43 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
 
 router.post('/users/:id/temp-password', requireRole('admin'), async (req, res) => {
   const { temp_password } = req.body || {};
-  if (!temp_password || String(temp_password).length < 6) {
-    return sendError(res, 400, 'PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres');
-  }
   try {
     const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    const weak = validatePassword(temp_password, { username: target.username, name: target.name });
+    if (weak) return sendError(res, 400, weak.code, weak.error);
     const user = await User.setTempPassword(id, temp_password);
     if (!user) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
     invalidateUserStatus(id);
+    await logActivity(req, {
+      category: 'usuarios', action: 'user.temp_password', entityType: 'user', entityId: id,
+      summary: `Puso una contraseña temporal a ${displayName(user)}`,
+    });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin temp password');
+  }
+});
+
+// ── Admin-only: activity log ──
+router.get('/activity', requireRole('admin'), async (req, res) => {
+  try {
+    const q = req.query;
+    const page = Math.max(Number(q.page) || 1, 1);
+    const pageSize = Math.min(Math.max(Number(q.page_size) || 50, 1), 100);
+    const { items, total } = await listActivity({
+      category: q.category || undefined,
+      actorId: q.actor_id || undefined,
+      from: q.from || undefined,
+      to: q.to || undefined,
+      q: q.q || undefined,
+      page,
+      pageSize,
+    });
+    res.json({ items, total, page, page_size: pageSize });
+  } catch (err) {
+    handleDbError(res, err, 'Admin activity list');
   }
 });
 
@@ -178,8 +226,17 @@ router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
       return sendError(res, 400, 'LAST_ADMIN', 'Debe quedar al menos un administrador activo');
     }
     const reassignTo = req.body?.reassign_to == null || req.body.reassign_to === '' ? null : Number(req.body.reassign_to);
+    const counts = await User.countAssignments(id);
     const user = await User.deactivate(id, reassignTo, req.user.id);
     invalidateUserStatus(id);
+    await safeLog(async () => {
+      const receiver = reassignTo ? await User.findById(reassignTo) : null;
+      await logActivity(req, {
+        category: 'usuarios', action: 'user.deactivate', entityType: 'user', entityId: id,
+        summary: `Desactivó a ${displayName(target)}; ${counts.clients} clientes/chats y ${counts.cases} casos pasaron a ${receiver ? displayName(receiver) : 'Sin asignar'}`,
+        details: { reassigned_to: reassignTo, clients: counts.clients, cases: counts.cases },
+      });
+    });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin deactivate user');
@@ -192,6 +249,10 @@ router.post('/users/:id/reactivate', requireRole('admin'), async (req, res) => {
     const user = await User.reactivate(id);
     if (!user) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
     invalidateUserStatus(id);
+    await logActivity(req, {
+      category: 'usuarios', action: 'user.reactivate', entityType: 'user', entityId: id,
+      summary: `Reactivó a ${displayName(user)}`,
+    });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin reactivate user');

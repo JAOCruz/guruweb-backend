@@ -9,6 +9,7 @@ function isEmployee(role) {
   return role !== 'admin';
 }
 const config = require('../config');
+const { logActivity, safeLog } = require('../services/activityLog');
 
 const router = express.Router();
 
@@ -481,6 +482,18 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
     }
 
     console.log(`[Cases] Case #${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId}`} by ${req.user.username}`);
+    await safeLog(async () => {
+      const assignee = targetUserId
+        ? (await pool.query('SELECT id, username, name FROM users WHERE id = $1', [targetUserId])).rows[0] || null
+        : null;
+      await logActivity(req, {
+        category: 'asignaciones', action: assignee ? 'case.assign' : 'case.unassign', entityType: 'case', entityId: caseRecord.id,
+        summary: assignee
+          ? `Asignó el caso ${caseRecord.case_number} (${caseRecord.title}) a ${assignee.name || assignee.username}`
+          : `Dejó sin asignar el caso ${caseRecord.case_number} (${caseRecord.title})`,
+        details: { from_user_id: previousUserId, to_user_id: targetUserId },
+      });
+    });
     res.json({ case: updated, message: isUnassign ? 'Case unassigned' : 'Case assigned' });
   } catch (err) {
     console.error('Assign case error:', err);

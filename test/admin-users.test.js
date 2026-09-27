@@ -16,6 +16,8 @@ test.before(async () => {
     ('hengi','hengi@x.com','x','Hengi','digitador','HENGI'), ('marleni','marleni@x.com','x','Marleni','digitador','MARLENI')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await pool.query('DROP TABLE IF EXISTS activity_log');
+  await runSqlFile('migrations/20260927_activity_log.sql');
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
     tok[u.username] = generateToken(u);
     ids[u.username] = u.id;
@@ -45,7 +47,7 @@ test('non-admins are rejected', async () => {
 });
 
 test('create user', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Pedro Gómez', username: 'pedro', role: 'digitador', in_payroll: true, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Pedro Gómez', username: 'pedro', role: 'digitador', in_payroll: true, temp_password: 'Temp2026x' });
   assert.equal(res.status, 201);
   const { user } = await res.json();
   assert.equal(user.must_change_password, true);
@@ -56,24 +58,24 @@ test('create user', async () => {
 });
 
 test('create validations', async () => {
-  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'PEDRO', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'PEDRO', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409); assert.equal(await code(res), 'USERNAME_TAKEN');
-  res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x1', role: 'superuser', in_payroll: false, temp_password: 'temp123' });
+  res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x1', role: 'superuser', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 400); assert.equal(await code(res), 'INVALID_ROLE');
   res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x2', role: 'digitador', in_payroll: false, temp_password: '123' });
-  assert.equal(res.status, 400); assert.equal(await code(res), 'PASSWORD_TOO_SHORT');
-  res = await call('POST', '/api/admin/users', 'admin', { name: '', username: '', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+  res = await call('POST', '/api/admin/users', 'admin', { name: '', username: '', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 400); assert.equal(await code(res), 'NAME_REQUIRED');
 });
 
 test('exact duplicate username (production constraint) → 409 USERNAME_TAKEN', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'pedro', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'pedro', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409);
   assert.equal(await code(res), 'USERNAME_TAKEN');
 });
 
 test('duplicate email → 409 EMAIL_TAKEN', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'otro', email: 'hengi@x.com', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'otro', email: 'hengi@x.com', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409);
   assert.deepEqual(await res.json(), { error: 'Ese email ya está en uso', code: 'EMAIL_TAKEN' });
 });
@@ -160,4 +162,42 @@ test('digitadores dropdown excludes deactivated users', async () => {
   const body = await res.json();
   const list = body.users || body.digitadores || body;
   assert.ok(!list.some((u) => u.username === 'marleni' || u.id === ids.marleni));
+});
+
+test('weak passwords are rejected when creating or resetting', async () => {
+  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Débil', username: 'debil', role: 'digitador', in_payroll: false, temp_password: '12345678' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+  res = await call('POST', `/api/admin/users/${ids.hengi}/temp-password`, 'admin', { temp_password: 'hengi2026' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+});
+
+const lastLog = async (action) => (await pool.query('SELECT * FROM activity_log WHERE action = $1 ORDER BY id DESC LIMIT 1', [action])).rows[0];
+
+test('user actions are recorded in the activity log', async () => {
+  const created = await lastLog('user.create');
+  assert.equal(created.category, 'usuarios');
+  assert.equal(created.actor_id, ids.admin);
+  assert.match(created.summary, /pedro/i);
+  assert.equal(created.details.temp_password, undefined);
+
+  const deact = (await pool.query(`SELECT * FROM activity_log WHERE action = 'user.deactivate' ORDER BY id ASC LIMIT 1`)).rows[0];
+  assert.match(deact.summary, /Marleni/);
+  assert.equal(deact.details.reassigned_to, ids.hengi);
+  assert.deepEqual({ clients: deact.details.clients, cases: deact.details.cases }, { clients: 2, cases: 1 });
+
+  assert.ok(await lastLog('user.temp_password'));
+  assert.ok(await lastLog('user.update'));
+  assert.ok(await lastLog('user.reactivate'));
+});
+
+test('GET /admin/activity lists with filters; employees cannot see it', async () => {
+  const res = await call('GET', `/api/admin/activity?category=usuarios&actor_id=${ids.admin}&page_size=5`, 'admin');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.total >= 5);
+  assert.equal(body.items.length, 5);
+  assert.ok(body.items.every((i) => i.category === 'usuarios' && i.actor_id === ids.admin));
+  assert.equal(body.page, 1);
+  assert.equal(body.page_size, 5);
+  assert.equal((await call('GET', '/api/admin/activity', 'hengi')).status, 403);
 });

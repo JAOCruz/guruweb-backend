@@ -5,6 +5,20 @@ const config = require('../config');
 const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
 const { validateAppearance } = require('../config/appearance');
 const turnstile = require('../services/turnstile');
+const { validatePassword } = require('../config/passwordPolicy');
+const { logActivity, safeLog, maskIdentifier } = require('../services/activityLog');
+
+// Failed logins go to the activity log (category seguridad); the caller's response is unchanged.
+// Unknown usernames are masked (could be a mistyped password) and everything is length-capped.
+function logFailedLogin(req, identifier, reason, userId = null) {
+  const shown = userId ? String(identifier).slice(0, 100) : maskIdentifier(identifier);
+  return logActivity(req, {
+    category: 'seguridad', action: 'login.failed', entityType: 'user', entityId: userId,
+    summary: `Intento de inicio de sesión fallido para "${shown}" (${reason})`,
+    details: { identifier: shown, reason },
+    actor: { id: userId, username: shown },
+  });
+}
 
 const router = express.Router();
 
@@ -50,6 +64,19 @@ const loginLimiter = rateLimit({
   message: 'Too many login attempts, try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    // Record only the first blocked request of each window
+    if (req.rateLimit && req.rateLimit.current === req.rateLimit.limit + 1) {
+      const identifier = String(req.body?.email || req.body?.username || 'desconocido').slice(0, 100);
+      logActivity(req, {
+        category: 'seguridad', action: 'login.blocked',
+        summary: `Inicio de sesión bloqueado 15 min para "${identifier}" por demasiados intentos`,
+        details: { identifier },
+        actor: { id: null, username: identifier },
+      });
+    }
+    res.status(options.statusCode).send(options.message);
+  },
 });
 
 // Admin-only: accounts are created by an admin (public sign-up let anyone become admin)
@@ -59,6 +86,8 @@ router.post('/register', authenticate, requireRole('admin'), registerLimiter, as
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'email, password, and name are required' });
     }
+    const weak = validatePassword(password, { username, name });
+    if (weak) return res.status(400).json(weak);
 
     const existing = await User.findByEmail(email);
     if (existing) {
@@ -87,21 +116,25 @@ router.post('/login', loginLimiter, async (req, res) => {
       secret: turnstile.secretForOrigin(req.headers.origin),
     });
     if (!human.ok) {
+      await logFailedLogin(req, identifier, 'verificación humana fallida');
       return res.status(400).json({ error: 'Verificación de seguridad fallida. Intenta de nuevo.', code: 'CAPTCHA_FAILED' });
     }
 
     const user = await User.findByUsernameOrEmail(identifier);
     if (!user) {
       console.log('[login] User not found for identifier:', identifier);
+      await logFailedLogin(req, identifier, 'usuario no existe');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const valid = await User.verifyPassword(password, user.password_hash);
     if (valid && user.is_active === false) {
+      await logFailedLogin(req, identifier, 'usuario desactivado', user.id);
       return res.status(403).json({ error: 'Usuario desactivado. Contacta al administrador.', code: 'USER_INACTIVE' });
     }
     if (!valid) {
-      console.log('[login] Password mismatch for user:', user.username, 'hash starts with:', user.password_hash?.slice(0, 10));
+      console.log('[login] Password mismatch for user:', user.username);
+      await logFailedLogin(req, identifier, 'contraseña incorrecta', user.id);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -175,16 +208,18 @@ router.post('/reset-password', authenticate, requireRole('admin'), async (req, r
     if (!username || !newPassword) {
       return res.status(400).json({ error: 'username and newPassword are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
     const target = await User.findByUsername(username);
     if (!target) {
       return res.status(404).json({ error: 'User not found' });
     }
+    const weak = validatePassword(newPassword, { username: target.username, name: target.name });
+    if (weak) return res.status(400).json(weak);
 
     const updated = await User.updatePasswordByUsername(username, newPassword);
+    await safeLog(() => logActivity(req, {
+      category: 'usuarios', action: 'user.password_reset', entityType: 'user', entityId: target.id,
+      summary: `Restableció la contraseña de ${target.name || target.username}`,
+    }));
     res.json({ ok: true, message: `Password reset for ${username}`, user: { id: updated.id, username: updated.username, role: updated.role } });
   } catch (err) {
     console.error('Reset password error:', err);
@@ -199,14 +234,13 @@ router.put('/change-password', authenticate, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'currentPassword and newPassword are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const weak = validatePassword(newPassword, { username: user.username, name: user.name });
+    if (weak) return res.status(400).json(weak);
 
     const valid = await User.verifyPassword(currentPassword, user.password_hash);
     if (!valid) {
@@ -215,6 +249,10 @@ router.put('/change-password', authenticate, async (req, res) => {
     }
 
     await User.updatePassword(user.id, newPassword);
+    await logActivity(req, {
+      category: 'usuarios', action: 'user.password_change', entityType: 'user', entityId: user.id,
+      summary: `${user.name || user.username} cambió su contraseña`,
+    });
     await User.clearMustChangePassword(user.id);
     invalidateUserStatus(user.id);
     res.json({ ok: true, message: 'Password updated successfully' });
