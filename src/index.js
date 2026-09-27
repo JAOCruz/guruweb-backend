@@ -346,6 +346,12 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
+  // Activity log retention: keep 1 year (runs now and every 24h)
+  try {
+    require("./services/activityLog").startActivityRetention(365);
+  } catch (err) {
+    console.error("[activity] retention not started:", err.message);
+  }
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API: http://localhost:${PORT}`);
