@@ -60,3 +60,13 @@ test('purgeOld removes entries older than a year only', async () => {
   const { rows } = await pool.query('SELECT summary FROM activity_log');
   assert.deepEqual(rows.map((r) => r.summary), ['nuevo']);
 });
+
+test('safeLog swallows errors thrown while building the entry', async () => {
+  await assert.doesNotReject(activity.safeLog(() => { throw new TypeError("Cannot read properties of null (reading 'doc_number')"); }));
+  await assert.doesNotReject(activity.safeLog(async () => { throw new Error('db down'); }));
+});
+
+test('maskIdentifier hides what was typed for unknown users', () => {
+  assert.equal(activity.maskIdentifier('MiClave2026!'), 'Mi… (12 caracteres)');
+  assert.equal(activity.maskIdentifier('x'.repeat(5000)).length < 40, true);
+});

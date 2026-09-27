@@ -117,3 +117,28 @@ test('own password change is recorded', async () => {
   assert.ok(rows.length >= 1);
   assert.equal(rows[0].category, 'usuarios');
 });
+
+test('unknown usernames are masked (people sometimes type their password there) and capped', async () => {
+  const typed = 'MiClaveSecreta2026';
+  await call('POST', '/api/auth/login', { username: typed, password: 'x' });
+  const { rows } = await pool.query(`SELECT summary, details FROM activity_log WHERE action = 'login.failed' ORDER BY id DESC LIMIT 1`);
+  assert.ok(!rows[0].summary.includes(typed));
+  assert.ok(!JSON.stringify(rows[0].details).includes(typed));
+  assert.match(rows[0].summary, /Mi…/);
+});
+
+test('a blocked login is recorded once per window, not on every blocked request', async () => {
+  for (let i = 0; i < 9; i++) await call('POST', '/api/auth/login', { username: 'bloqueo_prueba', password: 'x' });
+  const { rows } = await pool.query(`SELECT COUNT(*)::int AS n FROM activity_log WHERE action = 'login.blocked'`);
+  assert.equal(rows[0].n, 1);
+});
+
+test('admin reset-password follows the policy and is recorded', async () => {
+  let res = await call('POST', '/api/auth/reset-password', { username: 'ana', newPassword: '123456' }, 'admin');
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).code, 'WEAK_PASSWORD');
+  res = await call('POST', '/api/auth/reset-password', { username: 'ana', newPassword: 'Nueva2026x' }, 'admin');
+  assert.equal(res.status, 200);
+  const { rows } = await pool.query(`SELECT category FROM activity_log WHERE action = 'user.password_reset'`);
+  assert.equal(rows[0].category, 'usuarios');
+});

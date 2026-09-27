@@ -92,4 +92,21 @@ function rd(amount) {
   return `RD$ ${Number(amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-module.exports = { logActivity, listActivity, purgeOld, startActivityRetention, stripSecrets, rd };
+// Run the whole "build summary + look things up + log" step without ever
+// letting it fail the request (e.g. a null row after a concurrent change).
+async function safeLog(fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error('[activity] could not build entry:', err.message);
+  }
+}
+
+// What someone typed as a username that matches no account: people sometimes
+// type their password there, so keep only a hint.
+function maskIdentifier(identifier) {
+  const s = String(identifier ?? '');
+  return `${s.slice(0, 2)}… (${s.length} caracteres)`;
+}
+
+module.exports = { logActivity, listActivity, purgeOld, startActivityRetention, stripSecrets, rd, safeLog, maskIdentifier };

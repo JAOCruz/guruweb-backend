@@ -16,10 +16,11 @@ const Case = require('../models/Case');
 const Client = require('../models/Client');
 const Message = require('../models/Message');
 const outgoing = require('../whatsapp/outgoing');
-const { logActivity, rd } = require('../services/activityLog');
+const { logActivity, rd, safeLog } = require('../services/activityLog');
 
 const docLabel = (inv) => `${inv.type === 'FACTURA' ? 'la factura' : 'la cotización'} ${inv.doc_number}`;
 function logInvoice(req, action, inv, summary, details = {}) {
+  if (!inv) return Promise.resolve(); // e.g. a double click: the other request already changed it
   return logActivity(req, {
     category: 'facturas', action, entityType: 'invoice', entityId: inv.id, summary,
     details: { doc_number: inv.doc_number, type: inv.type, client_name: inv.client_name, total: inv.total, ...details },
@@ -262,7 +263,7 @@ router.post('/', async (req, res) => {
       discountReason: discount.discountReason,
     });
 
-    await logInvoice(req, 'invoice.create', invoice, `Creó ${docLabel(invoice)} para ${invoice.client_name || 'cliente sin nombre'} por ${rd(invoice.total)}`);
+    await safeLog(() => logInvoice(req, 'invoice.create', invoice, `Creó ${docLabel(invoice)} para ${invoice.client_name || 'cliente sin nombre'} por ${rd(invoice.total)}`));
     res.status(201).json({ invoice });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Doc number already exists' });
@@ -365,7 +366,7 @@ router.put('/:id', async (req, res) => {
       }
     }
 
-    await logInvoice(req, 'invoice.update', updated, `Editó ${docLabel(updated)} (total ${rd(invoice.total)} → ${rd(updated.total)})`, { total_antes: invoice.total });
+    await safeLog(() => logInvoice(req, 'invoice.update', updated, `Editó ${docLabel(updated)} (total ${rd(invoice.total)} → ${rd(updated.total)})`, { total_antes: invoice.total }));
     res.json({ invoice: updated });
   } catch (err) {
     console.error('Update invoice error:', err);
@@ -387,7 +388,7 @@ router.delete('/:id', async (req, res) => {
       }
     }
     await Invoice.delete(invoice.id);
-    await logInvoice(req, 'invoice.delete', invoice, `Eliminó ${docLabel(invoice)} de ${invoice.client_name || 'cliente sin nombre'} por ${rd(invoice.total)}`);
+    await safeLog(() => logInvoice(req, 'invoice.delete', invoice, `Eliminó ${docLabel(invoice)} de ${invoice.client_name || 'cliente sin nombre'} por ${rd(invoice.total)}`));
     res.json({ message: 'Invoice deleted' });
   } catch (err) {
     console.error('Delete invoice error:', err);
@@ -404,7 +405,7 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
       return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
     }
     const updated = await Invoice.approve(invoice.id, req.user.id);
-    await logInvoice(req, 'invoice.approve', updated, `Aprobó ${docLabel(updated)} por ${rd(updated.total)}`);
+    await safeLog(() => logInvoice(req, 'invoice.approve', updated, `Aprobó ${docLabel(updated)} por ${rd(updated.total)}`));
     res.json({ invoice: updated, message: 'Invoice approved' });
   } catch (err) {
     console.error('Approve invoice error:', err);
@@ -423,7 +424,7 @@ router.post('/:id/reject', requireRole('admin'), async (req, res) => {
     }
     const updated = await Invoice.reject(invoice.id, req.user.id, reason);
     if (!updated) return res.status(400).json({ error: 'Failed to reject invoice' });
-    await logInvoice(req, 'invoice.reject', updated, `Rechazó ${docLabel(updated)}${reason ? `: ${reason}` : ''}`, { reason: reason || null });
+    await safeLog(() => logInvoice(req, 'invoice.reject', updated, `Rechazó ${docLabel(updated)}${reason ? `: ${reason}` : ''}`, { reason: reason || null }));
     res.json({ invoice: updated, message: 'Invoice rejected' });
   } catch (err) {
     console.error('Reject invoice error:', err);
@@ -456,7 +457,7 @@ router.post('/:id/send', async (req, res) => {
       if (invoice.status === 'draft') {
         const updated = await Invoice.requestApproval(invoice.id);
         if (!updated) return res.status(400).json({ error: 'Failed to request approval' });
-        await logInvoice(req, 'invoice.request_approval', updated, `Pidió aprobación para ${docLabel(updated)} por ${rd(updated.total)}`);
+        await safeLog(() => logInvoice(req, 'invoice.request_approval', updated, `Pidió aprobación para ${docLabel(updated)} por ${rd(updated.total)}`));
         return res.json({ invoice: updated, message: 'Invoice submitted for admin approval before sending' });
       }
       // approved -> proceed to send below
@@ -506,7 +507,7 @@ router.post('/:id/send', async (req, res) => {
     }
 
     const updated = await Invoice.markSent(invoice.id, pdfPath, s3Key, s3Key ? 's3' : 'railway_volume');
-    await logInvoice(req, 'invoice.send', updated, `Envió ${docLabel(updated)} a ${updated.client_name || 'cliente sin nombre'}`);
+    await safeLog(() => logInvoice(req, 'invoice.send', updated, `Envió ${docLabel(updated)} a ${updated.client_name || 'cliente sin nombre'}`));
     res.json({
       invoice: updated,
       pdfPath,
@@ -684,7 +685,7 @@ router.post('/:id/confirm-payment', requireRole('admin'), async (req, res) => {
       console.log(`[Invoices] Related case #${updated.case_id} updated to ${newCaseStatus}`);
     }
 
-    await logInvoice(req, 'invoice.payment', updated, `Confirmó el pago de ${docLabel(updated)} por ${rd(updated.total)}${payment_reference ? ` (ref. ${payment_reference})` : ''}`, { payment_method: payment_method || null, payment_reference: payment_reference || null });
+    await safeLog(() => logInvoice(req, 'invoice.payment', updated, `Confirmó el pago de ${docLabel(updated)} por ${rd(updated.total)}${payment_reference ? ` (ref. ${payment_reference})` : ''}`, { payment_method: payment_method || null, payment_reference: payment_reference || null }));
     res.json({ invoice: updated, message: 'Payment confirmed. Case updated if linked.' });
   } catch (err) {
     console.error('Confirm payment error:', err);

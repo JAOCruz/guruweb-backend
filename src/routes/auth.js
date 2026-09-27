@@ -6,15 +6,17 @@ const { generateToken, authenticate, requireRole, invalidateUserStatus } = requi
 const { validateAppearance } = require('../config/appearance');
 const turnstile = require('../services/turnstile');
 const { validatePassword } = require('../config/passwordPolicy');
-const { logActivity } = require('../services/activityLog');
+const { logActivity, safeLog, maskIdentifier } = require('../services/activityLog');
 
-// Failed logins go to the activity log (category seguridad); the caller's response is unchanged
+// Failed logins go to the activity log (category seguridad); the caller's response is unchanged.
+// Unknown usernames are masked (could be a mistyped password) and everything is length-capped.
 function logFailedLogin(req, identifier, reason, userId = null) {
+  const shown = userId ? String(identifier).slice(0, 100) : maskIdentifier(identifier);
   return logActivity(req, {
     category: 'seguridad', action: 'login.failed', entityType: 'user', entityId: userId,
-    summary: `Intento de inicio de sesión fallido para "${identifier}" (${reason})`,
-    details: { identifier, reason },
-    actor: { id: userId, username: identifier },
+    summary: `Intento de inicio de sesión fallido para "${shown}" (${reason})`,
+    details: { identifier: shown, reason },
+    actor: { id: userId, username: shown },
   });
 }
 
@@ -63,13 +65,16 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res, next, options) => {
-    const identifier = req.body?.email || req.body?.username || 'desconocido';
-    logActivity(req, {
-      category: 'seguridad', action: 'login.blocked',
-      summary: `Inicio de sesión bloqueado 15 min para "${identifier}" por demasiados intentos`,
-      details: { identifier },
-      actor: { id: null, username: identifier },
-    });
+    // Record only the first blocked request of each window
+    if (req.rateLimit && req.rateLimit.current === req.rateLimit.limit + 1) {
+      const identifier = String(req.body?.email || req.body?.username || 'desconocido').slice(0, 100);
+      logActivity(req, {
+        category: 'seguridad', action: 'login.blocked',
+        summary: `Inicio de sesión bloqueado 15 min para "${identifier}" por demasiados intentos`,
+        details: { identifier },
+        actor: { id: null, username: identifier },
+      });
+    }
     res.status(options.statusCode).send(options.message);
   },
 });
@@ -203,16 +208,18 @@ router.post('/reset-password', authenticate, requireRole('admin'), async (req, r
     if (!username || !newPassword) {
       return res.status(400).json({ error: 'username and newPassword are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
     const target = await User.findByUsername(username);
     if (!target) {
       return res.status(404).json({ error: 'User not found' });
     }
+    const weak = validatePassword(newPassword, { username: target.username, name: target.name });
+    if (weak) return res.status(400).json(weak);
 
     const updated = await User.updatePasswordByUsername(username, newPassword);
+    await safeLog(() => logActivity(req, {
+      category: 'usuarios', action: 'user.password_reset', entityType: 'user', entityId: target.id,
+      summary: `Restableció la contraseña de ${target.name || target.username}`,
+    }));
     res.json({ ok: true, message: `Password reset for ${username}`, user: { id: updated.id, username: updated.username, role: updated.role } });
   } catch (err) {
     console.error('Reset password error:', err);

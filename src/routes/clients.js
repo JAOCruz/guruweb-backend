@@ -3,7 +3,7 @@ const Client = require('../models/Client');
 const Notification = require('../models/Notification');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
-const { logActivity } = require('../services/activityLog');
+const { logActivity, safeLog } = require('../services/activityLog');
 
 function logClientAssignment(req, client, user) {
   const who = client.name || client.phone;
@@ -212,7 +212,7 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
     }
 
     console.log(`[Clients] Client ${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser.username})`} by ${req.user.username}`);
-    await logClientAssignment(req, client, isUnassign ? null : assignedToUser);
+    await safeLog(() => logClientAssignment(req, client, isUnassign ? null : assignedToUser));
     res.json({ client, assigned_to_user: assignedToUser });
   } catch (err) {
     console.error('Assign client error:', err);
@@ -279,7 +279,7 @@ router.post('/assign-by-phone', requireRole('admin'), async (req, res) => {
     }
 
     console.log(`[Clients] Client ${client.id} (${client.phone}) ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser?.username})`} by ${req.user.username}`);
-    await logClientAssignment(req, client, isUnassign ? null : assignedToUser);
+    await safeLog(() => logClientAssignment(req, client, isUnassign ? null : assignedToUser));
     res.json({ client, assigned_to_user: assignedToUser });
   } catch (err) {
     console.error('Assign by phone error:', err);
@@ -355,10 +355,12 @@ router.put('/:id/assign', requireRole('admin'), async (req, res) => {
       if (targetRows[0]) await notifyAssignment(updated, targetRows[0]);
     }
 
-    const newAssignee = user_id
-      ? (await pool.query('SELECT id, username, name FROM users WHERE id = $1', [user_id])).rows[0] || null
-      : null;
-    await logClientAssignment(req, updated, newAssignee);
+    await safeLog(async () => {
+      const newAssignee = user_id
+        ? (await pool.query('SELECT id, username, name FROM users WHERE id = $1', [user_id])).rows[0] || null
+        : null;
+      await logClientAssignment(req, updated, newAssignee);
+    });
     console.log(`[Clients] Client #${clientId} assigned to user ${user_id} by ${req.user.username}`);
     res.json({ client: updated, message: 'Client assigned successfully' });
   } catch (err) {

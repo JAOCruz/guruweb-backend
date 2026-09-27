@@ -58,7 +58,7 @@ const { invalidateUserStatus } = require('../middleware/auth');
 
 const ROLES = ['admin', 'digitador', 'auxiliar'];
 const { validatePassword } = require('../config/passwordPolicy');
-const { logActivity, listActivity } = require('../services/activityLog');
+const { logActivity, listActivity, safeLog } = require('../services/activityLog');
 
 const ROLE_LABEL = { admin: 'Admin', digitador: 'Digitador', auxiliar: 'Auxiliar', employee: 'Digitador' };
 const displayName = (u) => (u && (u.name || u.username)) || 'usuario';
@@ -149,14 +149,16 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
       name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll,
     });
     invalidateUserStatus(id);
-    const changes = {};
-    for (const key of ['name', 'username', 'email', 'role', 'in_payroll']) {
-      if ((target[key] ?? null) !== (user[key] ?? null)) changes[key] = { antes: target[key] ?? null, despues: user[key] ?? null };
-    }
-    const roleNote = changes.role ? ` — rol: ${ROLE_LABEL[target.role] || target.role} → ${ROLE_LABEL[user.role] || user.role}` : '';
-    await logActivity(req, {
-      category: 'usuarios', action: 'user.update', entityType: 'user', entityId: id,
-      summary: `Editó el usuario ${displayName(user)}${roleNote}`, details: { cambios: changes },
+    await safeLog(async () => {
+      const changes = {};
+      for (const key of ['name', 'username', 'email', 'role', 'in_payroll']) {
+        if ((target[key] ?? null) !== (user[key] ?? null)) changes[key] = { antes: target[key] ?? null, despues: user[key] ?? null };
+      }
+      const roleNote = changes.role ? ` — rol: ${ROLE_LABEL[target.role] || target.role} → ${ROLE_LABEL[user.role] || user.role}` : '';
+      await logActivity(req, {
+        category: 'usuarios', action: 'user.update', entityType: 'user', entityId: id,
+        summary: `Editó el usuario ${displayName(user)}${roleNote}`, details: { cambios: changes },
+      });
     });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
@@ -227,11 +229,13 @@ router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
     const counts = await User.countAssignments(id);
     const user = await User.deactivate(id, reassignTo, req.user.id);
     invalidateUserStatus(id);
-    const receiver = reassignTo ? await User.findById(reassignTo) : null;
-    await logActivity(req, {
-      category: 'usuarios', action: 'user.deactivate', entityType: 'user', entityId: id,
-      summary: `Desactivó a ${displayName(target)}; ${counts.clients} clientes/chats y ${counts.cases} casos pasaron a ${receiver ? displayName(receiver) : 'Sin asignar'}`,
-      details: { reassigned_to: reassignTo, clients: counts.clients, cases: counts.cases },
+    await safeLog(async () => {
+      const receiver = reassignTo ? await User.findById(reassignTo) : null;
+      await logActivity(req, {
+        category: 'usuarios', action: 'user.deactivate', entityType: 'user', entityId: id,
+        summary: `Desactivó a ${displayName(target)}; ${counts.clients} clientes/chats y ${counts.cases} casos pasaron a ${receiver ? displayName(receiver) : 'Sin asignar'}`,
+        details: { reassigned_to: reassignTo, clients: counts.clients, cases: counts.cases },
+      });
     });
     res.json({ user: toAdminUser(user) });
   } catch (err) {
