@@ -16,6 +16,8 @@ test.before(async () => {
     ('temp','temp@x.com',$1,'Temp','digitador'), ('gone','gone@x.com',$1,'Gone','digitador')`, [hash]);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await pool.query('DROP TABLE IF EXISTS activity_log');
+  await runSqlFile('migrations/20260927_activity_log.sql');
   await pool.query(`UPDATE users SET must_change_password = TRUE WHERE username = 'temp'`);
   await pool.query(`UPDATE users SET is_active = FALSE WHERE username = 'gone'`);
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) tok[u.username] = generateToken(u);
@@ -98,4 +100,20 @@ test('change-password rejects a weak new password', async () => {
   const res = await call('PUT', '/api/auth/change-password', { currentPassword: 'secret1', newPassword: 'password1' }, 'ana');
   assert.equal(res.status, 400);
   assert.equal((await res.json()).code, 'WEAK_PASSWORD');
+});
+
+test('a failed login is recorded without changing the response', async () => {
+  const res = await call('POST', '/api/auth/login', { username: 'ana', password: 'mala-clave-99' });
+  assert.equal(res.status, 401);
+  assert.deepEqual(await res.json(), { error: 'Invalid credentials' });
+  const { rows } = await pool.query(`SELECT category, action, summary, details FROM activity_log WHERE action = 'login.failed' ORDER BY id DESC LIMIT 1`);
+  assert.equal(rows[0].category, 'seguridad');
+  assert.match(rows[0].summary, /ana/);
+  assert.equal(rows[0].details.password, undefined);
+});
+
+test('own password change is recorded', async () => {
+  const { rows } = await pool.query(`SELECT category FROM activity_log WHERE action = 'user.password_change'`);
+  assert.ok(rows.length >= 1);
+  assert.equal(rows[0].category, 'usuarios');
 });

@@ -87,4 +87,9 @@ function startActivityRetention(days = 365) {
   setInterval(run, DAY_MS).unref();
 }
 
-module.exports = { logActivity, listActivity, purgeOld, startActivityRetention, stripSecrets };
+// "RD$ 12,000.00" style amounts for summaries
+function rd(amount) {
+  return `RD$ ${Number(amount || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+module.exports = { logActivity, listActivity, purgeOld, startActivityRetention, stripSecrets, rd };

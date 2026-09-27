@@ -16,6 +16,8 @@ test.before(async () => {
     ('hengi','hengi@x.com','x','Hengi','digitador','HENGI'), ('marleni','marleni@x.com','x','Marleni','digitador','MARLENI')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await pool.query('DROP TABLE IF EXISTS activity_log');
+  await runSqlFile('migrations/20260927_activity_log.sql');
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
     tok[u.username] = generateToken(u);
     ids[u.username] = u.id;
@@ -167,4 +169,35 @@ test('weak passwords are rejected when creating or resetting', async () => {
   assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
   res = await call('POST', `/api/admin/users/${ids.hengi}/temp-password`, 'admin', { temp_password: 'hengi2026' });
   assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+});
+
+const lastLog = async (action) => (await pool.query('SELECT * FROM activity_log WHERE action = $1 ORDER BY id DESC LIMIT 1', [action])).rows[0];
+
+test('user actions are recorded in the activity log', async () => {
+  const created = await lastLog('user.create');
+  assert.equal(created.category, 'usuarios');
+  assert.equal(created.actor_id, ids.admin);
+  assert.match(created.summary, /pedro/i);
+  assert.equal(created.details.temp_password, undefined);
+
+  const deact = (await pool.query(`SELECT * FROM activity_log WHERE action = 'user.deactivate' ORDER BY id ASC LIMIT 1`)).rows[0];
+  assert.match(deact.summary, /Marleni/);
+  assert.equal(deact.details.reassigned_to, ids.hengi);
+  assert.deepEqual({ clients: deact.details.clients, cases: deact.details.cases }, { clients: 2, cases: 1 });
+
+  assert.ok(await lastLog('user.temp_password'));
+  assert.ok(await lastLog('user.update'));
+  assert.ok(await lastLog('user.reactivate'));
+});
+
+test('GET /admin/activity lists with filters; employees cannot see it', async () => {
+  const res = await call('GET', `/api/admin/activity?category=usuarios&actor_id=${ids.admin}&page_size=5`, 'admin');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.total >= 5);
+  assert.equal(body.items.length, 5);
+  assert.ok(body.items.every((i) => i.category === 'usuarios' && i.actor_id === ids.admin));
+  assert.equal(body.page, 1);
+  assert.equal(body.page_size, 5);
+  assert.equal((await call('GET', '/api/admin/activity', 'hengi')).status, 403);
 });
