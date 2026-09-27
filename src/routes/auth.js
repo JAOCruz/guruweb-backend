@@ -6,6 +6,7 @@ const { generateToken, authenticate, requireRole, invalidateUserStatus } = requi
 const { validateAppearance } = require('../config/appearance');
 const turnstile = require('../services/turnstile');
 const { validatePassword } = require('../config/passwordPolicy');
+const { normalizeBirthDate } = require('../config/birthDate');
 const { logActivity, safeLog, maskIdentifier } = require('../services/activityLog');
 
 // Failed logins go to the activity log (category seguridad); the caller's response is unchanged.
@@ -259,6 +260,20 @@ router.put('/change-password', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Change password error:', err);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Profile fields each user can edit themselves (today: birth date only)
+router.put('/me/profile', authenticate, async (req, res) => {
+  const bd = normalizeBirthDate((req.body || {}).birthDate);
+  if (!bd.ok) return res.status(400).json({ error: bd.error, code: bd.code });
+  try {
+    const updated = await User.updateBirthDate(req.user.id, bd.value);
+    if (!updated) return res.status(404).json({ error: 'User not found' });
+    res.json({ user: User.toPublicUser(updated) });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'No se pudo guardar' });
   }
 });
 

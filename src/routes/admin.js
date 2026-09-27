@@ -58,6 +58,7 @@ const { invalidateUserStatus } = require('../middleware/auth');
 
 const ROLES = ['admin', 'digitador', 'auxiliar'];
 const { validatePassword } = require('../config/passwordPolicy');
+const { normalizeBirthDate, formatBirthDate } = require('../config/birthDate');
 const { logActivity, listActivity, safeLog } = require('../services/activityLog');
 
 const ROLE_LABEL = { admin: 'Admin', digitador: 'Digitador', auxiliar: 'Auxiliar', employee: 'Digitador' };
@@ -70,15 +71,20 @@ function sendError(res, status, code, error) {
 function toAdminUser(u) {
   if (!u) return u;
   const { password_hash, ...rest } = u;
+  if ('birth_date' in rest) rest.birth_date = formatBirthDate(rest.birth_date);
   return rest;
 }
 
 function validateUserInput(body, { requirePassword }) {
-  const { name, username, role, temp_password } = body || {};
+  const { name, username, role, temp_password, birth_date } = body || {};
   if (!name || !String(name).trim() || !username || !String(username).trim()) {
     return ['NAME_REQUIRED', 'Nombre y usuario son obligatorios'];
   }
   if (!ROLES.includes(role)) return ['INVALID_ROLE', 'Rol no válido'];
+  if (birth_date !== undefined) {
+    const bd = normalizeBirthDate(birth_date);
+    if (!bd.ok) return [bd.code, bd.error];
+  }
   if (requirePassword) {
     const weak = validatePassword(temp_password, { username, name });
     if (weak) return [weak.code, weak.error];
@@ -106,7 +112,7 @@ router.get('/users', requireRole('admin'), async (req, res) => {
     // Default 'active': existing assignment dropdowns call this without a status
     const status = ['active', 'inactive', 'all'].includes(req.query.status) ? req.query.status : 'active';
     const users = await User.adminList(status);
-    res.json({ users });
+    res.json({ users: users.map(toAdminUser) });
   } catch (err) {
     handleDbError(res, err, 'Admin users list');
   }
@@ -116,9 +122,10 @@ router.post('/users', requireRole('admin'), async (req, res) => {
   const invalid = validateUserInput(req.body, { requirePassword: true });
   if (invalid) return sendError(res, 400, ...invalid);
   try {
-    const { name, username, email, role, in_payroll, temp_password } = req.body;
+    const { name, username, email, role, in_payroll, temp_password, birth_date } = req.body;
     const user = await User.adminCreate({
       name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll, temp_password,
+      birth_date: birth_date === undefined ? null : normalizeBirthDate(birth_date).value,
     });
     await logActivity(req, {
       category: 'usuarios', action: 'user.create', entityType: 'user', entityId: user.id,
@@ -138,7 +145,7 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
     const id = Number(req.params.id);
     const target = await User.findById(id);
     if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
-    const { name, username, email, role, in_payroll } = req.body;
+    const { name, username, email, role, in_payroll, birth_date } = req.body;
     if (target.role === 'admin' && role !== 'admin') {
       if (id === req.user.id) return sendError(res, 400, 'CANNOT_DEMOTE_SELF', 'No puedes quitarte el rol de administrador');
       if (target.is_active && (await User.countActiveAdmins(id)) === 0) {
@@ -147,12 +154,15 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
     }
     const user = await User.adminUpdate(id, {
       name: String(name).trim(), username: String(username).trim(), email, role, in_payroll: !!in_payroll,
+      birth_date: birth_date === undefined ? undefined : normalizeBirthDate(birth_date).value,
     });
     invalidateUserStatus(id);
     await safeLog(async () => {
       const changes = {};
-      for (const key of ['name', 'username', 'email', 'role', 'in_payroll']) {
-        if ((target[key] ?? null) !== (user[key] ?? null)) changes[key] = { antes: target[key] ?? null, despues: user[key] ?? null };
+      const before = toAdminUser(target);
+      const after = toAdminUser(user);
+      for (const key of ['name', 'username', 'email', 'role', 'in_payroll', 'birth_date']) {
+        if ((before[key] ?? null) !== (after[key] ?? null)) changes[key] = { antes: before[key] ?? null, despues: after[key] ?? null };
       }
       const roleNote = changes.role ? ` — rol: ${ROLE_LABEL[target.role] || target.role} → ${ROLE_LABEL[user.role] || user.role}` : '';
       await logActivity(req, {

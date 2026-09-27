@@ -17,6 +17,7 @@ test.before(async () => {
     ('israel','israel@x.com',$1,'Israel','digitador','ISRAEL')`, [hash]);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await runSqlFile('migrations/20260927_birth_date.sql');
   const { rows } = await pool.query('SELECT id, username, email, role FROM users');
   for (const u of rows) tokens[u.username] = generateToken(u);
 

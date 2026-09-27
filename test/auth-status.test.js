@@ -13,6 +13,7 @@ test.before(async () => {
     ('ana','ana@x.com','x','Ana','digitador'), ('temp','temp@x.com','x','Temp','digitador')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await runSqlFile('migrations/20260927_birth_date.sql');
   await pool.query(`UPDATE users SET must_change_password = TRUE WHERE username = 'temp'`);
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) tok[u.username] = { id: u.id, t: generateToken(u) };
 

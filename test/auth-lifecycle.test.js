@@ -16,6 +16,7 @@ test.before(async () => {
     ('temp','temp@x.com',$1,'Temp','digitador'), ('gone','gone@x.com',$1,'Gone','digitador')`, [hash]);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await runSqlFile('migrations/20260927_birth_date.sql');
   await pool.query('DROP TABLE IF EXISTS activity_log');
   await runSqlFile('migrations/20260927_activity_log.sql');
   await pool.query(`UPDATE users SET must_change_password = TRUE WHERE username = 'temp'`);

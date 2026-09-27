@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 
 const SALT_ROUNDS = 10;
 const { COLOR_KEYS } = require('../config/appearance');
+const { formatBirthDate } = require('../config/birthDate');
 
 // Cases still in progress; resolved/closed/paid/cancelled ones keep their author
 const OPEN_CASE = `status NOT IN ('resolved', 'closed', 'paid', 'cancelled')`;
@@ -151,7 +152,16 @@ const User = {
       isActive: user.is_active !== false,
       mustChangePassword: user.must_change_password === true,
       inPayroll: user.in_payroll === true,
+      birthDate: formatBirthDate(user.birth_date),
     };
+  },
+
+  async updateBirthDate(id, birthDate) {
+    const { rows } = await pool.query(
+      'UPDATE users SET birth_date = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [birthDate, id]
+    );
+    return rows[0] || null;
   },
 
   async clearMustChangePassword(id) {
@@ -220,7 +230,7 @@ const User = {
       : '';
     const { rows } = await pool.query(
       `SELECT id, COALESCE(NULLIF(name, ''), NULLIF(data_column, ''), username) AS name,
-              username, email, role, data_column, color, avatar,
+              username, email, role, data_column, color, avatar, birth_date,
               is_active, in_payroll, must_change_password, last_seen, created_at, deactivated_at
        FROM users ${where}
        ORDER BY is_active DESC, COALESCE(NULLIF(name, ''), username) ASC`
@@ -228,14 +238,14 @@ const User = {
     return rows;
   },
 
-  async adminCreate({ name, username, email, role, in_payroll, temp_password }) {
+  async adminCreate({ name, username, email, role, in_payroll, temp_password, birth_date = null }) {
     const passwordHash = await bcrypt.hash(temp_password, SALT_ROUNDS);
     const dataColumn = in_payroll ? await User.uniqueDataColumn(User.slugDataColumn(name)) : null;
     const { rows } = await pool.query(
-      `INSERT INTO users (name, username, email, role, in_payroll, data_column, password_hash, must_change_password)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
+      `INSERT INTO users (name, username, email, role, in_payroll, data_column, password_hash, must_change_password, birth_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8)
        RETURNING id`,
-      [name, username, email || null, role, !!in_payroll, dataColumn, passwordHash]
+      [name, username, email || null, role, !!in_payroll, dataColumn, passwordHash, birth_date]
     );
     const id = rows[0].id;
     try {
@@ -246,7 +256,8 @@ const User = {
     return User.findById(id);
   },
 
-  async adminUpdate(id, { name, username, email, role, in_payroll }) {
+  // birth_date undefined = keep the current value (older dashboards don't send it)
+  async adminUpdate(id, { name, username, email, role, in_payroll, birth_date }) {
     const current = await User.findById(id);
     if (!current) return null;
     let dataColumn = current.data_column;
@@ -254,9 +265,10 @@ const User = {
       dataColumn = await User.uniqueDataColumn(User.slugDataColumn(name || current.name));
     }
     const { rows } = await pool.query(
-      `UPDATE users SET name = $1, username = $2, email = $3, role = $4, in_payroll = $5, data_column = $6, updated_at = NOW()
+      `UPDATE users SET name = $1, username = $2, email = $3, role = $4, in_payroll = $5, data_column = $6,
+              birth_date = CASE WHEN $8 THEN $9::date ELSE birth_date END, updated_at = NOW()
        WHERE id = $7 RETURNING *`,
-      [name, username, email || null, role, !!in_payroll, dataColumn, id]
+      [name, username, email || null, role, !!in_payroll, dataColumn, id, birth_date !== undefined, birth_date ?? null]
     );
     return rows[0] || null;
   },

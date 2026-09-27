@@ -14,6 +14,7 @@ test.beforeEach(async () => {
     ('admin','x','Admin','admin',NULL), ('hengi','x','Hengi','digitador','HENGI'), ('marleni','x','Marleni','digitador','MARLENI')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await runSqlFile('migrations/20260927_birth_date.sql');
   const rows = (await pool.query('SELECT id, username FROM users')).rows;
   ids = Object.fromEntries(rows.map((r) => [r.username, r.id]));
   await pool.query('INSERT INTO clients (phone, assigned_to) VALUES ($1,$2), ($3,$2)', ['1', ids.marleni, '2']);

@@ -16,6 +16,7 @@ test.before(async () => {
     ('hengi','hengi@x.com','x','Hengi','digitador','HENGI'), ('marleni','marleni@x.com','x','Marleni','digitador','MARLENI')`);
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
+  await runSqlFile('migrations/20260927_birth_date.sql');
   await pool.query('DROP TABLE IF EXISTS activity_log');
   await runSqlFile('migrations/20260927_activity_log.sql');
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
