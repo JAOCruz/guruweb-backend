@@ -60,7 +60,7 @@ test('changing the password clears the flag', async () => {
 });
 
 test('register requires an admin', async () => {
-  const body = { email: 'n@x.com', password: 'secret1', name: 'Nuevo', username: 'nuevo' };
+  const body = { email: 'n@x.com', password: 'Secreto2026', name: 'Nuevo', username: 'nuevo' };
   assert.equal((await call('POST', '/api/auth/register', body)).status, 401);
   assert.equal((await call('POST', '/api/auth/register', body, 'ana')).status, 403);
   assert.equal((await call('POST', '/api/auth/register', body, 'admin')).status, 201);
@@ -92,4 +92,10 @@ test('login passes the token and client ip to the human check', async () => {
   } finally {
     turnstile.verifyTurnstile = original;
   }
+});
+
+test('change-password rejects a weak new password', async () => {
+  const res = await call('PUT', '/api/auth/change-password', { currentPassword: 'secret1', newPassword: 'password1' }, 'ana');
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).code, 'WEAK_PASSWORD');
 });

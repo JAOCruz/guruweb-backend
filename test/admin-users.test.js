@@ -45,7 +45,7 @@ test('non-admins are rejected', async () => {
 });
 
 test('create user', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Pedro Gómez', username: 'pedro', role: 'digitador', in_payroll: true, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Pedro Gómez', username: 'pedro', role: 'digitador', in_payroll: true, temp_password: 'Temp2026x' });
   assert.equal(res.status, 201);
   const { user } = await res.json();
   assert.equal(user.must_change_password, true);
@@ -56,24 +56,24 @@ test('create user', async () => {
 });
 
 test('create validations', async () => {
-  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'PEDRO', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'PEDRO', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409); assert.equal(await code(res), 'USERNAME_TAKEN');
-  res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x1', role: 'superuser', in_payroll: false, temp_password: 'temp123' });
+  res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x1', role: 'superuser', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 400); assert.equal(await code(res), 'INVALID_ROLE');
   res = await call('POST', '/api/admin/users', 'admin', { name: 'X', username: 'x2', role: 'digitador', in_payroll: false, temp_password: '123' });
-  assert.equal(res.status, 400); assert.equal(await code(res), 'PASSWORD_TOO_SHORT');
-  res = await call('POST', '/api/admin/users', 'admin', { name: '', username: '', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+  res = await call('POST', '/api/admin/users', 'admin', { name: '', username: '', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 400); assert.equal(await code(res), 'NAME_REQUIRED');
 });
 
 test('exact duplicate username (production constraint) → 409 USERNAME_TAKEN', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'pedro', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'pedro', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409);
   assert.equal(await code(res), 'USERNAME_TAKEN');
 });
 
 test('duplicate email → 409 EMAIL_TAKEN', async () => {
-  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'otro', email: 'hengi@x.com', role: 'digitador', in_payroll: false, temp_password: 'temp123' });
+  const res = await call('POST', '/api/admin/users', 'admin', { name: 'Otro', username: 'otro', email: 'hengi@x.com', role: 'digitador', in_payroll: false, temp_password: 'Temp2026x' });
   assert.equal(res.status, 409);
   assert.deepEqual(await res.json(), { error: 'Ese email ya está en uso', code: 'EMAIL_TAKEN' });
 });
@@ -160,4 +160,11 @@ test('digitadores dropdown excludes deactivated users', async () => {
   const body = await res.json();
   const list = body.users || body.digitadores || body;
   assert.ok(!list.some((u) => u.username === 'marleni' || u.id === ids.marleni));
+});
+
+test('weak passwords are rejected when creating or resetting', async () => {
+  let res = await call('POST', '/api/admin/users', 'admin', { name: 'Débil', username: 'debil', role: 'digitador', in_payroll: false, temp_password: '12345678' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
+  res = await call('POST', `/api/admin/users/${ids.hengi}/temp-password`, 'admin', { temp_password: 'hengi2026' });
+  assert.equal(res.status, 400); assert.equal(await code(res), 'WEAK_PASSWORD');
 });

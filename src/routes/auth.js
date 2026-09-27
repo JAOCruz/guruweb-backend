@@ -5,6 +5,7 @@ const config = require('../config');
 const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
 const { validateAppearance } = require('../config/appearance');
 const turnstile = require('../services/turnstile');
+const { validatePassword } = require('../config/passwordPolicy');
 
 const router = express.Router();
 
@@ -59,6 +60,8 @@ router.post('/register', authenticate, requireRole('admin'), registerLimiter, as
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'email, password, and name are required' });
     }
+    const weak = validatePassword(password, { username, name });
+    if (weak) return res.status(400).json(weak);
 
     const existing = await User.findByEmail(email);
     if (existing) {
@@ -199,14 +202,13 @@ router.put('/change-password', authenticate, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'currentPassword and newPassword are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const weak = validatePassword(newPassword, { username: user.username, name: user.name });
+    if (weak) return res.status(400).json(weak);
 
     const valid = await User.verifyPassword(currentPassword, user.password_hash);
     if (!valid) {

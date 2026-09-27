@@ -57,6 +57,7 @@ const User = require('../models/User');
 const { invalidateUserStatus } = require('../middleware/auth');
 
 const ROLES = ['admin', 'digitador', 'auxiliar'];
+const { validatePassword } = require('../config/passwordPolicy');
 
 function sendError(res, status, code, error) {
   return res.status(status).json({ error, code });
@@ -74,8 +75,9 @@ function validateUserInput(body, { requirePassword }) {
     return ['NAME_REQUIRED', 'Nombre y usuario son obligatorios'];
   }
   if (!ROLES.includes(role)) return ['INVALID_ROLE', 'Rol no válido'];
-  if (requirePassword && (!temp_password || String(temp_password).length < 6)) {
-    return ['PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres'];
+  if (requirePassword) {
+    const weak = validatePassword(temp_password, { username, name });
+    if (weak) return [weak.code, weak.error];
   }
   return null;
 }
@@ -146,11 +148,12 @@ router.put('/users/:id', requireRole('admin'), async (req, res) => {
 
 router.post('/users/:id/temp-password', requireRole('admin'), async (req, res) => {
   const { temp_password } = req.body || {};
-  if (!temp_password || String(temp_password).length < 6) {
-    return sendError(res, 400, 'PASSWORD_TOO_SHORT', 'La contraseña debe tener al menos 6 caracteres');
-  }
   try {
     const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    const weak = validatePassword(temp_password, { username: target.username, name: target.name });
+    if (weak) return sendError(res, 400, weak.code, weak.error);
     const user = await User.setTempPassword(id, temp_password);
     if (!user) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
     invalidateUserStatus(id);
