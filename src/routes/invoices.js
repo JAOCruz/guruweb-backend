@@ -53,9 +53,10 @@ router.get('/quotations', authenticate, async (req, res) => {
       FROM invoices i
       LEFT JOIN users cb ON cb.id = i.created_by
       WHERE i.type = 'COTIZACIÓN'
+        AND ($1::int IS NULL OR i.created_by = $1)
       ORDER BY i.created_at DESC
       LIMIT 50
-    `);
+    `, [isEmployee(req.user.role) ? req.user.id : null]);
     res.json({ quotations: rows });
   } catch (err) {
     console.error('Get quotations error:', err);
@@ -106,9 +107,22 @@ router.post('/admin/regenerate-pdfs', authenticate, requireRole('admin'), async 
 });
 
 // ── serve invoice PDF by filename (auth required) ──
-router.get('/pdf/:filename', authenticate, (req, res) => {
+router.get('/pdf/:filename', authenticate, async (req, res) => {
   try {
     const filename = path.basename(req.params.filename); // Prevent directory traversal
+
+    // Employees only get PDFs of quotes they could list: their own or their assigned clients'.
+    // Files not linked to any quote are admin-only.
+    if (isEmployee(req.user.role)) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM invoices
+         WHERE regexp_replace(pdf_path, '^.*/', '') = $1
+           AND (created_by = $2 OR client_id IN (SELECT id FROM clients WHERE assigned_to = $2))
+         LIMIT 1`,
+        [filename, req.user.id]
+      );
+      if (!rows.length) return res.status(403).json({ error: 'Access denied' });
+    }
 
     // Primary: Railway volume (storage.getDir('invoices'))
     const volumePath = storage.getFilePath('invoices', filename);
@@ -374,7 +388,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// ── DELETE /api/invoices/:id ── (admin: any | employee: own non-sent draft)
+// ── DELETE /api/invoices/:id ── (admin: any | employee: own, only before it is approved)
 router.delete('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
@@ -383,8 +397,8 @@ router.delete('/:id', async (req, res) => {
       if (invoice.created_by !== req.user.id) {
         return res.status(403).json({ error: 'Access denied' });
       }
-      if (invoice.status === 'sent') {
-        return res.status(400).json({ error: 'Cannot delete a sent invoice' });
+      if (!['draft', 'pending_approval', 'rejected'].includes(invoice.status)) {
+        return res.status(400).json({ error: 'Solo el admin puede eliminar un documento ya aprobado', code: 'ALREADY_APPROVED' });
       }
     }
     await Invoice.delete(invoice.id);
@@ -429,6 +443,27 @@ router.post('/:id/reject', requireRole('admin'), async (req, res) => {
   } catch (err) {
     console.error('Reject invoice error:', err);
     res.status(500).json({ error: 'Failed to reject invoice' });
+  }
+});
+
+// ── POST /api/invoices/:id/request-approval ── owner (employee) or admin: draft -> pending_approval
+router.post('/:id/request-approval', async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    if (invoice.status !== 'draft') {
+      return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
+    }
+    const updated = await Invoice.requestApproval(invoice.id);
+    if (!updated) return res.status(400).json({ error: 'Failed to request approval' });
+    await safeLog(() => logInvoice(req, 'invoice.request_approval', updated, `Pidió aprobación para ${docLabel(updated)} por ${rd(updated.total)}`));
+    res.json({ invoice: updated, message: 'Enviada al admin para aprobación' });
+  } catch (err) {
+    console.error('Request approval error:', err);
+    res.status(500).json({ error: 'Failed to request approval' });
   }
 });
 
@@ -555,14 +590,24 @@ router.post('/:id/generate-pdf', async (req, res) => {
 });
 
 // ── POST /api/invoices/:id/send-whatsapp ── generate PDF (if needed) and send it
-// to the client's WhatsApp chat. This is the manual "employee confirms and sends"
-// step — nothing is sent automatically. Owner (employee) or admin.
+// to the client's WhatsApp chat. Nothing is sent automatically. Employees can only send
+// their own quotes once an admin approved them; the admin can send directly (which approves it).
+// A rejected quote is never sent.
 router.post('/:id/send-whatsapp', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+    if (invoice.status === 'rejected') {
+      return res.status(400).json({ error: 'Este documento fue rechazado; corrígelo antes de enviarlo', code: 'REJECTED' });
+    }
+    if (isEmployee(req.user.role) && !['approved', 'sent', 'paid'].includes(invoice.status)) {
+      return res.status(403).json({ error: 'El admin debe aprobar este documento antes de enviarlo al cliente', code: 'APPROVAL_REQUIRED' });
+    }
+    if (!isEmployee(req.user.role) && ['draft', 'pending_approval'].includes(invoice.status)) {
+      await Invoice.approve(invoice.id, req.user.id);
     }
 
     // Ensure PDF exists (generate if missing or file gone)
