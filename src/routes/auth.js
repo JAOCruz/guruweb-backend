@@ -4,6 +4,7 @@ const User = require('../models/User');
 const config = require('../config');
 const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
 const { validateAppearance } = require('../config/appearance');
+const { getEnabledAvatars } = require('../services/avatarSettings');
 const turnstile = require('../services/turnstile');
 const { validatePassword } = require('../config/passwordPolicy');
 const { normalizeBirthDate } = require('../config/birthDate');
@@ -283,7 +284,8 @@ router.put('/me/appearance', authenticate, async (req, res) => {
     if (!me) return res.status(404).json({ error: 'User not found' });
 
     const { color, avatar } = req.body || {};
-    const check = validateAppearance({ role: me.role, color, avatar });
+    const enabledAvatars = await getEnabledAvatars();
+    const check = validateAppearance({ role: me.role, color, avatar, enabledAvatars, currentAvatar: me.avatar });
     if (!check.ok) {
       return res.status(check.status).json({ error: check.error, code: check.code });
     }

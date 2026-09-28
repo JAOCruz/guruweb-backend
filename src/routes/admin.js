@@ -58,6 +58,7 @@ const { invalidateUserStatus } = require('../middleware/auth');
 
 const ROLES = ['admin', 'digitador', 'auxiliar'];
 const { validatePassword } = require('../config/passwordPolicy');
+const { getEnabledAvatars, setAvatarEnabled, isToggleable } = require('../services/avatarSettings');
 const { normalizeBirthDate, formatBirthDate } = require('../config/birthDate');
 const { logActivity, listActivity, safeLog } = require('../services/activityLog');
 
@@ -194,6 +195,26 @@ router.post('/users/:id/temp-password', requireRole('admin'), async (req, res) =
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin temp password');
+  }
+});
+
+// ── Admin-only: which animals employees may pick ──
+router.put('/avatars/:key', requireRole('admin'), async (req, res) => {
+  const { key } = req.params;
+  const { enabled } = req.body || {};
+  if (!isToggleable(key)) return sendError(res, 400, 'INVALID_AVATAR', 'Animal no válido');
+  if (typeof enabled !== 'boolean') return sendError(res, 400, 'INVALID_VALUE', 'Indica si se activa o se desactiva');
+  try {
+    await setAvatarEnabled(key, enabled, req.user.id);
+    await logActivity(req, {
+      category: 'usuarios', action: enabled ? 'avatar.enable' : 'avatar.disable', entityType: 'avatar',
+      // The dashboard sends the Spanish name for the log; the key is the fallback
+      summary: `${enabled ? 'Activó' : 'Desactivó'} el animal «${String(req.body.label || key).slice(0, 40)}» para los empleados`,
+      details: { key, enabled },
+    });
+    res.json({ enabled: await getEnabledAvatars() });
+  } catch (err) {
+    handleDbError(res, err, 'Avatar toggle');
   }
 });
 

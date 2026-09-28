@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../db/pool');
 const { authenticate } = require('../middleware/auth');
 const User = require('../models/User');
+const { getEnabledAvatars } = require('../services/avatarSettings');
 const Appointment = require('../models/Appointment');
 const DocumentRequest = require('../models/DocumentRequest');
 const LEGAL_TOPICS = require('../knowledge/legalTopics');
@@ -101,6 +102,16 @@ router.put('/documents/:id', async (req, res) => {
 });
 
 // ── Users list ──
+// Animals the admin made available to employees
+router.get('/avatars', async (req, res) => {
+  try {
+    res.json({ enabled: await getEnabledAvatars() });
+  } catch (err) {
+    console.error('Avatar settings error:', err);
+    res.status(500).json({ error: 'Failed to load avatars' });
+  }
+});
+
 router.get('/users', async (req, res) => {
   try {
     const users = await User.listDirectory();

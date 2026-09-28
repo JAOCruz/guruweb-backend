@@ -1,13 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { COLOR_KEYS, AVATAR_KEYS, ADMIN_ONLY_AVATAR, validateAppearance } = require('../src/config/appearance');
+const { COLOR_KEYS, AVATAR_KEYS, ADMIN_ONLY_AVATAR, DEFAULT_ENABLED_AVATARS, validateAppearance } = require('../src/config/appearance');
 
 test('palette has 12 colors in fixed order', () => {
   assert.deepEqual(COLOR_KEYS, ['green','yellow','red','purple','orange','pink','teal','cyan','blue','indigo','lime','brown']);
 });
 
-test('avatars: 24 animals + owl', () => {
-  assert.equal(AVATAR_KEYS.length, 25);
+test('avatars: animal catalog + owl', () => {
+  assert.ok(AVATAR_KEYS.length >= 90);
   assert.ok(AVATAR_KEYS.includes('cow'));
   assert.equal(ADMIN_ONLY_AVATAR, 'owl');
 });
@@ -51,11 +51,23 @@ test('owl for admin → ok', () => {
   assert.deepEqual(validateAppearance({ role: 'admin', avatar: 'owl' }), { ok: true });
 });
 
-test('avatars are animal faces (removed full-body animals are rejected)', () => {
-  for (const key of ['koala', 'monkey', 'hamster', 'mouse', 'wolf', 'boar', 'unicorn', 'dragon', 'raccoon', 'zebra']) {
+test('catalog has animal faces and full-body animals; the 24 original faces are enabled by default', () => {
+  for (const key of ['koala', 'monkey', 'hamster', 'mouse', 'wolf', 'boar', 'unicorn', 'dragon', 'raccoon', 'zebra',
+    'sheep', 'goat', 'duck', 'turtle', 'dolphin', 'penguin', 'parrot', 'bee', 'butterfly', 'elephant']) {
     assert.ok(AVATAR_KEYS.includes(key), key);
   }
-  for (const key of ['sheep', 'goat', 'duck', 'turtle', 'dolphin', 'penguin', 'parrot', 'bee', 'butterfly', 'elephant']) {
-    assert.equal(validateAppearance({ role: 'digitador', avatar: key }).code, 'INVALID_AVATAR', key);
-  }
+  assert.equal(DEFAULT_ENABLED_AVATARS.length, 24);
+  assert.ok(!DEFAULT_ENABLED_AVATARS.includes('owl'));
+  assert.ok(DEFAULT_ENABLED_AVATARS.every((k) => AVATAR_KEYS.includes(k)));
+  assert.equal(new Set(AVATAR_KEYS).size, AVATAR_KEYS.length);
+});
+
+test('employees can only pick enabled animals; the admin can pick any', () => {
+  const enabledAvatars = ['cow', 'sheep'];
+  assert.deepEqual(validateAppearance({ role: 'digitador', avatar: 'sheep', enabledAvatars }), { ok: true });
+  const r = validateAppearance({ role: 'digitador', avatar: 'goat', enabledAvatars });
+  assert.equal(r.status, 403);
+  assert.equal(r.code, 'AVATAR_DISABLED');
+  assert.deepEqual(validateAppearance({ role: 'admin', avatar: 'goat', enabledAvatars }), { ok: true });
+  assert.equal(validateAppearance({ role: 'digitador', avatar: 'dinosaurio', enabledAvatars }).code, 'INVALID_AVATAR');
 });
