@@ -290,9 +290,26 @@ router.put('/me/appearance', authenticate, async (req, res) => {
       return res.status(check.status).json({ error: check.error, code: check.code });
     }
 
-    const updated = await User.updateAppearance(me.id, { color, avatar });
+    let updated = me;
+    if (avatar !== undefined && avatar !== me.avatar) {
+      // Only the admin may take an animal someone else has, and only after confirming (force)
+      const force = me.role === 'admin' && req.body.force === true;
+      const { user, previousOwner } = await User.assignAvatar(me.id, avatar, { force });
+      updated = user;
+      if (previousOwner) {
+        await safeLog(() => logActivity(req, {
+          category: 'usuarios', action: 'avatar.take', entityType: 'user', entityId: previousOwner.id,
+          summary: `Tomó el animal «${String(req.body.label || avatar).slice(0, 40)}» que usaba ${previousOwner.name}`,
+          details: { avatar, from_user_id: previousOwner.id },
+        }));
+      }
+    }
+    if (color !== undefined) updated = await User.updateAppearance(me.id, { color });
     res.json({ user: User.toPublicUser(updated) });
   } catch (err) {
+    if (err.code === 'AVATAR_TAKEN') {
+      return res.status(409).json({ error: `Ese animal lo tiene ${err.owner}`, code: 'AVATAR_TAKEN', owner: err.owner });
+    }
     if (err.code === '23505') {
       const isAvatar = err.constraint === 'users_avatar_unique';
       return res.status(409).json({

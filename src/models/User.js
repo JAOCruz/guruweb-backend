@@ -195,6 +195,43 @@ const User = {
     return rows[0] || null;
   },
 
+  // Gives `avatar` to a user. If someone else has it: without force → error with the owner's
+  // name; with force (admin only) → the other user loses it. One transaction.
+  async assignAvatar(targetId, avatar, { force = false } = {}) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      let previousOwner = null;
+      if (avatar) {
+        const { rows } = await client.query(
+          `SELECT id, COALESCE(NULLIF(name, ''), username) AS name FROM users WHERE avatar = $1 AND id <> $2 FOR UPDATE`,
+          [avatar, targetId]
+        );
+        if (rows.length) {
+          if (!force) {
+            const err = new Error('AVATAR_TAKEN');
+            err.code = 'AVATAR_TAKEN';
+            err.owner = rows[0].name;
+            throw err;
+          }
+          previousOwner = rows[0];
+          await client.query('UPDATE users SET avatar = NULL, updated_at = NOW() WHERE id = $1', [previousOwner.id]);
+        }
+      }
+      const { rows } = await client.query(
+        'UPDATE users SET avatar = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [avatar, targetId]
+      );
+      await client.query('COMMIT');
+      return { user: rows[0] || null, previousOwner };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
   async listDirectory() {
     const { rows } = await pool.query(
       `SELECT id,

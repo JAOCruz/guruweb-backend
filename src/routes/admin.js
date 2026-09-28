@@ -59,6 +59,7 @@ const { invalidateUserStatus } = require('../middleware/auth');
 const ROLES = ['admin', 'digitador', 'auxiliar'];
 const { validatePassword } = require('../config/passwordPolicy');
 const { getEnabledAvatars, setAvatarEnabled, isToggleable } = require('../services/avatarSettings');
+const { AVATAR_KEYS, ADMIN_ONLY_AVATAR } = require('../config/appearance');
 const { normalizeBirthDate, formatBirthDate } = require('../config/birthDate');
 const { logActivity, listActivity, safeLog } = require('../services/activityLog');
 
@@ -195,6 +196,34 @@ router.post('/users/:id/temp-password', requireRole('admin'), async (req, res) =
     res.json({ user: toAdminUser(user) });
   } catch (err) {
     handleDbError(res, err, 'Admin temp password');
+  }
+});
+
+// ── Admin-only: change a user's animal. force = confirmed taking it from whoever has it ──
+router.put('/users/:id/avatar', requireRole('admin'), async (req, res) => {
+  const { avatar = null, force = false } = req.body || {};
+  if (avatar !== null && !AVATAR_KEYS.includes(avatar)) return sendError(res, 400, 'INVALID_AVATAR', 'Animal no válido');
+  try {
+    const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    if (avatar === ADMIN_ONLY_AVATAR && target.role !== 'admin') {
+      return sendError(res, 403, 'OWL_RESERVED', 'El búho es solo del admin');
+    }
+    const { user, previousOwner } = await User.assignAvatar(id, avatar, { force: force === true });
+    await logActivity(req, {
+      category: 'usuarios', action: 'avatar.assign', entityType: 'user', entityId: id,
+      summary: avatar
+        ? `Le puso el animal «${String(req.body.label || avatar).slice(0, 40)}» a ${displayName(user)}${previousOwner ? ` (se lo quitó a ${previousOwner.name})` : ''}`
+        : `Le quitó el animal a ${displayName(user)}`,
+      details: { avatar, from_user_id: previousOwner?.id ?? null },
+    });
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    if (err.code === 'AVATAR_TAKEN') {
+      return res.status(409).json({ error: `Ese animal lo tiene ${err.owner}`, code: 'AVATAR_TAKEN', owner: err.owner });
+    }
+    handleDbError(res, err, 'Admin set avatar');
   }
 });
 
