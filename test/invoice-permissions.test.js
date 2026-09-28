@@ -162,3 +162,30 @@ test('an employee can only delete their quote before it is approved', async () =
   const approved = await quote('hengi', 'approved');
   assert.equal((await call('DELETE', `/api/invoices/${approved}`, 'admin')).status, 200);
 });
+
+test('an employee cannot view their own document until the admin approves it', async () => {
+  for (const status of ['draft', 'pending_approval', 'rejected']) {
+    const id = await quote('hengi', status);
+    for (const [method, url] of [
+      ['GET', `/api/invoices/${id}`],
+      ['GET', `/api/invoices/${id}/pdf`],
+      ['POST', `/api/invoices/${id}/generate-pdf`],
+      ['GET', `/api/invoices/pdf/COT-${id}.pdf`],
+    ]) {
+      const res = await call(method, url, 'hengi');
+      assert.equal(res.status, 403, `${status} ${method} ${url}`);
+      assert.equal((await res.json()).code, 'NOT_APPROVED', `${status} ${url}`);
+    }
+    // the admin always can
+    assert.equal((await call('GET', `/api/invoices/${id}/pdf`, 'admin')).status, 200, status);
+  }
+});
+
+test('once approved the employee can view it', async () => {
+  for (const status of ['approved', 'sent', 'paid']) {
+    const id = await quote('hengi', status);
+    assert.equal((await call('GET', `/api/invoices/${id}`, 'hengi')).status, 200, status);
+    assert.equal((await call('GET', `/api/invoices/${id}/pdf`, 'hengi')).status, 200, status);
+    assert.equal((await call('GET', `/api/invoices/pdf/COT-${id}.pdf`, 'hengi')).status, 200, status);
+  }
+});

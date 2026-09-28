@@ -9,6 +9,17 @@ const storage = require('../utils/storage');
 function isEmployee(role) {
   return role !== 'admin';
 }
+
+// Employees only see the document itself (detail, PDF) once an admin approved it;
+// before that they just see its status in the list.
+const EMPLOYEE_VIEWABLE = ['approved', 'sent', 'paid'];
+function blockUnapproved(req, res, invoice) {
+  if (isEmployee(req.user.role) && !EMPLOYEE_VIEWABLE.includes(invoice.status)) {
+    res.status(403).json({ error: 'El admin debe aprobar este documento antes de que puedas verlo', code: 'NOT_APPROVED' });
+    return true;
+  }
+  return false;
+}
 const Invoice = require('../models/Invoice');
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
@@ -115,13 +126,14 @@ router.get('/pdf/:filename', authenticate, async (req, res) => {
     // Files not linked to any quote are admin-only.
     if (isEmployee(req.user.role)) {
       const { rows } = await pool.query(
-        `SELECT 1 FROM invoices
+        `SELECT status FROM invoices
          WHERE regexp_replace(pdf_path, '^.*/', '') = $1
            AND (created_by = $2 OR client_id IN (SELECT id FROM clients WHERE assigned_to = $2))
          LIMIT 1`,
         [filename, req.user.id]
       );
       if (!rows.length) return res.status(403).json({ error: 'Access denied' });
+      if (blockUnapproved(req, res, rows[0])) return;
     }
 
     // Primary: Railway volume (storage.getDir('invoices'))
@@ -217,6 +229,7 @@ router.get('/:id', async (req, res) => {
     if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+    if (blockUnapproved(req, res, invoice)) return;
     res.json({ invoice });
   } catch (err) {
     console.error('Get invoice error:', err);
@@ -564,6 +577,7 @@ router.post('/:id/generate-pdf', async (req, res) => {
     if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+    if (blockUnapproved(req, res, invoice)) return;
 
     const created = new Date(invoice.created_at || Date.now());
     const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
@@ -655,6 +669,7 @@ router.get('/:id/pdf', async (req, res) => {
     if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+    if (blockUnapproved(req, res, invoice)) return;
     if (!invoice.pdf_path) {
       return res.status(404).json({ error: 'PDF not yet generated. Send the invoice first.' });
     }
