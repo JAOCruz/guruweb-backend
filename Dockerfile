@@ -6,6 +6,9 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ py3-pip py3-cffi pango-dev cairo-dev gdk-pixbuf-dev fontconfig-dev fontconfig libffi-dev python3-dev ttf-dejavu
 RUN pip3 install --no-cache-dir --break-system-packages weasyprint python-docx
 
+# Documentos: Word → PDF with LibreOffice; Liberation/Carlito keep Word's fonts (Times, Arial, Calibri) metrics
+RUN apk add --no-cache libreoffice-writer font-liberation font-carlito
+
 COPY package*.json ./
 
 RUN npm install
