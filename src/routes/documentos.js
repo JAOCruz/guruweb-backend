@@ -11,6 +11,11 @@ const { listModels, searchTemplates, resolveModelPath } = require('../documentos
 const { aiSearchTemplates } = require('../documentos/aiSearch');
 const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
+const os = require('os');
+const pool = require('../db/pool');
+const { listBlocks, hasTags, applyOps, fillTags } = require('../documentos/docxText');
+const aiDocs = require('../documentos/aiDocs');
+const LegalProfile = require('../documentos/legalProfile');
 
 // Documentos (Fase 1): "Buscar por nombre" in our selection of models + "Historial del digitador".
 // Separate from MotherBrain: it only reads the models; tags are edited there.
@@ -231,6 +236,186 @@ router.get('/versions/:id/file', async (req, res) => {
     return sendFile(res, v.file_path, v.file_name, false);
   } catch (err) {
     return pdfError(res, err);
+  }
+});
+
+// ── Fase 2 · Generación (personalizar un modelo o una versión del historial) ──
+
+const attachments = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 5 } });
+const ATTACH_OK = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf|audio\/(mpeg|mp3|mp4|m4a|x-m4a|aac|ogg|wav|x-wav|webm))$/;
+const fieldsCache = new Map();
+
+function humanize(key, group) {
+  const base = group !== 'DOCUMENTO' && key.endsWith(`_${group}`) ? key.slice(0, -(group.length + 1)) : key;
+  const text = base.replace(/_/g, ' ').toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// A model from our selection, or a Word version from my history
+async function resolveSource(user, { model_id, version_id }) {
+  if (version_id) {
+    const v = await Portfolio.getVersion(user, version_id).catch(() => null);
+    if (!v || !fs.existsSync(v.file_path)) return { error: [404, 'NOT_FOUND', 'Versión no encontrada'] };
+    if (v.mime_type !== DOCX) return { error: [400, 'NO_WORD', 'Solo se puede personalizar una versión en Word (.docx)'] };
+    return { file: v.file_path, title: v.title, version: v, documentId: v.document_id };
+  }
+  const model = (await listModels()).find((m) => m.id === Number(model_id));
+  const file = model && resolveModelPath(model.file_path);
+  if (!file || !fs.existsSync(file)) return { error: [404, 'NOT_FOUND', 'Modelo no encontrado'] };
+  return { file, title: model.name, model };
+}
+
+// Fields = the model's tags in the database; without tags, the AI proposes them from the text
+async function fieldsFor(source) {
+  if (source.model) {
+    const { rows } = await pool.query(
+      `SELECT v.tag, v.is_rol_dynamic, v.rol_type FROM doc_template_variables tv
+       JOIN doc_variables v ON v.id = tv.variable_id WHERE tv.template_id = $1 ORDER BY tv.sort_order, v.id`,
+      [source.model.id]
+    );
+    if (rows.length) {
+      const seen = new Set();
+      return rows
+        .map((r) => {
+          const group = r.is_rol_dynamic && r.rol_type ? r.rol_type : 'DOCUMENTO';
+          const key = r.is_rol_dynamic && r.rol_type ? r.tag.replace('[ROL]', r.rol_type) : r.tag;
+          return { key, label: humanize(key, group), group };
+        })
+        .filter((f) => !seen.has(f.key) && seen.add(f.key));
+    }
+  }
+  const cacheKey = source.version ? `v${source.version.id}` : `m${source.model.id}`;
+  if (!fieldsCache.has(cacheKey)) {
+    fieldsCache.set(cacheKey, await aiDocs.deriveFields(await listBlocks(source.file), source.title));
+  }
+  return fieldsCache.get(cacheKey);
+}
+
+const rolesOf = (fields) => [...new Set(fields.map((f) => f.group).filter((g) => g !== 'DOCUMENTO'))];
+const tmpDocx = () => path.join(os.tmpdir(), `doc-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.docx`);
+const sourceError = (res, source) => sendError(res, ...source.error);
+const aiError = (res, err, context) => {
+  console.error(`[documentos] ${context}:`, err.message);
+  return sendError(res, 502, 'AI_UNAVAILABLE', 'La IA no respondió; intenta de nuevo');
+};
+
+// Saves a generated Word as v1 of a new document, or as the next version of the one it came from
+async function saveGenerated(req, source, { clientId, title, out, sourceKind, notes }) {
+  const name = `${String(title).replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`;
+  const stored = storage.saveLocalFile(out, 'portfolio', `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${name}`);
+  fs.rm(out, { force: true }, () => {});
+  const file = { path: stored, name, mime: DOCX, size: fs.statSync(stored).size, source: sourceKind, notes };
+  if (source.version) {
+    await Portfolio.addVersion(source.documentId, req.user.id, file);
+    return source.documentId;
+  }
+  return Portfolio.createDocument({ clientId, title, templateId: source.model.id, userId: req.user.id, file });
+}
+
+async function clientFor(source, clientId) {
+  if (source.version) {
+    const { rows } = await pool.query('SELECT client_id FROM portfolio_documents WHERE id = $1', [source.documentId]);
+    clientId = rows[0]?.client_id;
+  }
+  const { rows } = await pool.query('SELECT id, name FROM clients WHERE id = $1', [Number(clientId)]);
+  return rows[0] || null;
+}
+
+router.get('/fields', async (req, res) => {
+  try {
+    const source = await resolveSource(req.user, req.query);
+    if (source.error) return sourceError(res, source);
+    const fields = await fieldsFor(source);
+    const role = req.query.client_role || null;
+    const prefill = req.query.client_id ? LegalProfile.prefill(fields, await LegalProfile.get(Number(req.query.client_id)), role) : {};
+    res.json({ fields, roles: rolesOf(fields), exact: await hasTags(source.file), prefill });
+  } catch (err) {
+    return aiError(res, err, 'fields');
+  }
+});
+
+router.get('/clients/:id/profile', async (req, res) => {
+  res.json({ profile: await LegalProfile.get(Number(req.params.id)) });
+});
+
+router.post('/fill/extract', (req, res) =>
+  attachments.array('files', 5)(req, res, async (err) => {
+    if (err) return sendError(res, 400, 'INVALID_FILE', err.code === 'LIMIT_FILE_SIZE' ? 'Un adjunto pasa de 15 MB' : 'Máximo 5 adjuntos');
+    const files = req.files || [];
+    if (files.some((f) => !ATTACH_OK.test(f.mimetype))) return sendError(res, 400, 'INVALID_FILE', 'Adjunta fotos, PDF o audios');
+    if (files.reduce((n, f) => n + f.size, 0) > 15 * 1024 * 1024) return sendError(res, 400, 'INVALID_FILE', 'Los adjuntos pasan de 15 MB en total');
+    try {
+      const source = await resolveSource(req.user, req.body);
+      if (source.error) return sourceError(res, source);
+      const fields = await fieldsFor(source);
+      const known = req.body.client_id ? await LegalProfile.get(Number(req.body.client_id)) : {};
+      res.json({ values: await aiDocs.extractValues({ fields, known, text: req.body.text || '', files }) });
+    } catch (e) {
+      return aiError(res, e, 'extract');
+    }
+  })
+);
+
+router.post('/fill/generate', async (req, res) => {
+  const { values = {}, client_role: role = null } = req.body || {};
+  try {
+    const source = await resolveSource(req.user, req.body);
+    if (source.error) return sourceError(res, source);
+    const client = await clientFor(source, req.body.client_id);
+    if (!client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+    const title = String(req.body.title || source.title).trim().slice(0, 200);
+    const fields = await fieldsFor(source);
+    const clean = Object.fromEntries(Object.entries(values).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
+    const out = tmpDocx();
+    const exact = await hasTags(source.file);
+    let changes = [];
+    if (exact) {
+      await fillTags(source.file, out, clean);
+    } else {
+      const blocks = await listBlocks(source.file);
+      const ops = await aiDocs.planFill({ blocks, values: clean, title: source.title });
+      if (!ops.length) return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró dónde poner esos datos; revisa el formulario');
+      await applyOps(source.file, out, ops);
+      changes = aiDocs.describe(ops, blocks);
+    }
+    const id = await saveGenerated(req, source, {
+      clientId: client.id, title, out, sourceKind: 'generated',
+      notes: exact ? 'Llenado exacto por etiquetas' : 'Personalizado con IA',
+    });
+    await LegalProfile.merge(client.id, LegalProfile.updatesFrom(fields, clean, role), req.user.id);
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'documento.generate', entityType: 'documento', entityId: id,
+      summary: `Personalizó «${title}» para ${client.name || 'cliente'}${exact ? '' : ' con IA'}`,
+    }));
+    res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes, exact });
+  } catch (err) {
+    return aiError(res, err, 'generate');
+  }
+});
+
+router.post('/ai-edit', async (req, res) => {
+  const instructions = String((req.body || {}).instructions || '').trim();
+  if (instructions.length < 5) return sendError(res, 400, 'INSTRUCTIONS_REQUIRED', 'Describe el cambio que quieres');
+  try {
+    const source = await resolveSource(req.user, req.body);
+    if (source.error) return sourceError(res, source);
+    const client = await clientFor(source, req.body.client_id);
+    if (!client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+    const blocks = await listBlocks(source.file);
+    const ops = await aiDocs.planEdits({ blocks, instructions, title: source.title });
+    if (!ops.length) return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró qué cambiar; describe el cambio con más detalle');
+    const out = tmpDocx();
+    await applyOps(source.file, out, ops);
+    const title = String(req.body.title || `${source.title} (personalizado)`).trim().slice(0, 200);
+    const id = await saveGenerated(req, source, { clientId: client.id, title, out, sourceKind: 'ai_edit', notes: instructions.slice(0, 500) });
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'documento.ai_edit', entityType: 'documento', entityId: id,
+      summary: `Cambios con IA en «${source.version ? source.title : title}» (${client.name || 'cliente'})`,
+      details: { instructions: instructions.slice(0, 500) },
+    }));
+    res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes: aiDocs.describe(ops, blocks) });
+  } catch (err) {
+    return aiError(res, err, 'ai-edit');
   }
 });
 
