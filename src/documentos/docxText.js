@@ -22,5 +22,7 @@ const listBlocks = async (file) => JSON.parse(await run(['list', file]));
 const hasTags = async (file) => (await run(['hastags', file])) === '1';
 const applyOps = (file, out, ops) => run(['apply', file, out], ops);
 const fillTags = (file, out, values) => run(['fill', file, out], values);
+const applySpans = (file, out, spans) => run(['spans', file, out], spans);
+const listTags = async (file) => JSON.parse(await run(['tags', file]));
 
-module.exports = { listBlocks, hasTags, applyOps, fillTags };
+module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags };

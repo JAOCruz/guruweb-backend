@@ -45,6 +45,21 @@ Responde SOLO JSON: [{"key": "NOMBRE_VENDEDOR", "label": "Nombre del vendedor", 
     .map((f) => ({ key: String(f.key).toUpperCase().slice(0, 80), label: String(f.label || f.key).slice(0, 80), group: String(f.group || 'DOCUMENTO').toUpperCase().slice(0, 40) }));
 }
 
+// Tagging a model: the paragraphs with case data, rewritten with {{TAGS}} in place of that data
+async function planTags({ blocks, title, vocabulary = [] }) {
+  const raw = await ask(`${CONTEXT}
+Vamos a convertir el modelo "${title}" en una plantilla con etiquetas. Contiene datos de un caso anterior (nombres, cédulas, nacionalidad, estado civil, profesión, domicilios, fechas, montos, matrículas, chasis, descripciones de bienes, números de acto) o espacios en blanco (____) donde van esos datos.
+Sus párrafos numerados:
+${numbered(blocks)}
+
+Para cada párrafo que tenga esos datos, devuélvelo COMPLETO y EXACTAMENTE igual, cambiando solo cada dato (o espacio en blanco) por una etiqueta {{NOMBRE_DE_ETIQUETA}}. No cambies ni una letra, espacio o signo del resto del texto. Nunca pongas dos etiquetas seguidas sin texto entre ellas.
+Nombres de etiqueta: MAYÚSCULAS, formato DATO_ROL (p. ej. NOMBRE_VENDEDOR, DOCUMENTO IDENTIDAD_COMPRADOR, NACIONALIDAD_VENDEDOR, DIRECCION O DOMICILIO_COMPRADOR); datos generales sin rol (CIUDAD_FIRMA, DIA_NUMERO, DIA_TEXTO, MES_TEXTO, AÑO_TEXTO, PRECIO_VENTA_LETRAS, PRECIO_VENTA_NUMEROS). Si el mismo dato de la misma persona se repite, usa la misma etiqueta. Montos y fechas escritos en letras y en números llevan etiquetas distintas (_LETRAS / _NUMEROS, _TEXTO / _NUMERO).
+${vocabulary.length ? `Prefiere estas etiquetas que ya usa la oficina para este modelo: ${vocabulary.join(', ')}` : ''}
+Responde SOLO JSON: {"paragraphs": [{"i": <número>, "text": "<párrafo con etiquetas>"}], "tags": [{"key": "NOMBRE_VENDEDOR", "label": "Nombre del vendedor", "group": "VENDEDOR"}]}
+"group" es el papel de la persona (VENDEDOR, COMPRADOR, REQUIRENTE, TESTIGO 1…) o "DOCUMENTO" para datos generales.`);
+  return parseJson(raw, '{', '}');
+}
+
 // Values for the form from the client's profile, attachments (photos, PDF, audio) and free text
 async function extractValues({ fields, known = {}, text = '', files = [] }) {
   const list = fields.map((f) => `- ${f.key}: ${f.label}`).join('\n');
@@ -112,4 +127,4 @@ function describe(ops, blocks) {
   return ops.map((o) => ({ op: o.op, i: o.i, before: o.op === 'insert_after' ? null : byI.get(o.i) ?? null, after: o.op === 'delete' ? null : o.text }));
 }
 
-module.exports = { setGenerator, deriveFields, extractValues, planFill, planEdits, describe };
+module.exports = { setGenerator, planTags, deriveFields, extractValues, planFill, planEdits, describe };

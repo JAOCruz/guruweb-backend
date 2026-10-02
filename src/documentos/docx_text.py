@@ -5,10 +5,13 @@ Documentos · Word engine (separate from MotherBrain's generator).
   list <path>             → JSON [{"i": n, "text": "..."}]  every paragraph (body + tables), in order
   hastags <path>          → "1" if the document has {{TAGS}}, else "0"
   apply <path> <out>      ← JSON ops on stdin: [{"op": "replace"|"insert_after"|"delete", "i": n, "text": "..."}]
-  fill <path> <out>       ← JSON {"TAG": "value"} on stdin: exact {{TAG}} filling
+  fill <path> <out>       ← JSON {"TAG": "value"} on stdin: exact {{TAG}} filling (tags without a value stay)
+  spans <path> <out>      ← JSON [{"i": n, "start": a, "end": b, "text": "..."}]: replace character spans
+  tags <path>             → JSON ["TAG", ...] every {{TAG}} in order (repeats included)
 
 Edits keep each paragraph's style: the new text goes into the first run (its font/bold/size),
-inserted paragraphs copy the style of the paragraph they follow.
+inserted paragraphs copy the style of the paragraph they follow. Spans and tag filling work inside
+the runs, so the rest of the paragraph keeps its own bold/italics and each value its run's format.
 """
 import copy
 import json
@@ -45,9 +48,52 @@ def set_text(p, text):
         p.add_run(text)
 
 
+def text_of(p):
+    return "".join(r.text for r in p.runs)
+
+
+def replace_spans(p, spans):
+    """spans: [(start, end, text)] over text_of(p). Overlapping or out-of-range spans are skipped."""
+    length = len(text_of(p))
+    ok = []
+    for start, end, text in spans:  # first come first served
+        if 0 <= start < end <= length and all(end <= s or start >= e for s, e, _ in ok):
+            ok.append((start, end, text))
+    for start, end, text in sorted(ok, reverse=True):  # from the end, so earlier offsets stay valid
+        pos, first = 0, True
+        for r in p.runs:
+            t = r.text
+            rs, re_ = pos, pos + len(t)
+            pos = re_
+            if re_ <= start or rs >= end:
+                continue
+            a, b = max(start, rs) - rs, min(end, re_) - rs
+            r.text = t[:a] + (text if first else "") + t[b:]
+            first = False
+
+
 def cmd_list(path):
     doc = Document(path)
-    print(json.dumps([{"i": i, "text": p.text} for i, p in enumerate(paragraphs(doc))], ensure_ascii=False))
+    print(json.dumps([{"i": i, "text": text_of(p)} for i, p in enumerate(paragraphs(doc))], ensure_ascii=False))
+
+
+def cmd_tags(path):
+    doc = Document(path)
+    print(json.dumps([m.group(1).strip() for p in paragraphs(doc) for m in TAG.finditer(text_of(p))], ensure_ascii=False))
+
+
+def cmd_spans(path, out, items):
+    doc = Document(path)
+    ps = paragraphs(doc)
+    by_p = {}
+    for it in items:
+        i = int(it.get("i", -1))
+        if 0 <= i < len(ps):
+            by_p.setdefault(i, []).append((int(it["start"]), int(it["end"]), str(it.get("text", ""))))
+    for i, spans in by_p.items():
+        replace_spans(ps[i], spans)
+    doc.save(out)
+    print(out)
 
 
 def cmd_hastags(path):
@@ -82,12 +128,10 @@ def cmd_apply(path, out, ops):
 def cmd_fill(path, out, values):
     doc = Document(path)
     for p in paragraphs(doc):
-        text = "".join(r.text for r in p.runs)
-        if not TAG.search(text):
-            continue
-        new = TAG.sub(lambda m: str(values.get(m.group(1).strip(), m.group(0))), text)
-        if new != text:
-            set_text(p, new)
+        spans = [(m.start(), m.end(), str(values[m.group(1).strip()]))
+                 for m in TAG.finditer(text_of(p)) if m.group(1).strip() in values]
+        if spans:
+            replace_spans(p, spans)
     doc.save(out)
     print(out)
 
@@ -100,6 +144,10 @@ if __name__ == "__main__":
         cmd_hastags(args[0])
     elif cmd == "apply":
         cmd_apply(args[0], args[1], json.load(sys.stdin))
+    elif cmd == "tags":
+        cmd_tags(args[0])
+    elif cmd == "spans":
+        cmd_spans(args[0], args[1], json.load(sys.stdin))
     elif cmd == "fill":
         cmd_fill(args[0], args[1], json.load(sys.stdin))
     else:

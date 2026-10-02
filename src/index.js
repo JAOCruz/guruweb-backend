@@ -224,6 +224,7 @@ const safeRoutes = [
   { path: "/api/invoices", module: "./routes/invoices" },
   { path: "/api/documents", module: "./routes/documents" },
   { path: "/api/docgen", module: "./routes/docGen" },
+  { path: "/api/documentos/tags", module: "./routes/documentosTags" },
   { path: "/api/documentos", module: "./routes/documentos" },
   { path: "/api/service-catalog", module: "./routes/serviceCatalog" },
 ];
