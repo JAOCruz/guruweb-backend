@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { alignTagged, normalizeKey, tagsInText } = require('../src/documentos/tagging');
+const { alignTagged, normalizeKey, tagsInText, selectionSpan, buildTagging } = require('../src/documentos/tagging');
 
 const ORIGINAL = 'el señor JUAN PEREZ, de nacionalidad dominicana, cédula 001-0000000-1, domicilio Santo Domingo; y el señor PEDRO DIAZ, domicilio Santo Domingo.';
 
@@ -45,4 +45,24 @@ test('tag keys are normalized', () => {
   assert.equal(normalizeKey('{{x}}'), 'X');
   assert.equal(normalizeKey(''), '');
   assert.equal(tagsInText('a {{UNO}} b {{DOS}} {{UNO}}').join(','), 'UNO,DOS,UNO');
+});
+
+test('a selection matches its paragraph even when the page shows a tab as a space; the nth equal paragraph is used', () => {
+  const blocks = [{ i: 0, text: 'Firma:\tJUAN' }, { i: 1, text: 'Testigo: PEDRO' }, { i: 2, text: 'Testigo: PEDRO' }];
+  assert.deepEqual(selectionSpan(blocks, { text: 'Firma: JUAN', offset: 7, length: 4 }), { i: 0, start: 7, end: 11, value: 'JUAN' });
+  assert.equal(selectionSpan(blocks, { text: 'Testigo: PEDRO', offset: 9, length: 5, occurrence: 1 }).i, 2);
+});
+
+test('buildTagging: spans, tags with their sample value and AI labels, skipped paragraphs', () => {
+  const blocks = [{ i: 0, text: 'Vende JUAN a PEDRO.' }, { i: 1, text: 'Precio: RD$5.' }];
+  const r = buildTagging(blocks, {
+    paragraphs: [{ i: 0, text: 'Vende {{NOMBRE_VENDEDOR}} a {{NOMBRE_COMPRADOR}}.' }, { i: 1, text: 'El precio: {{PRECIO}}.' }, { i: 7, text: 'x' }],
+    tags: [{ key: 'nombre_vendedor', label: 'Vendedor' }],
+  });
+  assert.deepEqual(r.spans, [{ i: 0, start: 6, end: 10, text: '{{NOMBRE_VENDEDOR}}' }, { i: 0, start: 13, end: 18, text: '{{NOMBRE_COMPRADOR}}' }]);
+  assert.deepEqual(r.tags, [
+    { key: 'NOMBRE_VENDEDOR', label: 'Vendedor', group: 'VENDEDOR', example: 'JUAN' },
+    { key: 'NOMBRE_COMPRADOR', label: 'Nombre (comprador)', group: 'COMPRADOR', example: 'PEDRO' },
+  ]);
+  assert.deepEqual(r.skipped, [{ i: 1, text: 'Precio: RD$5.' }]);
 });

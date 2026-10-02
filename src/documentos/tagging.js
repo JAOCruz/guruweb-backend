@@ -97,7 +97,9 @@ class EditError extends Error {}
 
 // A selection made in the page ("the paragraph's text + offset + length") → a span of the Word
 function selectionSpan(blocks, op) {
-  const same = blocks.filter((b) => b.text === op.text);
+  // the page shows tabs, line breaks and non-breaking spaces as one space (same length, so offsets still match)
+  const flat = (t) => String(t).replace(/[\t\n\u00a0\u2003]/g, ' ');
+  const same = blocks.filter((b) => flat(b.text) === flat(op.text));
   const block = same[Number(op.occurrence) || 0];
   if (!block) throw new EditError('No se encontró ese texto en el documento; recarga e intenta de nuevo');
   const start = Number(op.offset);
