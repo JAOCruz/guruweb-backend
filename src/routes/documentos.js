@@ -77,7 +77,10 @@ router.get('/models', async (req, res) => {
   try {
     const all = await listModels();
     // tag status (Etiquetas); before its migration runs the list still works, without status
-    const status = new Map((await Tags.listStatuses().catch(() => [])).map((m) => [m.id, m.status]));
+    // employees only learn whether a model is approved to fill
+    const admin = req.user.role === 'admin';
+    const status = new Map((await Tags.listStatuses().catch(() => []))
+      .map((m) => [m.id, admin ? m.status : m.approved_tag_version_id ? 'approved' : 'untagged']));
     const models = searchTemplates(all, req.query.q || '').map(({ file_path, ...m }) => ({ ...m, tag_status: status.get(m.id) || 'untagged' }));
     res.json({ models });
   } catch (err) {
@@ -263,10 +266,6 @@ async function resolveSource(user, { model_id, version_id }) {
     return { file: v.file_path, title: v.title, version: v, documentId: v.document_id };
   }
   const model = (await listModels()).find((m) => m.id === Number(model_id));
-  // an approved tagged version (Etiquetas) is filled exactly, with its own tags
-  const approved = model && (await Tags.getModel(model.id, { admin: false }).catch(() => null));
-  const tagged = approved && (await Tags.getVersion(approved.approved.id));
-  if (tagged && fs.existsSync(tagged.file_path)) return { file: tagged.file_path, title: model.name, model, tags: tagged.tags };
   const file = model && resolveModelPath(model.file_path);
   if (!file || !fs.existsSync(file)) return { error: [404, 'NOT_FOUND', 'Modelo no encontrado'] };
   return { file, title: model.name, model };
@@ -274,7 +273,6 @@ async function resolveSource(user, { model_id, version_id }) {
 
 // Fields = the model's tags in the database; without tags, the AI proposes them from the text
 async function fieldsFor(source) {
-  if (source.tags) return source.tags.map(({ key, label, group }) => ({ key, label, group }));
   if (source.model) {
     const { rows } = await pool.query(
       `SELECT v.tag, v.is_rol_dynamic, v.rol_type FROM doc_template_variables tv

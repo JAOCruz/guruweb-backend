@@ -2,10 +2,10 @@
 """
 Documentos · Word engine (separate from MotherBrain's generator).
 
-  list <path>             → JSON [{"i": n, "text": "..."}]  every paragraph (body + tables), in order
+  list <path>             → JSON [{"i": n, "text": "..."}]  every paragraph of the body, in document order
   hastags <path>          → "1" if the document has {{TAGS}}, else "0"
   apply <path> <out>      ← JSON ops on stdin: [{"op": "replace"|"insert_after"|"delete", "i": n, "text": "..."}]
-  fill <path> <out>       ← JSON {"TAG": "value"} on stdin: exact {{TAG}} filling (tags without a value stay)
+  fill <path> <out>       ← JSON {"TAG": "value" | ["1st", "2nd"…]} on stdin: exact {{TAG}} filling (tags without a value stay)
   spans <path> <out>      ← JSON [{"i": n, "start": a, "end": b, "text": "..."}]: replace character spans
   tags <path>             → JSON ["TAG", ...] every {{TAG}} in order (repeats included)
 
@@ -19,23 +19,21 @@ import re
 import sys
 
 from docx import Document
+from docx.oxml.ns import qn
 
 TAG = re.compile(r"\{\{([^}]+)\}\}")
 
 
 def paragraphs(doc):
-    seen, out = set(), []
-    def add(p):
-        if id(p._p) not in seen:  # merged table cells repeat the same paragraph
-            seen.add(id(p._p))
-            out.append(p)
-    for p in doc.paragraphs:
-        add(p)
-    for t in doc.tables:
-        for row in t.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    add(p)
+    """Every paragraph of the body in document order (table cells where the table is).
+    The fallback copy of a text box (mc:Fallback) is skipped so nothing is listed twice."""
+    from docx.text.paragraph import Paragraph
+    fallback = "{http://schemas.openxmlformats.org/markup-compatibility/2006}Fallback"
+    out = []
+    for p in doc.element.body.iter(qn("w:p")):
+        if any(a.tag == fallback for a in p.iterancestors()):
+            continue
+        out.append(Paragraph(p, doc._body))
     return out
 
 
@@ -52,12 +50,28 @@ def text_of(p):
     return "".join(r.text for r in p.runs)
 
 
+FIELD_PARTS = (qn("w:fldChar"), qn("w:instrText"))
+
+
+def touches_field(p, start, end):
+    pos = 0
+    for r in p.runs:
+        rs, re_ = pos, pos + len(r.text)
+        pos = re_
+        inside = rs < end and re_ > start if re_ > rs else start < rs < end
+        if inside and any(c.tag in FIELD_PARTS for c in r._r):
+            return True
+    return False
+
+
 def replace_spans(p, spans):
-    """spans: [(start, end, text)] over text_of(p). Overlapping or out-of-range spans are skipped."""
+    """spans: [(start, end, text)] over text_of(p). Overlapping or out-of-range spans are skipped,
+    and so are spans over part of a Word field (its markers would be lost)."""
     length = len(text_of(p))
     ok = []
     for start, end, text in spans:  # first come first served
-        if 0 <= start < end <= length and all(end <= s or start >= e for s, e, _ in ok):
+        if (0 <= start < end <= length and all(end <= s or start >= e for s, e, _ in ok)
+                and not touches_field(p, start, end)):
             ok.append((start, end, text))
     for start, end, text in sorted(ok, reverse=True):  # from the end, so earlier offsets stay valid
         pos, first = 0, True
@@ -126,10 +140,20 @@ def cmd_apply(path, out, ops):
 
 
 def cmd_fill(path, out, values):
+    """A value can be a list: one per occurrence of the tag, in document order."""
     doc = Document(path)
+    seen = {}
     for p in paragraphs(doc):
-        spans = [(m.start(), m.end(), str(values[m.group(1).strip()]))
-                 for m in TAG.finditer(text_of(p)) if m.group(1).strip() in values]
+        spans = []
+        for m in TAG.finditer(text_of(p)):
+            key = m.group(1).strip()
+            n = seen.get(key, 0)
+            seen[key] = n + 1
+            v = values.get(key)
+            if isinstance(v, list):
+                v = v[n] if n < len(v) else None
+            if v is not None:
+                spans.append((m.start(), m.end(), str(v)))
         if spans:
             replace_spans(p, spans)
     doc.save(out)

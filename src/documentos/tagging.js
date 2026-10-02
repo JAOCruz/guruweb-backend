@@ -70,14 +70,17 @@ function meta(key, given = {}, example = null) {
   return { key, label: String(given.label || '').trim().slice(0, 80) || labelOf(key, group), group, example };
 }
 
-// The AI's answer → spans per paragraph, tag list (with the sample value each replaced) and skipped paragraphs
+// The AI's answer → spans per paragraph, tag list (with the original text of each place, in
+// document order) and skipped paragraphs
 function buildTagging(blocks, answer) {
   const byI = new Map(blocks.map((b) => [b.i, b.text]));
-  const given = new Map((answer.tags || []).filter((t) => t && t.key).map((t) => [normalizeKey(t.key), t]));
+  const list = (x) => (Array.isArray(x) ? x : []);
+  const given = new Map(list(answer && answer.tags).filter((t) => t && t.key).map((t) => [normalizeKey(t.key), t]));
   const spans = [];
   const skipped = [];
   const tags = new Map();
-  for (const p of answer.paragraphs || []) {
+  const paragraphs = list(answer && answer.paragraphs).filter((p) => p && byI.has(Number(p.i))).sort((a, b) => Number(a.i) - Number(b.i));
+  for (const p of paragraphs) {
     const i = Number(p && p.i);
     if (!byI.has(i) || typeof p.text !== 'string') continue;
     const found = alignTagged(byI.get(i), p.text);
@@ -87,7 +90,8 @@ function buildTagging(blocks, answer) {
     }
     for (const s of found) {
       spans.push({ i, start: s.start, end: s.end, text: `{{${s.key}}}` });
-      if (!tags.has(s.key)) tags.set(s.key, meta(s.key, given.get(s.key), s.value));
+      if (!tags.has(s.key)) tags.set(s.key, { ...meta(s.key, given.get(s.key), s.value), examples: [] });
+      tags.get(s.key).examples.push(s.value);
     }
   }
   return { spans, tags: [...tags.values()], skipped };

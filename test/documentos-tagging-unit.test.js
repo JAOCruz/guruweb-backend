@@ -61,8 +61,13 @@ test('buildTagging: spans, tags with their sample value and AI labels, skipped p
   });
   assert.deepEqual(r.spans, [{ i: 0, start: 6, end: 10, text: '{{NOMBRE_VENDEDOR}}' }, { i: 0, start: 13, end: 18, text: '{{NOMBRE_COMPRADOR}}' }]);
   assert.deepEqual(r.tags, [
-    { key: 'NOMBRE_VENDEDOR', label: 'Vendedor', group: 'VENDEDOR', example: 'JUAN' },
-    { key: 'NOMBRE_COMPRADOR', label: 'Nombre (comprador)', group: 'COMPRADOR', example: 'PEDRO' },
+    { key: 'NOMBRE_VENDEDOR', label: 'Vendedor', group: 'VENDEDOR', example: 'JUAN', examples: ['JUAN'] },
+    { key: 'NOMBRE_COMPRADOR', label: 'Nombre (comprador)', group: 'COMPRADOR', example: 'PEDRO', examples: ['PEDRO'] },
   ]);
   assert.deepEqual(r.skipped, [{ i: 1, text: 'Precio: RD$5.' }]);
+});
+
+test('buildTagging survives a malformed AI answer', () => {
+  assert.deepEqual(buildTagging([{ i: 0, text: 'x' }], { paragraphs: 'nope', tags: 5 }), { spans: [], tags: [], skipped: [] });
+  assert.deepEqual(buildTagging([{ i: 0, text: 'x' }], null), { spans: [], tags: [], skipped: [] });
 });

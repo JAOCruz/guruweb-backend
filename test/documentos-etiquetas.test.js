@@ -133,7 +133,7 @@ test('AI tagging that aligns nothing answers 422 and creates no version', opts, 
 });
 
 test('models list and summary show the status of each model', opts, async () => {
-  const { models } = await (await call('GET', '/api/documentos/models', 'hengi')).json();
+  const { models } = await (await call('GET', '/api/documentos/models', 'admin')).json();
   const byName = Object.fromEntries(models.map((m) => [m.name, m.tag_status]));
   assert.deepEqual(byName, { 'ACTO DE VENTA': 'pending', PODER: 'untagged', VIEJO: 'untagged' });
   const summary = await (await call('GET', '/api/documentos/tags/summary', 'admin')).json();
@@ -254,16 +254,39 @@ test('the tagged Word of a version downloads (employees: approved only)', opts, 
   assert.equal((await call('GET', `/api/documentos/tags/versions/${pending}/file`, 'admin')).status, 200);
 });
 
-test('Personalizar uses the approved tagged version: exact filling and its tags as fields', opts, async () => {
+test('Personalizar keeps working on the original model as before (Etiquetas is its own flow)', opts, async () => {
   const res = await call('GET', '/api/documentos/fields?model_id=1', 'hengi');
   const body = await res.json();
-  assert.equal(body.exact, true);
-  assert.deepEqual(body.fields.map((f) => f.key), ['NOMBRE_VENDEDOR', 'NOMBRE_ADQUIRIENTE', 'PRECIO_VENTA_NUMEROS']);
+  assert.equal(body.exact, false);
+  assert.deepEqual(body.fields.map((f) => f.key), ['NOMBRE_VENDEDOR']); // MotherBrain's tags, as before
+});
+
+test('employees only see an approved flag in the models list, not pending', opts, async () => {
+  const { models } = await (await call('GET', '/api/documentos/models', 'hengi')).json();
+  assert.equal(models.find((m) => m.name === 'ACTO DE VENTA').tag_status, 'approved'); // v3 pending, v2 approved
+  const admin = await (await call('GET', '/api/documentos/models', 'admin')).json();
+  assert.equal(admin.models.find((m) => m.name === 'ACTO DE VENTA').tag_status, 'pending');
+});
+
+test('an admin can fill a chosen (pending) version', opts, async () => {
+  const { model } = await (await call('GET', '/api/documentos/tags/models/1', 'admin')).json();
+  const v3 = model.versions[0];
+  const res = await call('POST', '/api/documentos/tags/models/1/fill', 'admin', { client_id: 1, version_id: v3.id, values: { NOMBRE_COMPRADOR: 'ANA' } });
+  const { document } = await res.json();
+  const { rows } = await pool.query('SELECT file_path FROM portfolio_versions WHERE id = $1', [document.versions[0].id]);
+  assert.match((await listBlocks(rows[0].file_path))[1].text, /vendo a ANA el/); // v3 = restored v1, has NOMBRE_COMPRADOR
+});
+
+test('a non-numeric id answers 404, not 500', opts, async () => {
+  assert.equal((await call('GET', '/api/documentos/tags/models/abc', 'admin')).status, 404);
 });
 
 test('batch tags every untagged .docx model one by one and reports progress', opts, async () => {
-  ai = async () => JSON.stringify({ paragraphs: [{ i: 1, text: 'Otorgo poder a {{NOMBRE_APODERADO}}.' }], tags: [{ key: 'NOMBRE_APODERADO', group: 'APODERADO' }] });
-  assert.equal((await call('POST', '/api/documentos/tags/batch', 'admin')).status, 202);
+  ai = async () => { await new Promise((r) => setTimeout(r, 50)); return JSON.stringify({ paragraphs: [{ i: 1, text: 'Otorgo poder a {{NOMBRE_APODERADO}}.' }], tags: [{ key: 'NOMBRE_APODERADO', group: 'APODERADO' }] }); };
+  const [first, second] = await Promise.all([call('POST', '/api/documentos/tags/batch', 'admin'), call('POST', '/api/documentos/tags/batch', 'admin')]);
+  assert.equal(first.status, 202);
+  assert.equal((await first.json()).batch.running, true);
+  assert.equal(second.status, 202);
   let job;
   for (let i = 0; i < 50; i++) {
     job = (await (await call('GET', '/api/documentos/tags/summary', 'admin')).json()).batch;
@@ -276,4 +299,52 @@ test('batch tags every untagged .docx model one by one and reports progress', op
   assert.deepEqual(job.failed, []);
   const summary = await (await call('GET', '/api/documentos/tags/summary', 'admin')).json();
   assert.deepEqual(summary.counts, { untagged: 1, pending: 2, approved: 0 });
+});
+
+test('removing a tag puts back the original text of each place', opts, async () => {
+  makeDocx(path.join(TPL_DIR, 'dos.docx'), ['JUAN PÉREZ vende.', 'Firma: Juan Pérez']);
+  await pool.query(`INSERT INTO doc_templates (name, file_path, file_name, category_id) VALUES ('DOS', 'dos.docx', 'dos.docx', 1)`);
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'DOS'`)).rows[0].id;
+  ai = async () => JSON.stringify({ paragraphs: [{ i: 0, text: '{{NOMBRE_VENDEDOR}} vende.' }, { i: 1, text: 'Firma: {{NOMBRE_VENDEDOR}}' }], tags: [] });
+  const { model } = await (await call('POST', `/api/documentos/tags/models/${id}/ai`, 'admin')).json();
+  assert.deepEqual(model.current.tags[0].examples, ['JUAN PÉREZ', 'Juan Pérez']);
+  const res = await call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', { base_version_id: model.current.id, ops: [{ op: 'untag', key: 'NOMBRE_VENDEDOR' }] });
+  const after = (await res.json()).model;
+  assert.deepEqual(await versionText(after.current.id), ['JUAN PÉREZ vende.', 'Firma: Juan Pérez']);
+});
+
+test('a selection tagged with an existing key keeps its own text when that tag is removed later', opts, async () => {
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'DOS'`)).rows[0].id;
+  ai = async () => JSON.stringify({ paragraphs: [{ i: 0, text: '{{NOMBRE_VENDEDOR}} vende.' }], tags: [] });
+  await call('POST', `/api/documentos/tags/models/${id}/restore`, 'admin', { version_id: (await pool.query('SELECT id FROM template_tag_versions WHERE template_id = $1 AND version_number = 1', [id])).rows[0].id });
+  let { model } = await (await call('GET', `/api/documentos/tags/models/${id}`, 'admin')).json();
+  // v3 = copy of v1 (both places tagged). Untag, then tag only the second place again
+  ({ model } = await (await call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', { base_version_id: model.current.id, ops: [{ op: 'untag', key: 'NOMBRE_VENDEDOR' }] })).json());
+  ({ model } = await (await call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', { base_version_id: model.current.id, ops: [{ op: 'tag', text: 'Firma: Juan Pérez', offset: 7, length: 10, key: 'NOMBRE_VENDEDOR' }] })).json());
+  assert.deepEqual(model.current.tags[0].examples, ['Juan Pérez']);
+  assert.deepEqual(await versionText(model.current.id), ['JUAN PÉREZ vende.', 'Firma: {{NOMBRE_VENDEDOR}}']);
+});
+
+test('two saves from the same base at the same time: one wins, the other gets 409', opts, async () => {
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'DOS'`)).rows[0].id;
+  const { model } = await (await call('GET', `/api/documentos/tags/models/${id}`, 'admin')).json();
+  const body = (label) => ({ base_version_id: model.current.id, ops: [{ op: 'meta', key: 'NOMBRE_VENDEDOR', label }] });
+  const res = await Promise.all([call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', body('A')), call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', body('B'))]);
+  assert.deepEqual(res.map((r) => r.status).sort(), [201, 409]);
+});
+
+test('renaming a tag to a name that already exists is refused', opts, async () => {
+  const { model } = await (await call('GET', '/api/documentos/tags/models/1', 'admin')).json();
+  const res = await call('POST', '/api/documentos/tags/models/1/edit', 'admin', { base_version_id: model.current.id, ops: [{ op: 'rename', from: 'NOMBRE_VENDEDOR', key: 'NOMBRE_COMPRADOR' }] });
+  assert.equal(res.status, 400);
+});
+
+test('Llenar con IA reads into the tags of the version on screen', opts, async () => {
+  const { model } = await (await call('GET', '/api/documentos/tags/models/1', 'admin')).json();
+  let prompt = '';
+  ai = async (parts) => { prompt = parts[0]; return '{"NOMBRE_COMPRADOR": "ANA", "OTRA": "x"}'; };
+  const res = await call('POST', '/api/documentos/tags/models/1/extract', 'admin', { version_id: model.versions[0].id, text: 'La compradora es Ana' });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).values, { NOMBRE_COMPRADOR: 'ANA' });
+  assert.match(prompt, /NOMBRE_COMPRADOR/);
 });

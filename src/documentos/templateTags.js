@@ -80,14 +80,23 @@ async function latestVersionId(templateId) {
   return rows[0]?.id || null;
 }
 
-// Saves `localFile` (a tagged .docx) as the next version of the model
-async function createVersion({ templateId, localFile, tags, skipped = [], source, notes = null, userId }) {
+class StaleError extends Error {}
+
+// Saves `localFile` (a tagged .docx) as the next version of the model. With `baseVersionId`, refuses
+// (StaleError) when someone saved another version after that one.
+async function createVersion({ templateId, localFile, tags, skipped = [], source, notes = null, userId, baseVersionId }) {
   const stored = storage.saveLocalFile(localFile, 'template_tags', `${templateId}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.docx`);
   if (localFile !== stored && localFile.startsWith(require('os').tmpdir())) fs.rm(localFile, { force: true }, () => {});
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query('SELECT id FROM doc_templates WHERE id = $1 FOR UPDATE', [templateId]);
+    if (baseVersionId !== undefined) {
+      const { rows: latest } = await client.query(
+        'SELECT id FROM template_tag_versions WHERE template_id = $1 ORDER BY version_number DESC LIMIT 1', [templateId]
+      );
+      if ((latest[0]?.id || null) !== baseVersionId) throw new StaleError('stale');
+    }
     const { rows } = await client.query(
       `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, skipped, source, notes, created_by)
        VALUES ($1, (SELECT COALESCE(MAX(version_number), 0) + 1 FROM template_tag_versions WHERE template_id = $1),
@@ -116,4 +125,4 @@ async function approve(versionId, adminId) {
 
 const isWord = (filePath) => path.extname(filePath || '').toLowerCase() === '.docx';
 
-module.exports = { listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, isWord };
+module.exports = { listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, isWord, StaleError };
