@@ -59,7 +59,7 @@ const { invalidateUserStatus } = require('../middleware/auth');
 const ROLES = ['admin', 'digitador', 'auxiliar'];
 const { validatePassword } = require('../config/passwordPolicy');
 const { getEnabledAvatars, setAvatarEnabled, isToggleable } = require('../services/avatarSettings');
-const { AVATAR_KEYS, ADMIN_ONLY_AVATAR } = require('../config/appearance');
+const { AVATAR_KEYS, ADMIN_ONLY_AVATAR, COLOR_KEYS } = require('../config/appearance');
 const { normalizeBirthDate, formatBirthDate } = require('../config/birthDate');
 const { logActivity, listActivity, safeLog } = require('../services/activityLog');
 
@@ -224,6 +224,32 @@ router.put('/users/:id/avatar', requireRole('admin'), async (req, res) => {
       return res.status(409).json({ error: `Ese animal lo tiene ${err.owner}`, code: 'AVATAR_TAKEN', owner: err.owner });
     }
     handleDbError(res, err, 'Admin set avatar');
+  }
+});
+
+// ── Admin-only: change a user's color. force = confirmed taking it (the owner gets the one it replaced) ──
+router.put('/users/:id/color', requireRole('admin'), async (req, res) => {
+  const { color, force = false } = req.body || {};
+  if (!COLOR_KEYS.includes(color)) return sendError(res, 400, 'INVALID_COLOR', 'Color no válido');
+  try {
+    const id = Number(req.params.id);
+    const target = await User.findById(id);
+    if (!target) return sendError(res, 404, 'USER_NOT_FOUND', 'Usuario no encontrado');
+    const { user, previousOwner } = await User.assignColor(id, color, { force: force === true });
+    invalidateUserStatus(id);
+    if (previousOwner) invalidateUserStatus(previousOwner.id);
+    const label = String(req.body.label || color).slice(0, 40);
+    await logActivity(req, {
+      category: 'usuarios', action: 'color.assign', entityType: 'user', entityId: id,
+      summary: `Le puso el color «${label}» a ${displayName(user)}${previousOwner ? ` (se lo quitó a ${previousOwner.name})` : ''}`,
+      details: { color, from_user_id: previousOwner?.id ?? null, previous_owner_new_color: previousOwner?.newColor ?? null },
+    });
+    res.json({ user: toAdminUser(user) });
+  } catch (err) {
+    if (err.code === 'COLOR_TAKEN') {
+      return res.status(409).json({ error: `Ese color lo tiene ${err.owner}`, code: 'COLOR_TAKEN', owner: err.owner });
+    }
+    handleDbError(res, err, 'Admin set color');
   }
 });
 

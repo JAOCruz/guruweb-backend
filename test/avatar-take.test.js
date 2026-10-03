@@ -93,3 +93,49 @@ test('rules: owl only for admins, admin-only endpoint, valid keys, null clears',
   assert.equal(res.status, 200);
   assert.equal(await avatarOf('marleni'), null);
 });
+
+// ── Admin-only: change a user's color. Taking one someone has → they get the color it replaced ──
+const colorOf = async (u) => (await pool.query('SELECT color FROM users WHERE username = $1', [u])).rows[0].color;
+
+test('admin sets a free color for a user', async () => {
+  await pool.query(`UPDATE users SET color = NULL`);
+  await pool.query(`UPDATE users SET color = 'red' WHERE username = 'hengi'`);
+  await pool.query(`UPDATE users SET color = 'green' WHERE username = 'marleni'`);
+  const res = await call('PUT', `/api/admin/users/${ids.marleni}/color`, 'admin', { color: 'purple', label: 'Morado' });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).user.color, 'purple');
+  assert.equal(await colorOf('marleni'), 'purple');
+  const log = (await pool.query(`SELECT summary FROM activity_log WHERE action = 'color.assign' ORDER BY id DESC LIMIT 1`)).rows[0];
+  assert.match(log.summary, /Morado/);
+});
+
+test('a color someone has: without confirming → 409 with the owner; confirmed → swapped', async () => {
+  let res = await call('PUT', `/api/admin/users/${ids.marleni}/color`, 'admin', { color: 'red' });
+  assert.equal(res.status, 409);
+  const body = await res.json();
+  assert.equal(body.code, 'COLOR_TAKEN');
+  assert.equal(body.owner, 'Hengi');
+  assert.equal(await colorOf('marleni'), 'purple');
+  res = await call('PUT', `/api/admin/users/${ids.marleni}/color`, 'admin', { color: 'red', force: true, label: 'Rojo' });
+  assert.equal(res.status, 200);
+  assert.equal(await colorOf('marleni'), 'red');
+  assert.equal(await colorOf('hengi'), 'purple'); // gets the color Marleni had
+  const log = (await pool.query(`SELECT summary FROM activity_log WHERE action = 'color.assign' ORDER BY id DESC LIMIT 1`)).rows[0];
+  assert.match(log.summary, /Hengi/);
+});
+
+test('taking a color for a user without one leaves the previous owner with a free color', async () => {
+  await pool.query(`UPDATE users SET color = NULL WHERE username = 'admin'`);
+  const res = await call('PUT', `/api/admin/users/${ids.admin}/color`, 'admin', { color: 'red', force: true });
+  assert.equal(res.status, 200);
+  assert.equal(await colorOf('admin'), 'red');
+  const other = await colorOf('marleni');
+  assert.ok(other && other !== 'red' && other !== 'purple');
+});
+
+test('color changes are admin-only and validated', async () => {
+  assert.equal((await call('PUT', `/api/admin/users/${ids.hengi}/color`, 'marleni', { color: 'cyan' })).status, 403);
+  assert.equal((await call('PUT', `/api/admin/users/${ids.hengi}/color`, 'admin', { color: 'fucsia' })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/users/${ids.hengi}/color`, 'admin', { color: null })).status, 400);
+  assert.equal((await call('PUT', `/api/admin/users/99999/color`, 'admin', { color: 'cyan' })).status, 404);
+});

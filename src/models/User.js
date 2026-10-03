@@ -232,6 +232,54 @@ const User = {
     }
   },
 
+  // Gives `color` to a user. If someone else has it: without force → error with the owner's name;
+  // with force (admin only) → that person gets the color it replaced (or the first free one).
+  async assignColor(targetId, color, { force = false } = {}) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows: [target] } = await client.query('SELECT color FROM users WHERE id = $1 FOR UPDATE', [targetId]);
+      const { rows } = await client.query(
+        `SELECT id, COALESCE(NULLIF(name, ''), username) AS name FROM users WHERE color = $1 AND id <> $2 FOR UPDATE`,
+        [color, targetId]
+      );
+      let previousOwner = null;
+      if (rows.length) {
+        if (!force) {
+          const err = new Error('COLOR_TAKEN');
+          err.code = 'COLOR_TAKEN';
+          err.owner = rows[0].name;
+          throw err;
+        }
+        previousOwner = rows[0];
+        // colors are unique: free it first, then hand out both
+        await client.query('UPDATE users SET color = NULL WHERE id = $1', [previousOwner.id]);
+      }
+      const { rows: [user] } = await client.query(
+        'UPDATE users SET color = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [color, targetId]
+      );
+      if (previousOwner) {
+        const { rows: [given] } = await client.query(
+          `UPDATE users SET color = COALESCE($2, (
+             SELECT p.c FROM unnest($3::text[]) WITH ORDINALITY AS p(c, ord)
+             WHERE p.c NOT IN (SELECT color FROM users WHERE color IS NOT NULL)
+             ORDER BY p.ord LIMIT 1)), updated_at = NOW()
+           WHERE id = $1 RETURNING color`,
+          [previousOwner.id, target?.color && target.color !== color ? target.color : null, COLOR_KEYS]
+        );
+        previousOwner.newColor = given?.color ?? null;
+      }
+      await client.query('COMMIT');
+      return { user: user || null, previousOwner };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
   async listDirectory() {
     const { rows } = await pool.query(
       `SELECT id,
