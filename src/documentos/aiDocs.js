@@ -95,14 +95,19 @@ Responde SOLO JSON: [{"i": <número de párrafo>, "text": "<párrafo completo re
 }
 
 // Specific changes asked in plain language
-async function planEdits({ blocks, instructions, title }) {
+async function planEdits({ blocks, instructions, title, tagged = false }) {
+  const tagRule = tagged
+    ? `
+Es una plantilla: las etiquetas {{ASÍ}} son los datos que se llenan para cada cliente. Consérvalas exactamente como están (mismo nombre, con sus llaves) salvo que los cambios pidan quitar ese dato. Si un cambio necesita un dato nuevo del cliente o del caso, ponlo como etiqueta nueva en MAYÚSCULAS con formato DATO_ROL (p. ej. {{NACIONALIDAD_VENDEDOR}}, {{FECHA_ENTREGA}}); nunca inventes nombres ni cifras.`
+    : '';
   const raw = await ask(`${CONTEXT}
 Documento "${title}". Sus párrafos numerados:
 ${numbered(blocks)}
 
 Cambios que pide el digitador: ${String(instructions).slice(0, 3000)}
 
-Aplica SOLO esos cambios con redacción legal dominicana y el mismo estilo del documento. Operaciones posibles:
+Aplica SOLO esos cambios con redacción legal dominicana y el mismo estilo del documento.${tagRule}
+Operaciones posibles:
 - {"op": "replace", "i": n, "text": "<párrafo completo nuevo>"}
 - {"op": "insert_after", "i": n, "text": "<párrafo nuevo>"}
 - {"op": "delete", "i": n}

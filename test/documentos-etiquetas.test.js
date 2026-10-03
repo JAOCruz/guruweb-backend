@@ -348,3 +348,99 @@ test('Llenar con IA reads into the tags of the version on screen', opts, async (
   assert.deepEqual((await res.json()).values, { NOMBRE_COMPRADOR: 'ANA' });
   assert.match(prompt, /NOMBRE_COMPRADOR/);
 });
+
+// ── Body edits: the admin changes the model's wording (by hand or with the AI) → a new version ──
+const CUERPO = ['CONTRATO', 'El señor JUAN vende a PEDRO.', 'SEGUNDO: Cláusula vieja.', 'TERCERO: Se borra.'];
+async function cuerpoV1() {
+  makeDocx(path.join(TPL_DIR, 'cuerpo.docx'), CUERPO);
+  await pool.query(`INSERT INTO doc_templates (name, file_path, file_name, category_id) VALUES ('CUERPO', 'cuerpo.docx', 'cuerpo.docx', 1)`);
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'CUERPO'`)).rows[0].id;
+  ai = async () => JSON.stringify({ paragraphs: [{ i: 1, text: 'El señor {{NOMBRE_VENDEDOR}} vende a {{NOMBRE_COMPRADOR}}.' }], tags: [] });
+  const { model } = await (await call('POST', `/api/documentos/tags/models/${id}/ai`, 'admin')).json();
+  return { id, model };
+}
+
+test('body edits: change a selection (tags included), rewrite, insert and delete paragraphs → new version with its tags', opts, async () => {
+  const { id, model } = await cuerpoV1();
+  const p1 = 'El señor {{NOMBRE_VENDEDOR}} vende a {{NOMBRE_COMPRADOR}}.';
+  const sel = 'vende a {{NOMBRE_COMPRADOR}}';
+  const res = await call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', {
+    base_version_id: model.current.id,
+    notes: 'Ahora es donación',
+    ops: [
+      { op: 'text', text: p1, offset: p1.indexOf(sel), length: sel.length, occurrence: 0, replacement: 'dona a {{nombre_donatario}}' },
+      { op: 'para', i: 2, from: 'SEGUNDO: Cláusula vieja.', to: 'SEGUNDO: Cláusula nueva conforme a la Ley 108-05.' },
+      { op: 'delete', i: 3, from: 'TERCERO: Se borra.' },
+      { op: 'insert', after: 2, text: 'TERCERO: El precio es {{PRECIO_NUMEROS}}.' },
+    ],
+  });
+  assert.equal(res.status, 201);
+  const after = (await res.json()).model;
+  assert.equal(after.current.version_number, 2);
+  assert.equal(after.current.source, 'edit');
+  assert.equal(after.status, 'pending');
+  assert.deepEqual(await versionText(after.current.id), [
+    'CONTRATO',
+    'El señor {{NOMBRE_VENDEDOR}} dona a {{NOMBRE_DONATARIO}}.',
+    'SEGUNDO: Cláusula nueva conforme a la Ley 108-05.',
+    'TERCERO: El precio es {{PRECIO_NUMEROS}}.',
+  ]);
+  assert.deepEqual(after.current.tags.map((t) => [t.key, t.group, t.example]), [
+    ['NOMBRE_VENDEDOR', 'VENDEDOR', 'JUAN'],
+    ['NOMBRE_DONATARIO', 'DONATARIO', null],
+    ['PRECIO_NUMEROS', 'DOCUMENTO', null],
+  ]);
+});
+
+test('body edits are refused when stale, when a selection cuts a tag, or mixed with tag edits', opts, async () => {
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'CUERPO'`)).rows[0].id;
+  const { model } = await (await call('GET', `/api/documentos/tags/models/${id}`, 'admin')).json();
+  const edit = (ops) => call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', { base_version_id: model.current.id, ops });
+  const p1 = 'El señor {{NOMBRE_VENDEDOR}} dona a {{NOMBRE_DONATARIO}}.';
+  assert.equal((await edit([{ op: 'para', i: 2, from: 'otro texto', to: 'x' }])).status, 400);
+  assert.equal((await edit([{ op: 'text', text: p1, offset: 3, length: 12, occurrence: 0, replacement: 'x' }])).status, 400); // ends inside {{NOMBRE_VENDEDOR}}
+  assert.equal((await edit([{ op: 'para', i: 0, from: 'CONTRATO', to: 'CONTRATO DE DONACIÓN' }, { op: 'meta', key: 'NOMBRE_VENDEDOR', label: 'x' }])).status, 400);
+  assert.equal((await edit([{ op: 'para', i: 0, from: 'CONTRATO', to: 'CONTRATO DE {{}}' }])).status, 400);
+  const { rows } = await pool.query('SELECT COUNT(*)::int n FROM template_tag_versions WHERE template_id = $1', [id]);
+  assert.equal(rows[0].n, 2);
+});
+
+test('AI body edit only proposes: the changes come back to confirm, no version is created', opts, async () => {
+  const id = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'CUERPO'`)).rows[0].id;
+  const { model } = await (await call('GET', `/api/documentos/tags/models/${id}`, 'admin')).json();
+  let prompt = '';
+  ai = async (p) => {
+    prompt = p;
+    return JSON.stringify([
+      { op: 'replace', i: 1, text: 'El señor {{NOMBRE_VENDEDOR}}, de nacionalidad {{NACIONALIDAD_VENDEDOR}}, dona a {{NOMBRE_DONATARIO}}.' },
+      { op: 'insert_after', i: 3, text: 'CUARTO: Las partes eligen domicilio en Santo Domingo.' },
+      { op: 'delete', i: 99 },
+    ]);
+  };
+  assert.equal((await call('POST', `/api/documentos/tags/models/${id}/ai-edit`, 'hengi', { instructions: 'x' })).status, 403);
+  assert.equal((await call('POST', `/api/documentos/tags/models/${id}/ai-edit`, 'admin', { instructions: ' ' })).status, 400);
+  const res = await call('POST', `/api/documentos/tags/models/${id}/ai-edit`, 'admin', { instructions: 'Agrega la nacionalidad del vendedor y elección de domicilio' });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.match(prompt, /Agrega la nacionalidad/);
+  assert.match(prompt, /\{\{NOMBRE_VENDEDOR\}\}/);
+  assert.match(prompt, /etiquetas/i);
+  assert.equal(body.base_version_id, model.current.id);
+  assert.deepEqual(body.changes, [
+    { op: 'para', i: 1, from: 'El señor {{NOMBRE_VENDEDOR}} dona a {{NOMBRE_DONATARIO}}.', to: 'El señor {{NOMBRE_VENDEDOR}}, de nacionalidad {{NACIONALIDAD_VENDEDOR}}, dona a {{NOMBRE_DONATARIO}}.', tags_added: ['NACIONALIDAD_VENDEDOR'], tags_removed: [] },
+    { op: 'insert', after: 3, text: 'CUARTO: Las partes eligen domicilio en Santo Domingo.', tags_added: [], tags_removed: [] },
+  ]);
+  const { rows } = await pool.query('SELECT COUNT(*)::int n FROM template_tag_versions WHERE template_id = $1', [id]);
+  assert.equal(rows[0].n, 2);
+  // the accepted changes go back through /edit as one new version
+  const saved = await call('POST', `/api/documentos/tags/models/${id}/edit`, 'admin', { base_version_id: body.base_version_id, ops: body.changes, notes: 'IA' });
+  assert.equal(saved.status, 201);
+  const v = (await saved.json()).model.current;
+  assert.deepEqual((await versionText(v.id)).slice(1), [
+    'El señor {{NOMBRE_VENDEDOR}}, de nacionalidad {{NACIONALIDAD_VENDEDOR}}, dona a {{NOMBRE_DONATARIO}}.',
+    'SEGUNDO: Cláusula nueva conforme a la Ley 108-05.',
+    'TERCERO: El precio es {{PRECIO_NUMEROS}}.',
+    'CUARTO: Las partes eligen domicilio en Santo Domingo.',
+  ]);
+  assert.deepEqual(v.tags.map((t) => t.key), ['NOMBRE_VENDEDOR', 'NACIONALIDAD_VENDEDOR', 'NOMBRE_DONATARIO', 'PRECIO_NUMEROS']);
+});

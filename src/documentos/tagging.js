@@ -99,8 +99,9 @@ function buildTagging(blocks, answer) {
 
 class EditError extends Error {}
 
-// A selection made in the page ("the paragraph's text + offset + length") → a span of the Word
-function selectionSpan(blocks, op) {
+// A selection made in the page ("the paragraph's text + offset + length") → a span of the Word.
+// For tagging it cannot touch a tag; for changing text (wholeTags) it may hold whole tags, never part of one.
+function selectionSpan(blocks, op, { wholeTags = false } = {}) {
   // the page shows tabs, line breaks and non-breaking spaces as one space (same length, so offsets still match)
   const flat = (t) => String(t).replace(/[\t\n\u00a0\u2003]/g, ' ');
   const same = blocks.filter((b) => flat(b.text) === flat(op.text));
@@ -110,13 +111,46 @@ function selectionSpan(blocks, op) {
   const end = start + Number(op.length);
   if (!(start >= 0 && end > start && end <= block.text.length)) throw new EditError('La selección no es válida');
   for (const m of block.text.matchAll(TAG)) {
-    if (start < m.index + m[0].length && end > m.index) throw new EditError('La selección toca una etiqueta existente');
+    const a = m.index;
+    const b = a + m[0].length;
+    if (!(start < b && end > a)) continue;
+    if (!wholeTags) throw new EditError('La selección toca una etiqueta existente');
+    if (start > a || end < b) throw new EditError('La selección corta una etiqueta; selecciónala completa');
   }
   const value = block.text.slice(start, end);
   if (!value.trim()) throw new EditError('Selecciona el texto a etiquetar');
   return { i: block.i, start, end, value };
 }
 
+// New wording written by the admin or the AI: its tags in the house format ({{nombre x}} → {{NOMBRE X}})
+function cleanTagged(text) {
+  const bad = () => new EditError('Hay una etiqueta mal escrita: escribe {{NOMBRE_DE_LA_ETIQUETA}}');
+  const out = String(text ?? '').replace(TAG, (_, raw) => {
+    const key = normalizeKey(raw);
+    if (!key) throw bad();
+    return `{{${key}}}`;
+  });
+  if (/\{\{|\}\}/.test(out.replace(TAG, ''))) throw bad();
+  return out;
+}
+
+// The smallest span that turns `from` into `to` (the common start and end stay, with their format)
+function diffSpan(from, to) {
+  let a = 0;
+  while (a < from.length && a < to.length && from[a] === to[a]) a++;
+  let b = 0;
+  while (b < from.length - a && b < to.length - a && from[from.length - 1 - b] === to[to.length - 1 - b]) b++;
+  let span = { start: a, end: from.length - b, text: to.slice(a, to.length - b) };
+  // a pure insertion takes the character before (or after) it along, so the span is never empty
+  if (span.start === span.end && from.length) {
+    span = span.start > 0
+      ? { start: span.start - 1, end: span.end, text: from[span.start - 1] + span.text }
+      : { start: 0, end: 1, text: span.text + from[0] };
+  }
+  return span;
+}
+
 module.exports = {
+  cleanTagged, diffSpan,
   alignTagged, normalizeKey, tagsInText, TAG, ROLES, groupOf, labelOf, meta, buildTagging, selectionSpan, EditError,
 };

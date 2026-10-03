@@ -8,13 +8,13 @@ const pool = require('../db/pool');
 const storage = require('../utils/storage');
 const { logActivity, safeLog } = require('../services/activityLog');
 const { resolveModelPath } = require('../documentos/templatesCatalog');
-const { listBlocks, applySpans, fillTags, listTags } = require('../documentos/docxText');
+const { listBlocks, applySpans, applyOps, fillTags, listTags } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
 const Tags = require('../documentos/templateTags');
 const Portfolio = require('../documentos/portfolio');
 const LegalProfile = require('../documentos/legalProfile');
 const multer = require('multer');
-const { buildTagging, selectionSpan, normalizeKey, meta, EditError, TAG } = require('../documentos/tagging');
+const { buildTagging, selectionSpan, normalizeKey, meta, EditError, TAG, tagsInText, cleanTagged, diffSpan } = require('../documentos/tagging');
 
 // Documentos · Etiquetas: AI tagging of the models, the admin's review (edits → new versions,
 // approval) and exact filling of approved models. MotherBrain's tables are only read.
@@ -176,6 +176,85 @@ router.get('/versions/:id/file', async (req, res) => {
   }
 });
 
+// ── Body edits: the model's wording changes (a selection, a whole paragraph, paragraphs added or
+// removed). They may add or remove tags; the tag list follows the new file. Kept apart from tag
+// edits in one save, because both point at the text of the version on screen.
+const BODY_OPS = new Set(['text', 'para', 'insert', 'delete']);
+
+async function bodyEdit(base, ops, temps) {
+  const blocks = await listBlocks(base.file_path);
+  const byI = new Map(blocks.map((b) => [b.i, b]));
+  const paragraph = (i, from) => {
+    const b = byI.get(Number(i));
+    if (!b || (from !== undefined && b.text !== from)) throw new EditError('Ese párrafo cambió o no existe; recarga e intenta de nuevo');
+    return b;
+  };
+  const spans = [];
+  const inserts = [];
+  const deleted = new Set();
+  for (const op of ops) {
+    if (op.op === 'text') {
+      const s = selectionSpan(blocks, op, { wholeTags: true });
+      spans.push({ i: s.i, start: s.start, end: s.end, text: cleanTagged(op.replacement) });
+    } else if (op.op === 'para') {
+      const b = paragraph(op.i, op.from);
+      const to = cleanTagged(op.to);
+      if (to === b.text) continue;
+      if (!b.text) inserts.push({ op: 'replace', i: b.i, text: to }); // an empty paragraph has nothing to keep
+      else spans.push({ i: b.i, ...diffSpan(b.text, to) });
+    } else if (op.op === 'insert') {
+      paragraph(op.after);
+      inserts.push({ op: 'insert_after', i: Number(op.after), text: cleanTagged(op.text) });
+    } else if (op.op === 'delete') {
+      deleted.add(paragraph(op.i, op.from).i);
+    }
+  }
+  for (const s of spans) {
+    if (deleted.has(s.i)) throw new EditError('Un párrafo que se borra también se cambia; quita uno de los dos cambios');
+    if (spans.some((x) => x !== s && x.i === s.i && x.start < s.end && s.start < x.end)) throw new EditError('Dos cambios tocan el mismo texto');
+  }
+
+  // what the file must say afterwards; checked against the result (a Word field would block a change)
+  const expected = [];
+  for (const b of blocks) {
+    let text = b.text;
+    const replaced = inserts.find((o) => o.op === 'replace' && o.i === b.i);
+    if (replaced) text = replaced.text;
+    for (const s of spans.filter((x) => x.i === b.i).sort((x, y) => y.start - x.start)) text = text.slice(0, s.start) + s.text + text.slice(s.end);
+    if (!deleted.has(b.i)) expected.push(text);
+    for (const o of inserts) if (o.op === 'insert_after' && o.i === b.i) expected.push(o.text);
+  }
+
+  let file = base.file_path;
+  if (spans.length) {
+    temps.push(tmpDocx());
+    await applySpans(file, temps.at(-1), spans);
+    file = temps.at(-1);
+  }
+  const paraOps = [...inserts, ...[...deleted].map((i) => ({ op: 'delete', i }))];
+  if (paraOps.length) {
+    temps.push(tmpDocx());
+    await applyOps(file, temps.at(-1), paraOps);
+    file = temps.at(-1);
+  }
+  if (file === base.file_path) throw new EditError('No hay cambios para guardar');
+  const got = (await listBlocks(file)).map((b) => b.text);
+  if (JSON.stringify(got) !== JSON.stringify(expected)) {
+    throw new EditError('Una parte de ese texto es un campo de Word (numeración, fecha automática…) y no se puede cambiar aquí; cámbiala en el Word');
+  }
+
+  // each tag keeps the original text of its places, in order; new tags start without one
+  const known = base.tags.map((t) => ({ ...t, examples: Array.isArray(t.examples) ? t.examples : t.example != null ? [t.example] : [] }));
+  const counts = {};
+  for (const k of await listTags(file)) counts[k] = (counts[k] || 0) + 1;
+  const tags = (await orderedTags(file, known)).map((t) => {
+    const old = t.examples || [];
+    const examples = Array.from({ length: counts[t.key] || 0 }, (_, n) => old[n] ?? old[0] ?? BLANK).filter((x) => x !== BLANK || old.length);
+    return { ...t, examples, example: examples[0] ?? null };
+  });
+  return { file, tags };
+}
+
 // Edits on the latest version → a new pending version.
 // Selections are tagged first (they point at the base text); then renames, removals and labels are
 // applied to the tag list, and the file gets them in one pass. Each tag keeps the original text of
@@ -190,6 +269,22 @@ router.post('/models/:id/edit', admin, async (req, res) => {
     if (!latest) return sendError(res, 404, 'NOT_FOUND', 'Este modelo no tiene etiquetas todavía');
     if (Number(baseId) !== latest) return sendError(res, 409, 'STALE', 'Alguien guardó otra versión mientras editabas; recarga');
     const base = await Tags.getVersion(latest);
+    const body = ops.filter((o) => BODY_OPS.has(o && o.op));
+    if (body.length && body.length !== ops.length) {
+      throw new EditError('Guarda primero los cambios de etiquetas y después los cambios de texto (o al revés)');
+    }
+    if (body.length) {
+      const { file, tags } = await bodyEdit(base, ops, temps);
+      const v = await Tags.createVersion({
+        templateId, localFile: file, tags, skipped: [], source: 'edit', notes, userId: req.user.id, baseVersionId: latest,
+      });
+      const model = await Tags.getModel(templateId, { admin: true });
+      await safeLog(() => logActivity(req, {
+        category: 'documentos', action: 'etiquetas.edit_text', entityType: 'modelo', entityId: templateId,
+        summary: `Cambió el texto de «${model.name}» (v${v.version_number})${notes ? `: ${String(notes).slice(0, 120)}` : ''}`,
+      }));
+      return res.status(201).json({ model });
+    }
     const examplesOf = (t) => (Array.isArray(t.examples) ? t.examples : t.example != null ? [t.example] : []);
     // fileKey: the name the tag has in the file; key: its name after these edits
     const tags = base.tags.map((t) => ({ ...t, fileKey: t.key, examples: examplesOf(t) }));
@@ -280,6 +375,52 @@ router.post('/models/:id/edit', admin, async (req, res) => {
     return fail(res, err, 'edit');
   } finally {
     for (const t of temps) fs.rm(t, { force: true }, () => {});
+  }
+});
+
+// "Cambiar con IA": the AI proposes changes to the wording of the latest version; nothing is saved
+// here. The admin confirms the ones they want and they come back through /edit as a new version.
+router.post('/models/:id/ai-edit', admin, async (req, res) => {
+  const instructions = String((req.body || {}).instructions || '').trim();
+  if (instructions.length < 3) return sendError(res, 400, 'INVALID_EDIT', 'Escribe qué cambios legales quieres');
+  try {
+    const templateId = Number(req.params.id);
+    const latest = await Tags.latestVersionId(templateId);
+    if (!latest) return sendError(res, 404, 'NOT_FOUND', 'Este modelo no tiene etiquetas todavía');
+    const [base, t] = await Promise.all([Tags.getVersion(latest), Tags.getTemplate(templateId)]);
+    const blocks = await listBlocks(base.file_path);
+    let ops;
+    try {
+      ops = await aiDocs.planEdits({ blocks, instructions, title: t.name, tagged: true });
+    } catch (err) {
+      console.error('[etiquetas] AI edit error:', err.message);
+      return sendError(res, 502, 'AI_UNAVAILABLE', 'La IA no respondió; intenta de nuevo');
+    }
+    const byI = new Map(blocks.map((b) => [b.i, b.text]));
+    const diff = (before, after) => {
+      const a = new Set(tagsInText(before));
+      const b = new Set(tagsInText(after));
+      return { tags_added: [...b].filter((k) => !a.has(k)), tags_removed: [...a].filter((k) => !b.has(k)) };
+    };
+    const changes = [];
+    for (const o of ops) {
+      try {
+        if (o.op === 'replace') {
+          const to = cleanTagged(o.text);
+          if (to !== byI.get(o.i)) changes.push({ op: 'para', i: o.i, from: byI.get(o.i), to, ...diff(byI.get(o.i), to) });
+        } else if (o.op === 'insert_after') {
+          const text = cleanTagged(o.text);
+          if (text.trim()) changes.push({ op: 'insert', after: o.i, text, ...diff('', text) });
+        } else if (o.op === 'delete') {
+          changes.push({ op: 'delete', i: o.i, from: byI.get(o.i), ...diff(byI.get(o.i), '') });
+        }
+      } catch {
+        // a change with a broken tag is left out
+      }
+    }
+    res.json({ base_version_id: latest, changes });
+  } catch (err) {
+    return fail(res, err, 'ai-edit');
   }
 });
 

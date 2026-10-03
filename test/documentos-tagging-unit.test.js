@@ -71,3 +71,21 @@ test('buildTagging survives a malformed AI answer', () => {
   assert.deepEqual(buildTagging([{ i: 0, text: 'x' }], { paragraphs: 'nope', tags: 5 }), { spans: [], tags: [], skipped: [] });
   assert.deepEqual(buildTagging([{ i: 0, text: 'x' }], null), { spans: [], tags: [], skipped: [] });
 });
+
+test('diffSpan: the smallest change, never an empty span', () => {
+  const { diffSpan } = require('../src/documentos/tagging');
+  const apply = (from, s) => from.slice(0, s.start) + s.text + from.slice(s.end);
+  for (const [from, to] of [['El precio es diez.', 'El precio es veinte.'], ['abc', 'aXbc'], ['abc', 'Xabc'], ['abc', 'abcX'], ['abc', 'ac'], ['abc', '']]) {
+    const s = diffSpan(from, to);
+    assert.ok(s.end > s.start, `${from} → ${to}`);
+    assert.equal(apply(from, s), to);
+  }
+  assert.deepEqual(diffSpan('El precio es diez.', 'El precio es veinte.'), { start: 13, end: 17, text: 'veinte' });
+});
+
+test('cleanTagged: tags in the house format; malformed ones are refused', () => {
+  const { cleanTagged } = require('../src/documentos/tagging');
+  assert.equal(cleanTagged('a {{nombre_vendedor}} b'), 'a {{NOMBRE_VENDEDOR}} b');
+  assert.throws(() => cleanTagged('a {{}} b'));
+  assert.throws(() => cleanTagged('a {{NOMBRE b'));
+});
