@@ -26,6 +26,12 @@ function configDiagnostics(env = process.env) {
       writable: isWritable(volume || '/data/guru-files'),
       s3_configured: Boolean(env.S3_BUCKET),
     },
+    whatsapp: {
+      access_token: Boolean(env.WHATSAPP_ACCESS_TOKEN),
+      phone_number_id: Boolean(env.WHATSAPP_PHONE_NUMBER_ID),
+      app_secret: Boolean(env.WHATSAPP_APP_SECRET),
+      verify_token: Boolean(env.WHATSAPP_VERIFY_TOKEN),
+    },
     commit: env.RAILWAY_GIT_COMMIT_SHA ? env.RAILWAY_GIT_COMMIT_SHA.slice(0, 7) : null,
   };
 }
