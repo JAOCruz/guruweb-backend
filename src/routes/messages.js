@@ -19,7 +19,7 @@ function isEmployee(role) {
 const {
   setChatEnabled, isChatEnabled, getEnabledPhones,
   setManualMode, isManualMode, getManualPhones,
-  shouldBotRespond,
+  shouldBotRespond, chatBotOn, toggleChatBot,
 } = require('../whatsapp/handler');
 
 const router = express.Router();
@@ -44,7 +44,7 @@ router.get('/conversations', async (req, res) => {
     // Enrich with bot/manual state
     for (const conv of conversations) {
       conv.chatEnabled = isChatEnabled(conv.phone);
-      conv.botActive = !isManualMode(conv.phone);
+      conv.botActive = chatBotOn(conv.phone);
       conv.manualMode = isManualMode(conv.phone);
     }
     res.json({ conversations });
@@ -296,6 +296,13 @@ router.post('/chat-toggle/:phone', (req, res) => {
   res.json({ phone, chatEnabled: !current, botResponding: shouldBotRespond(phone) });
 });
 
+// The chat's 🤖 button: in "Seleccionados" turns the bot on/off for this chat, in "Todos" is the agent takeover
+router.post('/bot-toggle/:phone', (req, res) => {
+  const { phone } = req.params;
+  const botActive = toggleChatBot(phone);
+  res.json({ phone, botActive, botResponding: shouldBotRespond(phone) });
+});
+
 // Toggle manual mode (agent takeover — independent of chat enabled)
 router.post('/manual-toggle/:phone', (req, res) => {
   const { phone } = req.params;
@@ -407,7 +414,7 @@ router.get('/search', async (req, res) => {
     // Enrich with bot/manual state
     for (const conv of conversations) {
       conv.chatEnabled = isChatEnabled(conv.phone);
-      conv.botActive = !isManualMode(conv.phone);
+      conv.botActive = chatBotOn(conv.phone);
       conv.manualMode = isManualMode(conv.phone);
     }
 

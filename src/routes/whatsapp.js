@@ -8,6 +8,7 @@ const config = require('../config');
 const pool = require('../db/pool');
 const Client = require('../models/Client');
 
+const cloudApi = require('../whatsapp/cloudApi');
 const router = express.Router();
 router.use(authenticate);
 
@@ -53,6 +54,10 @@ async function savePendingQR(sessionId, qr) {
 }
 
 router.post('/connect', async (req, res) => {
+  // A Baileys session next to Meta's API would answer every message twice
+  if (cloudApi.isCloudEnabled()) {
+    return res.status(409).json({ error: 'WhatsApp está conectado por la API oficial de Meta; no hace falta escanear QR' });
+  }
   try {
     const sessionId = `user_${req.user.id}`;
     const force = req.query.force === '1' || req.body?.force === true;
@@ -169,7 +174,10 @@ router.get('/status', (req, res) => {
       activeSession = any.sessionId;
     }
   }
-  res.json({ sessionId: activeSession, connected, botActive: isBotActive(), botMode: getBotMode(), assignmentMode: getAssignmentMode() });
+  // With Meta's official API there is no QR session: the number is always connected
+  const provider = cloudApi.isCloudEnabled() ? 'meta' : 'baileys';
+  if (provider === 'meta') connected = true;
+  res.json({ sessionId: activeSession, connected, provider, botActive: isBotActive(), botMode: getBotMode(), assignmentMode: getAssignmentMode() });
 });
 
 router.post('/bot-toggle', requireAdmin, (req, res) => {

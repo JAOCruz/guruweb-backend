@@ -1,18 +1,13 @@
-const crypto = require('crypto');
 const Message = require('../models/Message');
 const Client = require('../models/Client');
 const ClientMedia = require('../models/ClientMedia');
 const Notification = require('../models/Notification');
 const storage = require('../utils/storage');
-const { routeMessage, AI_DEFERRED } = require('../conversation/router');
-const { shouldBotRespond } = require('./handler');
+const config = require('../config');
+const { shouldBotRespond, bufferMessage } = require('./handler');
 const cloudApi = require('./cloudApi');
-const outgoing = require('./outgoing');
-const { getQuotaBackoffRemaining } = require('../llm/generate');
 
 const processingIds = new Set();
-const pendingRetries = new Map();
-const MAX_RETRY_ATTEMPTS = 6;
 
 const MIME_EXTENSIONS = {
   'image/jpeg': '.jpg',
@@ -91,72 +86,18 @@ async function saveCloudMedia(mediaId, mimeType, fileName, mediaType, phone, waM
   };
 }
 
-async function sendReply(phone, text, client) {
-  try {
-    const sent = await outgoing.sendText(phone, text);
-    await Message.create({
-      waMessageId: sent.key?.id || null,
-      phone,
-      clientId: client?.id || null,
-      direction: 'outbound',
-      content: text,
-      waJid: `${phone}@s.whatsapp.net`,
-    });
-  } catch (err) {
-    console.error('[WA Cloud] Failed to send reply:', err.message);
-  }
+// The Baileys pipeline (batching, voice notes, photo analysis, complaints, AI retries) replies
+// through `sock.sendMessage(jid, { text })`: this answers that call through Meta
+function cloudSock(phone) {
+  return {
+    sendMessage: (_jid, content) => cloudApi.sendTextMessage(phone, content.text),
+  };
 }
 
-async function handleResponse(phone, text, normalizedMsg, savedMedia, client) {
-  try {
-    const response = await routeMessage(phone, text, normalizedMsg, savedMedia);
-    if (response === AI_DEFERRED) {
-      scheduleRetry(phone, text, normalizedMsg, savedMedia, client);
-    } else if (response) {
-      await sendReply(phone, response, client);
-    }
-  } catch (err) {
-    console.error('[WA Cloud] Error handling response:', err.message);
-  }
-}
-
-function scheduleRetry(phone, text, normalizedMsg, savedMedia, client) {
-  const backoffMs = getQuotaBackoffRemaining() || 30000;
-  const delayMs = backoffMs + 5000;
-
-  const existing = pendingRetries.get(phone);
-  if (existing) {
-    existing.text = `${existing.text} ${text}`.trim();
-    if (savedMedia) existing.savedMedia = savedMedia;
-    clearTimeout(existing.timer);
-  }
-  const entry = existing || { text, savedMedia, normalizedMsg, client, attempts: 0 };
-
-  entry.timer = setTimeout(async () => {
-    pendingRetries.delete(phone);
-    entry.attempts++;
-    if (!shouldBotRespond(phone)) {
-      console.log(`[WA Cloud] AI retry cancelled — bot no longer responding to ${phone}`);
-      return;
-    }
-    try {
-      const response = await routeMessage(phone, entry.text, entry.normalizedMsg, entry.savedMedia);
-      if (response && response !== AI_DEFERRED) {
-        await sendReply(phone, response, entry.client);
-      } else if (response === AI_DEFERRED && entry.attempts < MAX_RETRY_ATTEMPTS) {
-        scheduleRetry(phone, entry.text, entry.normalizedMsg, entry.savedMedia, entry.client);
-      } else if (response === AI_DEFERRED) {
-        await sendReply(phone,
-          '🦉 Estamos procesando varias solicitudes en este momento. Un miembro de nuestro equipo le atenderá en breve, gracias por su paciencia.',
-          entry.client);
-      }
-    } catch (err) {
-      console.error('[WA Cloud] AI retry error:', err.message);
-    }
-  }, delayMs);
-
-  pendingRetries.set(phone, entry);
-  console.log(`[WA Cloud] AI backoff — message from ${phone} deferred, retry in ${Math.round(delayMs / 1000)}s`);
+// The same Meta app can serve more than one number: only handle the one configured here
+function isOurNumber(value) {
+  const id = value?.metadata?.phone_number_id;
+  return !!id && String(id) === String(config.wa.cloud.phoneNumberId);
 }
 
 function normalizeMessage(message, value) {
@@ -231,9 +172,22 @@ function normalizeMessage(message, value) {
       normalized.message.conversation = text;
       break;
     }
-    default:
-      text = message[type]?.body || message[type]?.caption || '';
+    case 'interactive': {
+      // a tap on a reply button or a list option
+      const it = message.interactive || {};
+      text = it.button_reply?.title || it.list_reply?.title || '';
       normalized.message.conversation = text;
+      break;
+    }
+    case 'button': {
+      // quick-reply button of a template
+      text = message.button?.text || '';
+      normalized.message.conversation = text;
+      break;
+    }
+    default:
+      // reactions, stickers, contacts, unsupported…: stored, never answered
+      text = '';
   }
 
   return { normalized, text };
@@ -285,7 +239,7 @@ async function processSingleMessage(message, value) {
     const willRespond = !isStale && shouldBotRespond(phone);
 
     const tag = isStale ? '[OLD] ' : !shouldBotRespond(phone) ? '[MANUAL/INACTIVE] ' : '';
-    console.log(`[WA Cloud] ${tag}Mensaje de ${phone}: ${finalText || '[media]'}`);
+    console.log(`[WA Cloud] ${tag}Mensaje de ${phone} (${message.type})`);
 
     let client = await Client.findByPhone(phone);
     if (pushName) {
@@ -339,7 +293,7 @@ async function processSingleMessage(message, value) {
       : normalized.message.videoMessage ? 'video' : 'archivo';
     const logContent = finalText
       ? (savedMedia ? `${finalText}\n[📎 adjunto]` : finalText)
-      : (savedMedia ? `[📎 ${savedMedia.media_type || mediaLabel}]` : `[📎 ${mediaLabel}]`);
+      : (savedMedia ? `[📎 ${savedMedia.media_type || mediaLabel}]` : mediaInfo ? `[📎 ${mediaLabel}]` : `[${message.type}]`);
 
     try {
       await Message.create({
@@ -360,9 +314,14 @@ async function processSingleMessage(message, value) {
       console.error(`[WA Cloud] ❌ Error guardando mensaje phone=${phone}:`, saveErr.message);
     }
 
+    // Nothing to answer (a reaction, a sticker…)
+    if (!finalText && !mediaInfo) return;
+
     if (willRespond) {
-      await handleResponse(phone, finalText, normalized, savedMedia, client);
+      cloudApi.markAsRead(message.id).catch((err) => console.warn('[WA Cloud] markAsRead failed:', err.message));
     }
+    // Same as Baileys: grouped for 3s, media analyzed, then answered only if willRespond
+    bufferMessage(phone, { msg: normalized, text: finalText, savedMedia, willRespond }, cloudSock(phone));
   } finally {
     processingIds.delete(message.id);
   }
@@ -376,6 +335,16 @@ async function processWebhookPayload(payload) {
     const changes = entry.changes || [];
     for (const change of changes) {
       const value = change.value || {};
+      if (!isOurNumber(value)) {
+        console.warn('[WA Cloud] Event for another phone number — ignored');
+        continue;
+      }
+      for (const st of value.statuses || []) {
+        if (st.status === 'failed') {
+          const e = (st.errors || [])[0] || {};
+          console.error(`[WA Cloud] ❌ Not delivered to ${st.recipient_id}: ${e.code || ''} ${e.title || ''}`.trim());
+        }
+      }
       const messages = value.messages || [];
       for (const message of messages) {
         try {
@@ -390,4 +359,7 @@ async function processWebhookPayload(payload) {
 
 module.exports = {
   processWebhookPayload,
+  normalizeMessage,
+  isOurNumber,
+  cloudSock,
 };

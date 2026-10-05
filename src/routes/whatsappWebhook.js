@@ -75,13 +75,15 @@ router.post('/', (req, res) => {
   // Meta requires an immediate 200 OK; otherwise it retries.
   res.sendStatus(200);
 
+  // Without the app secret anyone could post fake client messages: process nothing
   const appSecret = process.env.WHATSAPP_APP_SECRET;
-  if (appSecret) {
-    if (!verifySignature(req, appSecret)) {
-      console.warn('[WA Cloud] Signature verification failed — rejecting event');
-      return;
-    }
-    console.log('[WA Cloud] Signature verified');
+  if (!appSecret) {
+    console.error('[WA Cloud] WHATSAPP_APP_SECRET is not set — ignoring webhook event');
+    return;
+  }
+  if (!verifySignature(req, appSecret)) {
+    console.warn('[WA Cloud] Signature verification failed — rejecting event');
+    return;
   }
 
   const payload = parsePayload(req);
@@ -95,7 +97,10 @@ router.post('/', (req, res) => {
     return;
   }
 
-  console.log('[WA Cloud] Incoming webhook payload:', JSON.stringify(payload, null, 2));
+  // A summary only: the full payload has the client's number and message text
+  const changes = (payload.entry || []).flatMap((e) => e.changes || []);
+  const count = (key) => changes.reduce((n, c) => n + ((c.value && c.value[key]) || []).length, 0);
+  console.log(`[WA Cloud] Webhook event: ${count('messages')} message(s), ${count('statuses')} status update(s)`);
 
   cloudHandler.processWebhookPayload(payload).catch((err) => {
     console.error('[WA Cloud] Error processing payload:', err.message);

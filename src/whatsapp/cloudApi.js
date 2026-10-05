@@ -57,24 +57,29 @@ function normalizePhone(input) {
   return String(input).replace(/\D/g, '');
 }
 
+const authHeader = () => ({ Authorization: `Bearer ${config.wa.cloud.accessToken}` });
+
+// Meta's error codes worth explaining to whoever is sending from the dashboard
+const WINDOW_CLOSED_CODES = new Set([131047, 131026]);
+
 async function graphRequest(pathOrUrl, options = {}) {
   if (!isCloudEnabled()) {
     throw new Error('WhatsApp Cloud API is not configured');
   }
 
-  const url = new URL(pathOrUrl.startsWith('http') ? pathOrUrl : `${GRAPH_BASE}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`);
-  url.searchParams.set('access_token', config.wa.cloud.accessToken);
+  // the token goes in the header: a URL ends up in proxy and error logs
+  const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${GRAPH_BASE}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
 
   const fetchOptions = {
     method: options.method || 'GET',
-    headers: options.headers || {},
+    headers: { ...(options.headers || {}), ...authHeader() },
   };
 
   if (options.body) {
     fetchOptions.body = options.body;
   }
 
-  const res = await fetch(url.toString(), fetchOptions);
+  const res = await fetch(url, fetchOptions);
   const text = await res.text();
   let data = null;
   try {
@@ -84,8 +89,13 @@ async function graphRequest(pathOrUrl, options = {}) {
   }
 
   if (!res.ok) {
-    const err = new Error(data?.error?.message || `Graph API ${res.status} error`);
+    const metaCode = data?.error?.code;
+    const err = WINDOW_CLOSED_CODES.has(metaCode)
+      ? new Error('Pasaron más de 24 horas desde el último mensaje del cliente: WhatsApp solo permite escribirle con una plantilla aprobada')
+      : new Error(data?.error?.message || `Graph API ${res.status} error`);
+    if (WINDOW_CLOSED_CODES.has(metaCode)) err.code = 'WINDOW_CLOSED';
     err.status = res.status;
+    err.metaCode = metaCode;
     err.response = data;
     throw err;
   }
@@ -93,20 +103,51 @@ async function graphRequest(pathOrUrl, options = {}) {
   return data;
 }
 
+const MAX_TEXT = 4096;
+
+// WhatsApp caps a text message at 4096 characters: cut at a paragraph or line break when possible
+function splitText(text) {
+  const parts = [];
+  let rest = String(text);
+  while (rest.length > MAX_TEXT) {
+    const window = rest.slice(0, MAX_TEXT);
+    let cut = Math.max(window.lastIndexOf('\n\n'), window.lastIndexOf('\n'));
+    if (cut < MAX_TEXT / 2) cut = window.lastIndexOf(' ');
+    if (cut < MAX_TEXT / 2) cut = MAX_TEXT;
+    parts.push(rest.slice(0, cut).trimEnd());
+    rest = rest.slice(cut).trimStart();
+  }
+  if (rest) parts.push(rest);
+  return parts;
+}
+
 async function sendTextMessage(phone, text) {
   const to = normalizePhone(phone);
-  const data = await graphRequest(`/${config.wa.cloud.phoneNumberId}/messages`, {
+  let first = null;
+  for (const body of splitText(text)) {
+    const data = await graphRequest(`/${config.wa.cloud.phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to,
+        type: 'text',
+        text: { body },
+      }),
+    });
+    if (!first) first = data;
+  }
+  return { key: { id: first?.messages?.[0]?.id } };
+}
+
+// The client sees the blue ticks: only called when the bot is the one answering
+async function markAsRead(messageId) {
+  return graphRequest(`/${config.wa.cloud.phoneNumberId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to,
-      type: 'text',
-      text: { body: text },
-    }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: messageId }),
   });
-  return { key: { id: data.messages?.[0]?.id } };
 }
 
 async function uploadMedia(buffer, mimeType, fileName) {
@@ -192,9 +233,7 @@ async function getMediaUrl(mediaId) {
 }
 
 async function downloadMedia(mediaUrl) {
-  const url = new URL(mediaUrl);
-  url.searchParams.set('access_token', config.wa.cloud.accessToken);
-  const res = await fetch(url.toString());
+  const res = await fetch(mediaUrl, { headers: authHeader() });
   if (!res.ok) {
     throw new Error(`Media download failed: ${res.status}`);
   }
@@ -206,6 +245,7 @@ module.exports = {
   isCloudEnabled,
   graphRequest,
   sendTextMessage,
+  markAsRead,
   uploadMedia,
   sendDocumentMessage,
   sendImageMessage,

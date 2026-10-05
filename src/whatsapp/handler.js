@@ -106,13 +106,10 @@ const manualPhones = new Set();
     (saved.manualPhones || []).forEach(p => manualPhones.add(p));
     // Ensure always-manual numbers stay manual even if persisted state says otherwise
     ALWAYS_MANUAL_PHONES.forEach(p => manualPhones.add(p));
-    // Self-heal: "selected" mode with an EMPTY enabled list means the bot
-    // answers nobody — a mute state that has bitten us repeatedly after
-    // accidental clicks. If that state is ever persisted, recover to "all".
+    // "selected" with nobody enabled is kept on purpose: it is how the bot is tested with
+    // chosen chats only. Switching it back to "all" on a restart answered every client.
     if (botMode === 'selected' && enabledPhones.size === 0) {
-      console.warn('[WA] Persisted mode was "selected" with empty enabled list (bot muted) — auto-recovering to "all"');
-      botMode = 'all';
-      persist().catch(() => {});
+      console.warn('[WA] Mode "selected" with no enabled chats — the bot answers nobody until one is enabled');
     }
     console.log(`[WA] Bot state restored: active=${botActive}, mode=${botMode}, assignment=${assignmentMode}, enabled=${enabledPhones.size}, manual=${manualPhones.size}, alwaysManual=${ALWAYS_MANUAL_PHONES.size}`);
   } catch (err) {
@@ -125,18 +122,24 @@ function normalizePhone(phone) {
   return phone.replace(/@s\.whatsapp\.net$|@lid$/g, '');
 }
 
-async function persist() {
-  try {
-    await saveSettings({
-      botActive,
-      botMode,
-      assignmentMode,
-      enabledPhones: [...enabledPhones],
-      manualPhones: [...manualPhones],
-    });
-  } catch (err) {
-    console.error('[WA] Failed to persist settings:', err.message);
-  }
+// Saves run one after the other, each with the state at that moment: two quick clicks
+// can't land in the wrong order and leave the older state saved
+let persistChain = Promise.resolve();
+function persist() {
+  persistChain = persistChain.then(async () => {
+    try {
+      await saveSettings({
+        botActive,
+        botMode,
+        assignmentMode,
+        enabledPhones: [...enabledPhones],
+        manualPhones: [...manualPhones],
+      });
+    } catch (err) {
+      console.error('[WA] Failed to persist settings:', err.message);
+    }
+  });
+  return persistChain;
 }
 
 function setBotActive(active) {
@@ -224,6 +227,33 @@ function clearManualPhones() {
   manualPhones.clear();
   console.log(`[WA] Cleared ${count} manual phones — bot will respond to all chats`);
   persist().catch(() => {});
+}
+
+// The chat's own switch (the 🤖 button): everything except the global pause
+function chatBotOn(phone) {
+  const clean = normalizePhone(phone);
+  if (clean.endsWith('@g.us')) return false;
+  if (botMode === 'selected' && !enabledPhones.has(clean)) return false;
+  if (manualPhones.has(clean)) return false;
+  if (ALWAYS_MANUAL_PHONES.has(clean)) return false;
+  return true;
+}
+
+// The 🤖 button of a chat. In "selected" it enables/disables that chat (enabling also ends an
+// agent takeover); in "all" it is the agent takeover. → whether the bot is now on for the chat
+function toggleChatBot(phone) {
+  const on = chatBotOn(phone);
+  if (botMode === 'selected') {
+    if (on) {
+      setChatEnabled(phone, false);
+    } else {
+      setChatEnabled(phone, true);
+      if (isManualMode(phone)) setManualMode(phone, false);
+    }
+  } else {
+    setManualMode(phone, on);
+  }
+  return chatBotOn(phone);
 }
 
 // Determine if bot should respond to a specific phone
@@ -616,6 +646,7 @@ function handleHistoryMessage(msg) {
 }
 
 module.exports = {
+  bufferMessage,
   handleIncomingMessage,
   handleHistoryMessage,
   setBotActive, isBotActive,
@@ -624,4 +655,5 @@ module.exports = {
   setChatEnabled, isChatEnabled, getEnabledPhones,
   setManualMode, isManualMode, getManualPhones, clearManualPhones,
   shouldBotRespond,
+  chatBotOn, toggleChatBot,
 };
