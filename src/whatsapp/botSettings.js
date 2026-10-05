@@ -49,4 +49,21 @@ async function save(settings) {
   }
 }
 
-module.exports = { load, save };
+// Mensajes lists only chats with messages from this moment on (older ones are archived, not deleted)
+const SINCE_KEY = 'chats_since';
+
+async function getChatsSince() {
+  const { rows } = await pool.query('SELECT value FROM wa_bot_state WHERE key = $1', [SINCE_KEY]);
+  return rows[0]?.value?.since || null;
+}
+
+async function setChatsSince(since) {
+  await pool.query(
+    `INSERT INTO wa_bot_state (key, value, updated_at) VALUES ($1, $2, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+    [SINCE_KEY, JSON.stringify({ since })]
+  );
+  return since;
+}
+
+module.exports = { load, save, getChatsSince, setChatsSince };

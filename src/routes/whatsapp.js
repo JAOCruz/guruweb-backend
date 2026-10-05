@@ -2,13 +2,15 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { createConnection, getConnection, getAnyConnection, disconnectSession, stopSession, resyncSession, forceReconnect } = require('../whatsapp/connection');
-const { handleIncomingMessage, handleHistoryMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones } = require('../whatsapp/handler');
+const { handleIncomingMessage, handleHistoryMessage, setBotActive, isBotActive, setBotMode, getBotMode, setAssignmentMode, getAssignmentMode, clearManualPhones, getManualPhones } = require('../whatsapp/handler');
 const { authenticate, requireRole } = require('../middleware/auth');
 const config = require('../config');
 const pool = require('../db/pool');
 const Client = require('../models/Client');
 
 const cloudApi = require('../whatsapp/cloudApi');
+const { getChatsSince, setChatsSince } = require('../whatsapp/botSettings');
+const { logActivity } = require('../services/activityLog');
 const router = express.Router();
 router.use(authenticate);
 
@@ -162,7 +164,7 @@ router.get('/qr', async (req, res) => {
   }
 });
 
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   // Check user-specific session first, then fall back to any active connection
   const sessionId = `user_${req.user.id}`;
   let connected = !!getConnection(sessionId);
@@ -177,13 +179,35 @@ router.get('/status', (req, res) => {
   // With Meta's official API there is no QR session: the number is always connected
   const provider = cloudApi.isCloudEnabled() ? 'meta' : 'baileys';
   if (provider === 'meta') connected = true;
-  res.json({ sessionId: activeSession, connected, provider, botActive: isBotActive(), botMode: getBotMode(), assignmentMode: getAssignmentMode() });
+  let chatsSince = null;
+  try { chatsSince = await getChatsSince(); } catch (err) { console.error('[WA] chats_since read failed:', err.message); }
+  res.json({ sessionId: activeSession, connected, provider, chatsSince, botActive: isBotActive(), botMode: getBotMode(), assignmentMode: getAssignmentMode() });
 });
 
 router.post('/bot-toggle', requireAdmin, (req, res) => {
   const current = isBotActive();
   setBotActive(!current);
   res.json({ botActive: !current });
+});
+
+// "Empezar de cero": Mensajes shows only chats from now on (old ones archived, nothing deleted)
+// and every chat leaves manual mode, so the bot can answer them again.
+router.post('/archive-chats', requireAdmin, async (req, res) => {
+  try {
+    const manualCleared = getManualPhones().length;
+    const chatsSince = await setChatsSince(new Date().toISOString());
+    clearManualPhones();
+    await logActivity(req, {
+      category: 'whatsapp',
+      action: 'whatsapp.archive_chats',
+      summary: `Archivó los chats anteriores de WhatsApp y quitó el modo manual a ${manualCleared} chat(s)`,
+      details: { chatsSince, manualCleared },
+    });
+    res.json({ chatsSince, manualCleared });
+  } catch (err) {
+    console.error('[WA] archive-chats error:', err.message);
+    res.status(500).json({ error: 'No se pudieron archivar los chats' });
+  }
 });
 
 // Clear all manual-mode overrides so the bot responds to every chat again.

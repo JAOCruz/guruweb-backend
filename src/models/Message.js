@@ -131,8 +131,10 @@ const Message = {
   // side) because PostgreSQL rejects FULL OUTER JOIN with an OR join condition
   // ("FULL JOIN is only supported with merge-joinable or hash-joinable join conditions").
   // If userId provided, only returns conversations from clients OR cases assigned to that user.
-  async getConversations(filter = 'all', userId = null) {
+  // `since`: only chats with messages from then on (archived ones stay in the DB, out of the list)
+  async getConversations(filter = 'all', userId = null, since = null) {
     const uid = userId !== null ? parseInt(userId) : null;
+    const params = since ? [since] : [];
 
     // Conditions for the messages side
     const msgConditions = [];
@@ -152,6 +154,7 @@ const Message = {
         )`);
       }
     }
+    if (since) msgConditions.push('m.created_at >= $1');
     const msgWhere = msgConditions.length > 0 ? 'WHERE ' + msgConditions.join(' AND ') : '';
 
     // Conditions for the clients-without-messages side
@@ -162,6 +165,7 @@ const Message = {
     if (uid !== null) {
       cliConditions.push(`c.assigned_to = ${uid}`);
     }
+    if (since) cliConditions.push('c.created_at >= $1');
     const cliWhere = 'WHERE ' + cliConditions.join(' AND ');
 
     const { rows } = await pool.query(`
@@ -189,7 +193,7 @@ const Message = {
       ) combined
       WHERE phone IS NOT NULL
       ORDER BY last_message_at DESC NULLS LAST
-    `);
+    `, params);
 
     // Fetch last message for ALL conversations in ONE query (was N+1: one query per
     // conversation, which made the message list slow as the number of chats grew).

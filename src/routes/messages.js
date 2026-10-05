@@ -22,6 +22,8 @@ const {
   shouldBotRespond, chatBotOn, toggleChatBot,
 } = require('../whatsapp/handler');
 
+const { getChatsSince } = require('../whatsapp/botSettings');
+
 const router = express.Router();
 
 // Internal endpoint to toggle manual mode (requires auth)
@@ -40,7 +42,7 @@ router.get('/conversations', async (req, res) => {
   try {
     const filter = req.query.filter || 'all'; // all | clients | non_clients
     const userId = isEmployee(req.user.role) ? req.user.id : null;
-    const conversations = await Message.getConversations(filter, userId);
+    const conversations = await Message.getConversations(filter, userId, await getChatsSince());
     // Enrich with bot/manual state
     for (const conv of conversations) {
       conv.chatEnabled = isChatEnabled(conv.phone);
