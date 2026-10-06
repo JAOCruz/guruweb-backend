@@ -217,6 +217,19 @@ test('sin cuota el agente difiere el lote y el reintento responde con el agente'
   assert.equal(calls, 2);
 });
 
+test('sin cuota para siempre: deja de reintentar a los 6 intentos y manda un solo mensaje de espera', async () => {
+  handler._setAIRetryDelayMs(20);
+  let calls = 0;
+  setFakeProvider({ name: 'fake', async chat() { calls++; const e = new Error('x'); e.code = 'QUOTA'; throw e; } });
+  await handler.processBatch(AGENT, batch(AGENT, 'hola'), sock);
+  await settle(800);
+  assert.equal(calls, 7); // el intento original + 6 reintentos
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /miembro de nuestro equipo/);
+  await settle(200);
+  assert.equal(calls, 7); // y no sigue intentando
+});
+
 test('un lote encolado mientras el turno anterior pasó el chat a una persona no corre el modelo ni manda nada', async () => {
   const p = createFakeProvider([
     { toolCalls: [{ id: '1', name: 'pasar_a_humano', args: { motivo: 'reclamación' } }] },

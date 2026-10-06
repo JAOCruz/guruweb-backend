@@ -90,7 +90,7 @@ function agentOpts(phone, media, sock, remoteJid) {
 
 // `media`: los medios del lote (solo el agente los usa; el motor viejo recibe `savedMedia`).
 // `cutoff`: corte del lote para el agente (ver inboundCutoff); con lotes unidos se queda el mayor.
-function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media = null, cutoff = null) {
+function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media = null, cutoff = null, attempts = 0) {
   const backoffMs = getQuotaBackoffRemaining() || 30000;
   const delayMs = aiRetryDelayOverrideMs ?? backoffMs + 5000; // small safety margin past the backoff
 
@@ -103,7 +103,7 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
     if (cutoff != null) existing.cutoff = existing.cutoff == null ? cutoff : Math.max(existing.cutoff, cutoff);
     clearTimeout(existing.timer);
   }
-  const entry = existing || { text, savedMedia, media, remoteJid, sock, client, attempts: 0, cutoff };
+  const entry = existing || { text, savedMedia, media, remoteJid, sock, client, attempts, cutoff };
 
   entry.timer = setTimeout(async () => {
     pendingAIRetries.delete(phone);
@@ -123,7 +123,7 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
         // El agente ya entregó (deliver); el motor viejo se envía aquí.
         if (!agent) await sendResponse(entry.sock, entry.remoteJid, response, syntheticMsg, phone, entry.client);
       } else if (response === AI_DEFERRED && entry.attempts < MAX_AI_RETRY_ATTEMPTS) {
-        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client, entry.media, entry.cutoff);
+        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client, entry.media, entry.cutoff, entry.attempts);
       } else if (response === AI_DEFERRED) {
         // Exhausted retries — graceful message instead of the robotic fallback
         await sendResponse(entry.sock, entry.remoteJid,
