@@ -29,6 +29,19 @@ const WRITE_TOOLS = new Set(['crear_solicitud', 'preparar_cotizacion']); // si c
 
 const queues = new Map(); // phone → Promise del último ciclo (turno + entrega), en serie por teléfono
 
+/**
+ * Corre fn cuando termine lo que haya en la cola de ese teléfono (y antes de lo que llegue después).
+ * Es el mismo candado que usa respond; el handler mete en él el lote completo (análisis de medios incluido)
+ * y llama a respond con { alreadyLocked: true }, que entonces no vuelve a encolar (si lo hiciera se esperaría
+ * a sí mismo). Un fallo de fn no frena la cola.
+ */
+function runSerial(phone, fn) {
+  const prev = queues.get(phone) || Promise.resolve();
+  const run = prev.catch(() => {}).then(fn);
+  queues.set(phone, run);
+  return run.finally(() => { if (queues.get(phone) === run) queues.delete(phone); });
+}
+
 let botUserIdCache = null;
 async function getBotUserId() {
   if (botUserIdCache == null) {
@@ -226,7 +239,7 @@ async function attempt({ provider, system, ctx, turn, stats }) {
 
 // Un turno: devuelve { reply, toolLogIds, handoff }. reply es '' (nada que mandar), AI_DEFERRED o el texto;
 // handoff es true si este turno pasó el chat a una persona (su mensaje de espera debe mandarse igual).
-async function respondNow(phone, text, { media = [], provider, now = new Date() } = {}) {
+async function respondNow(phone, text, { media = [], provider, now = new Date(), cutoff = null } = {}) {
   const t0 = Date.now();
   const stats = { calls: 0, tools: 0 };
   const ctx = { phone, client: null, botUserId: null, now, lastText: String(text || ''), toolLogIds: [], handedOff: false };
@@ -249,7 +262,7 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
     // Sin esperar: el resumen de la conversación anterior puede tardar y no cambia este turno.
     maybeSummarize({ phone, client: ctx.client, provider, now }).catch(() => {});
 
-    const { system, messages } = await buildContext({ phone, client: ctx.client, now });
+    const { system, messages } = await buildContext({ phone, client: ctx.client, now, cutoff });
     turn.messages = normalize([...dropCurrentBatch(messages, current, media.length > 0), { role: 'user', text: current }]);
     await seedAllowed(phone, now, turn.allowed, turn.totals);
 
@@ -298,14 +311,17 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
  *   está en manual, pero su mensaje de espera debe mandarse). Tiene un tope de opts.deliverTimeoutMs (20 s por
  *   defecto): pasado ese tiempo el ciclo sigue sin ligar nada.
  * @param {number} [opts.deliverTimeoutMs]
+ * @param {number|null} [opts.cutoff] id del último inbound del lote: los inbound guardados después no entran al
+ *   contexto (son del lote siguiente). Sin cutoff entra todo.
+ * @param {boolean} [opts.alreadyLocked] true cuando quien llama ya está dentro de runSerial(phone): el turno corre
+ *   directo, sin volver a encolar.
  * @returns {Promise<string>} el texto enviado/por enviar; '' significa "nada que mandar" (lote vacío o turno
  *   omitido); AI_DEFERRED significa "sin cuota, reintente después". deliver no se llama en esos dos casos.
  *
  * Los ciclos de un mismo teléfono (turno + entrega) van en serie: el siguiente arranca cuando el anterior entregó.
  */
 function respond(phone, text, opts = {}) {
-  const prev = queues.get(phone) || Promise.resolve();
-  const run = prev.catch(() => {}).then(async () => {
+  const cycle = async () => {
     if (typeof opts.shouldRun === 'function' && !opts.shouldRun()) {
       console.log(`[Agent] ${phone} turno omitido: el bot ya no responde este chat`);
       return '';
@@ -320,9 +336,8 @@ function respond(phone, text, opts = {}) {
       }
     }
     return reply;
-  });
-  queues.set(phone, run);
-  return run.finally(() => { if (queues.get(phone) === run) queues.delete(phone); });
+  };
+  return opts.alreadyLocked ? cycle() : runSerial(phone, cycle);
 }
 
 // Liga las herramientas de un turno (ids de bot_tool_log) al mensaje del bot ya guardado. Devuelve cuántas ligó.
@@ -333,6 +348,6 @@ async function attachToolLogs(messageId, ids) {
 }
 
 module.exports = {
-  respond, attachToolLogs, AI_DEFERRED, collectAmounts, collectArgAmounts, addSums, priceGuard,
+  respond, runSerial, attachToolLogs, AI_DEFERRED, collectAmounts, collectArgAmounts, addSums, priceGuard,
   turnText, normalize, dropCurrentBatch, _resetBotUserCache,
 };

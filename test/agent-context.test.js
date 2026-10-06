@@ -293,3 +293,36 @@ test('el resumen guardado no conserva cédulas ni montos aunque el modelo los es
   assert.ok(!/RD\$\s?\d/.test(m.resumen));
   assert.ok(m.resumen.includes('pidió un poder'));
 });
+
+// ---------- revisión final ----------
+
+test('una herramienta que nunca termina se corta por tiempo: "no se pudo completar" y ok=false', async () => {
+  const { _setToolTimeoutMs } = require('../src/agent/tools');
+  const { _setAnalyzer } = require('../src/agent/tools/client');
+  const mediaId = (await pool.query(`INSERT INTO client_media (phone, media_type, mime_type, file_path) VALUES ($1,'image','image/jpeg','/tmp/x.jpg') RETURNING id`, [PHONE])).rows[0].id;
+  _setAnalyzer(() => new Promise(() => {}));
+  if (typeof _setToolTimeoutMs === 'function') _setToolTimeoutMs(100);
+  try {
+    const r = await Promise.race([
+      runTool('leer_documento', { media_id: mediaId }, ctx),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('runTool no terminó')), 2000)),
+    ]);
+    assert.deepEqual(r, { error: 'no se pudo completar' });
+    const l = await logs();
+    assert.equal(l.length, 1); assert.equal(l[0].ok, false); assert.equal(l[0].herramienta, 'leer_documento');
+  } finally {
+    if (typeof _setToolTimeoutMs === 'function') _setToolTimeoutMs(null);
+    _setAnalyzer(null);
+  }
+});
+
+test('buildContext con cutoff deja fuera los inbound guardados después del corte, pero no los outbound', async () => {
+  await seedMessages(4);
+  const cutoff = (await pool.query('SELECT max(id) m FROM messages')).rows[0].m;
+  await pool.query(`INSERT INTO messages (phone, client_id, direction, content) VALUES ($1,$2,'inbound','llegó tarde')`, [PHONE, clientId]);
+  await pool.query(`INSERT INTO messages (phone, client_id, direction, content) VALUES ($1,$2,'outbound','respuesta del turno anterior')`, [PHONE, clientId]);
+  const { messages } = await buildContext({ phone: PHONE, client: ctx.client, now: MONDAY, cutoff });
+  assert.deepEqual(messages.map((m) => m.text), ['mensaje 1', 'mensaje 2', 'mensaje 3', 'mensaje 4', 'respuesta del turno anterior']);
+  const all = await buildContext({ phone: PHONE, client: ctx.client, now: MONDAY });
+  assert.equal(all.messages.length, 6);
+});

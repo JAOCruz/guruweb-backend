@@ -53,7 +53,9 @@ test('"venta del carro" encuentra el acto de venta de vehículo por su alias', a
 test('busca sin importar acentos: "vehiculo" encuentra "Vehículo"', async () => {
   const r = await buscar_servicio({ consulta: 'VEHICULO liviano' });
   assert.equal(r.resultados[0].nombre, 'Acto de Venta - Vehículo Liviano');
-  assert.equal(typeof r.resultados[0].precio, 'number');
+  // Por tramos: sin valor del bien no hay precio (lo da calcular_precio con valor_del_bien).
+  assert.equal(r.resultados[0].precio, null);
+  assert.equal(r.resultados[0].depende_del_valor, true);
 });
 test('sin coincidencias devuelve lista vacía', async () => {
   assert.deepEqual(await buscar_servicio({ consulta: 'zzzz' }), { resultados: [] });
@@ -125,4 +127,33 @@ test('empates: el mismo orden en cada llamada (por nombre y luego id)', async ()
   assert.deepEqual(a.resultados.map((x) => x.id), b.resultados.map((x) => x.id));
   const tied = a.resultados.map((x) => x.id);
   assert.deepEqual(tied, [...tied].sort((x, y) => x - y));
+});
+
+// ---------- tramos: sin valor del bien no hay precio ----------
+
+test('buscar_servicio: un servicio por tramos sale sin precio y con depende_del_valor', async () => {
+  const r = await buscar_servicio({ consulta: 'venta del carro' });
+  assert.equal(r.resultados[0].id, ids.venta);
+  assert.equal(r.resultados[0].precio, null);
+  assert.equal(r.resultados[0].depende_del_valor, true);
+  assert.equal(r.resultados[0].por_confirmar, false);
+  const c = await buscar_servicio({ consulta: 'legalizacion' });
+  assert.equal(c.resultados[0].precio, 1000);
+  assert.equal(c.resultados[0].depende_del_valor, false);
+});
+test('calcular_precio por tramos sin valor del bien: total null y falta valor_del_bien', async () => {
+  const r = await calcular_precio({ servicio_id: ids.venta });
+  assert.equal(r.total, null); assert.equal(r.falta, 'valor_del_bien'); assert.equal(r.por_confirmar, false);
+  const con = await calcular_precio({ servicio_id: ids.venta, valor_del_bien: 500000 });
+  assert.equal(con.total, 950); assert.equal(con.falta, null);
+});
+test('ver_tramite: un paso por tramos (sin valor) queda en faltan_precios y el total es null', async () => {
+  await pool.query(`INSERT INTO tramites (nombre, alias, pasos, preguntas_obligatorias, reglas) VALUES ('Venta con acto', ARRAY[]::text[], $1, ARRAY[]::text[], NULL)`,
+    [JSON.stringify([{ orden: 1, descripcion: 'Acto', servicio: 'Acto de Venta - Vehículo Liviano' }, { orden: 2, descripcion: 'Copia', servicio: 'Copia certificada' }])]);
+  const r = await ver_tramite({ nombre: 'Venta con acto' });
+  assert.equal(r.total, null);
+  assert.deepEqual(r.faltan_precios, ['Acto de Venta - Vehículo Liviano']);
+  assert.equal(r.pasos[0].precio, null);
+  assert.equal(r.pasos[0].depende_del_valor, true);
+  assert.equal(r.pasos[1].precio, 700);
 });

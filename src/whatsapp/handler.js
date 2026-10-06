@@ -10,7 +10,7 @@ const config = require('../config');
 const pool = require('../db/pool');
 // El agente (src/agent): responde los chats que engineFor marca como 'agent'. Su AI_DEFERRED es el
 // mismo valor que el del router, así que un solo chequeo sirve para los dos motores.
-const { respond: agentRespond } = require('../agent/agent');
+const { respond: agentRespond, runSerial } = require('../agent/agent');
 const { engineFor } = require('../agent/engine');
 const { notifyUrgentAfterHandoff } = require('../agent/tools/handoff');
 
@@ -73,7 +73,8 @@ function agentOpts(phone, media, sock, remoteJid) {
 }
 
 // `media`: los medios del lote (solo el agente los usa; el motor viejo recibe `savedMedia`).
-function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media = null) {
+// `cutoff`: corte del lote para el agente (ver inboundCutoff); con lotes unidos se queda el mayor.
+function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media = null, cutoff = null) {
   const backoffMs = getQuotaBackoffRemaining() || 30000;
   const delayMs = aiRetryDelayOverrideMs ?? backoffMs + 5000; // small safety margin past the backoff
 
@@ -83,9 +84,10 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
     existing.text = `${existing.text} ${text}`.trim();
     if (savedMedia) existing.savedMedia = savedMedia;
     if (media && media.length) existing.media = [...(existing.media || []), ...media];
+    if (cutoff != null) existing.cutoff = existing.cutoff == null ? cutoff : Math.max(existing.cutoff, cutoff);
     clearTimeout(existing.timer);
   }
-  const entry = existing || { text, savedMedia, media, remoteJid, sock, client, attempts: 0 };
+  const entry = existing || { text, savedMedia, media, remoteJid, sock, client, attempts: 0, cutoff };
 
   entry.timer = setTimeout(async () => {
     pendingAIRetries.delete(phone);
@@ -99,13 +101,13 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
       const syntheticMsg = { key: { remoteJid: entry.remoteJid } };
       const agent = engineFor(phone) === 'agent';
       const response = agent
-        ? await agentRespond(phone, entry.text, agentOpts(phone, entry.media, entry.sock, entry.remoteJid))
+        ? await agentRespond(phone, entry.text, { ...agentOpts(phone, entry.media, entry.sock, entry.remoteJid), cutoff: entry.cutoff ?? null })
         : await routeMessage(phone, entry.text, syntheticMsg, entry.savedMedia);
       if (response && response !== AI_DEFERRED) {
         // El agente ya entregó (deliver); el motor viejo se envía aquí.
         if (!agent) await sendResponse(entry.sock, entry.remoteJid, response, syntheticMsg, phone, entry.client);
       } else if (response === AI_DEFERRED && entry.attempts < MAX_AI_RETRY_ATTEMPTS) {
-        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client, entry.media);
+        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client, entry.media, entry.cutoff);
       } else if (response === AI_DEFERRED) {
         // Exhausted retries — graceful message instead of the robotic fallback
         await sendResponse(entry.sock, entry.remoteJid,
@@ -241,12 +243,16 @@ function getEnabledPhones() {
 
 // Cuando un chat vuelve al bot se olvida el traspaso del agente (wa_bot_state `handoff:<phone>`), para que
 // un "urgente" posterior no avise como si el chat siguiera pasado a una persona. Sin teléfono: todos.
-// En segundo plano: las funciones de estado son síncronas y un fallo aquí no debe frenar nada.
-function clearHandoffState(phone = null) {
+// En segundo plano: las funciones de estado son síncronas y un fallo aquí no debe frenar nada. Como el DELETE
+// puede llegar a la base después de un traspaso nuevo, solo borra los traspasos anteriores a `at` (la hora
+// en que se devolvió el chat): uno más reciente se conserva.
+function clearHandoffState(phone = null, at = new Date()) {
+  const ts = (at instanceof Date ? at : new Date(at)).toISOString();
+  const older = `COALESCE((value->>'at')::timestamptz, '-infinity'::timestamptz) < $1::timestamptz`;
   const q = phone
-    ? pool.query('DELETE FROM wa_bot_state WHERE key = $1', [`handoff:${phone}`])
-    : pool.query(`DELETE FROM wa_bot_state WHERE key LIKE 'handoff:%'`);
-  q.catch((err) => console.error(`[WA] Could not clear handoff state${phone ? ` for ${phone}` : ''}:`, err.message));
+    ? pool.query(`DELETE FROM wa_bot_state WHERE key = $2 AND ${older}`, [ts, `handoff:${phone}`])
+    : pool.query(`DELETE FROM wa_bot_state WHERE key LIKE 'handoff:%' AND ${older}`, [ts]);
+  q.catch((err) => console.error(`[WA] Could not clear handoff state${phone ? ` for ${phone}` : ''}:`, err.code || err.name || 'error'));
 }
 
 function setManualMode(phone, manual) {
@@ -259,7 +265,7 @@ function setManualMode(phone, manual) {
     manualPhones.add(clean);
   } else {
     manualPhones.delete(clean);
-    clearHandoffState(clean);
+    clearHandoffState(clean, new Date());
   }
   console.log(`[WA] Phone ${clean}: ${manual ? 'MANUAL (agent)' : 'BOT mode'}`);
   persist().catch(() => {});
@@ -276,7 +282,7 @@ function getManualPhones() {
 function clearManualPhones() {
   const count = manualPhones.size;
   manualPhones.clear();
-  clearHandoffState();
+  clearHandoffState(null, new Date());
   console.log(`[WA] Cleared ${count} manual phones — bot will respond to all chats`);
   persist().catch(() => {});
 }
@@ -343,11 +349,38 @@ async function sendResponse(sock, remoteJid, response, msg, phone, client) {
   }
 }
 
+// Solo pruebas: reemplaza transcribeAudio/analyzeDocument (y salta el chequeo de config.gemini.enabled).
+let mediaAnalysisOverride = null;
+function _setMediaAnalysis(fns) { mediaAnalysisOverride = fns || null; }
+
+// Corte del lote: id del último inbound guardado de este teléfono al cerrar el lote. Lo que se guarde después
+// es de otro lote y se responde en su propio turno (no entra al contexto de este). Sin tabla o sin filas: null.
+async function inboundCutoff(phone) {
+  try {
+    const { rows } = await pool.query(`SELECT max(id) AS id FROM messages WHERE phone = $1 AND direction = 'inbound'`, [phone]);
+    return rows[0]?.id ?? null;
+  } catch (err) {
+    console.error(`[WA] Could not read batch cutoff for ${phone}:`, err.code || err.name || 'error');
+    return null;
+  }
+}
+
 /**
  * Process a batch of messages from the same phone as one logical turn.
  * Merges text, collects all media, processes together.
+ * Chats del agente: el lote completo (análisis de medios, aviso de "urgente" y turno) corre dentro del candado
+ * del teléfono, en orden de llegada: un lote de texto no se responde antes que el lote de la foto que llegó
+ * primero. El corte se toma al cerrar el lote, antes de esperar el turno. El motor viejo no cambia.
  */
 async function processBatch(phone, batch, sock) {
+  if (engineFor(phone) !== 'agent') return processBatchNow(phone, batch, sock, { agent: false });
+  // La consulta del corte sale ahora (al cerrar el lote) pero la cola se toma de inmediato, en el mismo tick:
+  // así dos lotes seguidos quedan en orden de llegada aunque sus consultas terminen en otro orden.
+  const cutoff = inboundCutoff(phone);
+  return runSerial(phone, async () => processBatchNow(phone, batch, sock, { agent: true, cutoff: await cutoff }));
+}
+
+async function processBatchNow(phone, batch, sock, { agent, cutoff = null }) {
   // Merge all text parts
   const textParts = batch.map(b => b.text).filter(Boolean);
   let combinedText = textParts.join(' ').trim();
@@ -364,9 +397,9 @@ async function processBatch(phone, batch, sock) {
   }
 
   // Run Gemini analysis on ALL media in parallel now that the buffer window is closed
-  if (config.gemini.enabled && allMedia.length > 0) {
+  if ((mediaAnalysisOverride || config.gemini.enabled) && allMedia.length > 0) {
     try {
-      const { transcribeAudio, analyzeDocument } = require('../llm/mediaAnalysis');
+      const { transcribeAudio, analyzeDocument } = mediaAnalysisOverride || require('../llm/mediaAnalysis');
       await Promise.all(allMedia.map(async (media) => {
         try {
           if (media.media_type === 'audio') {
@@ -414,7 +447,7 @@ async function processBatch(phone, batch, sock) {
     try {
       await notifyUrgentAfterHandoff(phone, combinedText);
     } catch (err) {
-      console.error(`[WA] Urgent-after-handoff notice failed for ${phone}:`, err.message);
+      console.error(`[WA] Urgent-after-handoff notice failed for ${phone}:`, err.code || err.name || 'error');
     }
   }
 
@@ -428,9 +461,10 @@ async function processBatch(phone, batch, sock) {
   // respond envía y guarda la respuesta vía deliver y liga las herramientas del turno al mensaje guardado.
   // Dentro del candado del teléfono respond vuelve a preguntar (shouldRun) si el chat sigue siendo del bot:
   // un lote encolado mientras el turno anterior lo pasó a una persona no corre el modelo ni manda nada.
-  if (engineFor(phone) === 'agent') {
-    const response = await agentRespond(phone, combinedText, agentOpts(phone, allMedia, sock, remoteJid));
-    if (response === AI_DEFERRED) scheduleAIRetry(phone, combinedText, null, remoteJid, sock, null, allMedia);
+  // Ya estamos dentro del candado del teléfono (processBatch): respond no vuelve a encolar.
+  if (agent) {
+    const response = await agentRespond(phone, combinedText, { ...agentOpts(phone, allMedia, sock, remoteJid), alreadyLocked: true, cutoff });
+    if (response === AI_DEFERRED) scheduleAIRetry(phone, combinedText, null, remoteJid, sock, null, allMedia, cutoff);
     return;
   }
 
@@ -725,6 +759,8 @@ module.exports = {
   bufferMessage,
   processBatch, // exportado para las pruebas (bufferMessage espera 3 s)
   _setAIRetryDelayMs, // solo pruebas
+  _setMediaAnalysis, // solo pruebas
+  clearHandoffState,
   handleIncomingMessage,
   handleHistoryMessage,
   setBotActive, isBotActive,

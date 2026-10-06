@@ -65,14 +65,22 @@ async function clientSheet(client) {
   return lines.join('\n');
 }
 
-async function recentMessages(phone) {
-  const rows = await Message.findRecentByPhone(phone, HISTORY_LIMIT);
+// cutoff: id del último inbound que forma parte del lote (lo fija el handler al cerrar el lote). Los inbound
+// guardados después son de un lote siguiente y se responden en su propio turno, no en este. Los outbound
+// no se filtran: la respuesta del turno anterior, entregada mientras este esperaba su turno, sí es contexto.
+async function recentMessages(phone, cutoff = null) {
+  const rows = cutoff == null
+    ? await Message.findRecentByPhone(phone, HISTORY_LIMIT)
+    : (await pool.query(
+      `SELECT direction, content FROM messages
+       WHERE phone = $1 AND (direction <> 'inbound' OR id <= $2)
+       ORDER BY created_at DESC, id DESC LIMIT $3`, [phone, Number(cutoff), HISTORY_LIMIT])).rows.reverse();
   return rows
     .filter((m) => m.content && String(m.content).trim())
     .map((m) => ({ role: m.direction === 'outbound' ? 'assistant' : 'user', text: String(m.content) }));
 }
 
-async function buildContext({ phone, client, now = new Date() }) {
+async function buildContext({ phone, client, now = new Date(), cutoff = null }) {
   const info = await getBusinessInfo();
   const zona = info.horario?.zona || ZONA;
   const abierto = isOpen(now, info.horario);
@@ -90,7 +98,7 @@ async function buildContext({ phone, client, now = new Date() }) {
     '## Ficha del cliente',
     await clientSheet(client),
   ].join('\n\n');
-  const messages = await recentMessages(phone);
+  const messages = await recentMessages(phone, cutoff);
   return { system, messages };
 }
 

@@ -13,7 +13,7 @@ test.beforeEach(async () => {
   await resetDb();
   await runSqlFile('migrations/20260926_user_management.sql');
   await pool.query(`DROP TABLE IF EXISTS notifications, cases, messages, client_media, legal_profiles, clients CASCADE`);
-  await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT, user_id INT, email VARCHAR(255), address TEXT, notes TEXT, source VARCHAR(20) DEFAULT 'whatsapp', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await pool.query(`CREATE TABLE client_media (id SERIAL PRIMARY KEY, phone VARCHAR(20) NOT NULL, client_id INT, wa_message_id VARCHAR(255), media_type VARCHAR(20) NOT NULL, mime_type VARCHAR(100), file_path TEXT NOT NULL)`);
   await pool.query(`CREATE TABLE messages (id SERIAL PRIMARY KEY, wa_message_id VARCHAR(255), phone VARCHAR(20), content TEXT)`);
@@ -145,4 +145,32 @@ test('estado_solicitud devuelve las del cliente, la más nueva primero', async (
   assert.equal(r.solicitudes.length, 5);
   assert.deepEqual(r.solicitudes.map((s) => s.caso), ['C6', 'C5', 'C4', 'C3', 'C2']);
   assert.equal(r.solicitudes[0].estado, 'new');
+});
+
+// ---------- cliente no registrado: se crea por teléfono ----------
+
+test('crear_solicitud sin cliente registrado lo crea por teléfono y deja la solicitud sin asignar (avisa a los admins)', async () => {
+  const NEW = '18095550202';
+  const c = { phone: NEW, client: null, botUserId: adminId, now: new Date() };
+  const r = await crear_solicitud({ servicio: 'Poder' }, c);
+  assert.match(r.caso, /^CASO-/);
+  assert.equal(r.asignado_a, null);
+  const row = (await pool.query('SELECT * FROM clients WHERE phone=$1', [NEW])).rows[0];
+  assert.ok(row, 'se creó el cliente');
+  assert.equal(row.name, NEW); assert.equal(row.source, 'whatsapp');
+  assert.equal(c.client.id, row.id);
+  const caso = (await pool.query('SELECT * FROM cases WHERE case_number=$1', [r.caso])).rows[0];
+  assert.equal(caso.client_id, row.id); assert.equal(caso.user_id, null);
+  assert.deepEqual((await pool.query('SELECT user_id FROM notifications')).rows.map((x) => x.user_id), [adminId]);
+});
+
+test('guardar_datos_cliente sin cliente registrado lo crea y el nombre dado reemplaza al teléfono', async () => {
+  const NEW = '18095550203';
+  const c = { phone: NEW, client: null, botUserId: adminId, now: new Date() };
+  const r = await guardar_datos_cliente({ campos: { nombre: 'Luis Pérez', cedula: '001-0000000-1' } }, c);
+  assert.deepEqual(r.guardado, ['NOMBRE', 'CEDULA']);
+  const row = (await pool.query('SELECT * FROM clients WHERE phone=$1', [NEW])).rows[0];
+  assert.ok(row); assert.equal(row.name, 'Luis Pérez');
+  assert.equal(c.client.id, row.id); assert.equal(c.client.name, 'Luis Pérez');
+  assert.equal((await legalProfile.get(row.id)).NOMBRE, 'Luis Pérez');
 });

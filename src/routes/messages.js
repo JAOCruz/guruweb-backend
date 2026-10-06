@@ -131,7 +131,13 @@ router.get('/phone/:phone', async (req, res) => {
       limit: parseInt(limit, 10) || 100,
       offset: parseInt(offset, 10) || 0,
     });
-    await attachTools(messages);
+    // Las herramientas son un extra: si bot_tool_log no existe (migración sin correr) el chat se lista igual.
+    try {
+      await attachTools(messages);
+    } catch (err) {
+      console.error('List messages: could not attach bot tools:', err.code || err.name || 'error');
+      for (const m of messages) if (m.direction === 'outbound') m.tools = [];
+    }
     res.json({ messages });
   } catch (err) {
     console.error('List messages by phone error:', err);

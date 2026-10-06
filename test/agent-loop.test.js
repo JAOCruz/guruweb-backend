@@ -500,3 +500,13 @@ test('deliver recibe handoff=true solo cuando ese turno pasó el chat a una pers
   await respond(PHONE, 'otra cosa', { provider: failing(null), deliver });
   assert.deepEqual(infos.map((i) => i.handoff), [false, true, true]);
 });
+
+// ---------- revisión final ----------
+
+test('respond con cutoff: un inbound guardado después del corte no entra al contexto del turno', async () => {
+  const id = await save('inbound', 'hola');
+  await save('inbound', 'otro mensaje que llegó después');
+  const p = createFakeProvider([{ text: 'ok' }]);
+  assert.equal(await respond(PHONE, 'hola', { provider: p, cutoff: id }), 'ok');
+  assert.deepEqual(p.calls[0].messages, [{ role: 'user', text: 'hola' }]);
+});

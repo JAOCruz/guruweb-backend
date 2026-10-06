@@ -1,14 +1,16 @@
 const pool = require('../../db/pool');
 const { fold } = require('../text');
 const { getBusinessInfo, isOpen } = require('../businessInfo');
-const { assigneeOrAdmins, notifyUsers } = require('./notify');
+const { assigneeOrAdmins, activeAdminIds, notifyUsers } = require('./notify');
 
 const keyOf = (phone) => `handoff:${phone}`;
 const isUrgent = (text) => /\burgente\b/.test(fold(text));
 
+// Normal: el asignado (o, si no hay, los admins). Urgente: el asignado y además cada admin activo.
 async function sendNotice({ phone, client, urgente, motivo }) {
   const nombre = client?.name || phone;
-  const { recipients } = await assigneeOrAdmins(client?.assigned_to);
+  let { recipients } = await assigneeOrAdmins(client?.assigned_to);
+  if (urgente) recipients = [...new Set([...recipients, ...(await activeAdminIds())])];
   await notifyUsers(recipients, {
     type: 'handoff',
     title: `${urgente ? '🚨 URGENTE ' : ''}🙋 El bot pasó un chat: ${nombre}`,
@@ -34,17 +36,20 @@ async function pasar_a_humano(args, ctx) {
 }
 
 // Chat ya en manual: si el cliente escribe "urgente" fuera de horario, avisa una sola vez.
+// El "una sola vez" lo garantiza la base: un UPDATE atómico reclama el aviso y solo quien lo reclamó avisa
+// (dos lotes a la vez no avisan dos veces).
 async function notifyUrgentAfterHandoff(phone, text, now = new Date()) {
-  const { rows } = await pool.query('SELECT value FROM wa_bot_state WHERE key = $1', [keyOf(phone)]);
-  const state = rows[0]?.value;
-  if (!state || state.urgente_avisado || !isUrgent(text)) return false;
+  if (!isUrgent(text)) return false;
   const info = await getBusinessInfo();
   if (isOpen(now, info.horario)) return false;
+  const { rows } = await pool.query(
+    `UPDATE wa_bot_state SET value = jsonb_set(value, '{urgente_avisado}', 'true'), updated_at = NOW()
+     WHERE key = $1 AND COALESCE((value->>'urgente_avisado')::boolean, false) = false
+     RETURNING value`, [keyOf(phone)]);
+  if (!rows.length) return false; // sin traspaso del bot, o ya avisado
+  const state = rows[0].value || {};
   const c = await pool.query('SELECT * FROM clients WHERE phone = $1', [phone]);
   await sendNotice({ phone, client: c.rows[0] || null, urgente: true, motivo: state.motivo });
-  await pool.query(
-    `UPDATE wa_bot_state SET value = $2, updated_at = NOW() WHERE key = $1`,
-    [keyOf(phone), JSON.stringify({ ...state, urgente_avisado: true })]);
   return true;
 }
 

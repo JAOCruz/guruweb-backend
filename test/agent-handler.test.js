@@ -256,7 +256,7 @@ test('la respuesta guardada lleva el cliente aunque se haya registrado durante e
 // ---------- estado del traspaso al devolver el chat al bot ----------
 
 test('al devolver un chat al bot se borra el estado del traspaso', async () => {
-  const put = (phone) => pool.query(`INSERT INTO wa_bot_state (key, value, updated_at) VALUES ($1, '{"at":"x","motivo":"m","urgente_avisado":false}', NOW())`, [`handoff:${phone}`]);
+  const put = (phone) => pool.query(`INSERT INTO wa_bot_state (key, value, updated_at) VALUES ($1, '{"at":"2026-10-05T15:00:00.000Z","motivo":"m","urgente_avisado":false}', NOW())`, [`handoff:${phone}`]);
   await put(AGENT);
   handler.setManualMode(AGENT, true);
   handler.setManualMode(AGENT, false);
@@ -304,4 +304,86 @@ test('GET /api/messages/phone/:phone trae las herramientas de cada respuesta del
   assert.deepEqual(byId[out2].tools, []);
   assert.equal('tools' in byId[inId], false);
   assert.equal(byId[inId].content, 'cuanto es un poder');
+});
+
+// ---------- revisión final ----------
+
+test('un lote con foto (análisis lento) y luego uno de texto del mismo teléfono: se responden en orden y el texto ve el análisis', async () => {
+  let release;
+  handler._setMediaAnalysis({
+    analyzeDocument: () => new Promise((r) => { release = () => r('Cédula de Ana López'); }),
+    transcribeAudio: async () => null,
+  });
+  try {
+    const p = createFakeProvider([
+      (messages) => ({ text: `Foto: ${messages[messages.length - 1].text}` }),
+      (messages) => ({ text: `Texto: ${messages.map((m) => m.text).join(' | ')}` }),
+    ]);
+    setFakeProvider(p);
+    await pool.query(`INSERT INTO messages (phone, client_id, direction, content, wa_message_id) VALUES ($1,$2,'inbound','[📎 image]','img-1')`, [AGENT, clientIds.agent]);
+    const media = { id: 7, media_type: 'image', mime_type: 'image/jpeg', file_path: '/tmp/x.jpg', wa_message_id: 'img-1' };
+    const a = handler.processBatch(AGENT, batch(AGENT, '', true, media), sock);
+    await settle(30);
+    // El siguiente lote llega (y se guarda) mientras la foto todavía se analiza.
+    await inbound(AGENT, 'y cuanto cuesta');
+    const b = handler.processBatch(AGENT, batch(AGENT, 'y cuanto cuesta'), sock);
+    await settle(100);
+    assert.deepEqual(sent, [], 'nada se responde hasta que termine el lote de la foto');
+    release();
+    await Promise.all([a, b]);
+    assert.equal(sent.length, 2);
+    assert.match(sent[0].text, /^Foto: .*Cédula de Ana López/);
+    assert.match(sent[1].text, /^Texto: /);
+    assert.match(sent[1].text, /Cédula de Ana López/, 'el turno del texto ve el análisis de la foto');
+    assert.match(sent[1].text, /y cuanto cuesta/);
+    // El inbound que llegó después del cierre del lote de la foto no entra al turno de la foto.
+    assert.ok(!p.calls[0].messages.some((m) => m.text.includes('y cuanto cuesta')), 'el lote de la foto no responde el texto siguiente');
+    // El turno del texto ve la respuesta de la foto y termina con el texto actual (una sola respuesta por lote).
+    const msgs = p.calls[1].messages;
+    assert.equal(msgs[msgs.length - 1].role, 'user');
+    assert.match(msgs[msgs.length - 1].text, /y cuanto cuesta/);
+    assert.ok(msgs.some((m) => m.role === 'assistant' && /^Foto: /.test(m.text)));
+    assert.equal((await outbound(AGENT)).length, 2);
+  } finally {
+    handler._setMediaAnalysis(null);
+  }
+});
+
+test('GET /api/messages/phone/:phone responde 200 aunque no exista bot_tool_log', async () => {
+  await inbound(AGENT, 'hola');
+  await pool.query(`INSERT INTO messages (phone, client_id, direction, content) VALUES ($1,$2,'outbound','Hola 🦉')`, [AGENT, clientIds.agent]);
+  await pool.query('DROP TABLE bot_tool_log');
+  const res = await originalFetch(`${base}/api/messages/phone/${AGENT}`, { headers: { Authorization: `Bearer ${tok}` } });
+  const body = await res.text();
+  assert.equal(res.status, 200, body);
+  const { messages } = JSON.parse(body);
+  assert.equal(messages.length, 2);
+  const out = messages.find((m) => m.direction === 'outbound');
+  assert.deepEqual(out.tools, []);
+  assert.equal(messages.find((m) => m.direction === 'inbound').tools, undefined);
+});
+
+test('clearHandoffState no borra un traspaso más nuevo que el momento de devolver el chat', async () => {
+  const put = (at) => pool.query(
+    `INSERT INTO wa_bot_state (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [`handoff:${AGENT}`, JSON.stringify({ at, motivo: 'm', urgente_avisado: false })]);
+  const t = new Date();
+  const fresh = new Date(t.getTime() + 1000).toISOString();
+  const old = new Date(t.getTime() - 1000).toISOString();
+  await put(fresh);
+  handler.clearHandoffState(AGENT, t);
+  await settle();
+  assert.deepEqual(await handoffRows(), [`handoff:${AGENT}`], 'un traspaso posterior al clic se conserva');
+  await put(old);
+  handler.clearHandoffState(AGENT, t);
+  await settle();
+  assert.deepEqual(await handoffRows(), []);
+  await put(fresh);
+  handler.clearHandoffState(null, t);
+  await settle();
+  assert.deepEqual(await handoffRows(), [`handoff:${AGENT}`]);
+  await put(old);
+  handler.clearHandoffState(null, t);
+  await settle();
+  assert.deepEqual(await handoffRows(), []);
 });

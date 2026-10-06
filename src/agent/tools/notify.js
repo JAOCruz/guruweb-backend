@@ -21,7 +21,7 @@ async function notifyUsers(userIds, { type, title, message, link, metadata }) {
     try {
       await Notification.create({ userId, type, title, message, link, metadata: metadata || {} });
     } catch (err) {
-      console.error('[Agent] notificación falló:', err.message);
+      console.error('[Agent] notificación falló:', err.code || err.name || 'error');
     }
   }
 }

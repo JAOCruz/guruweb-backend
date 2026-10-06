@@ -14,13 +14,19 @@ async function ver_tramite(args = {}, ctx) {
   const pasos = [];
   for (const p of t.pasos || []) {
     let precio = null;
+    let dependeDelValor = false;
     if (p.servicio) {
       const r = await pool.query('SELECT * FROM service_catalog WHERE name = $1 AND active = true LIMIT 1', [p.servicio]);
-      if (r.rows.length) precio = calculatePrice(r.rows[0]).total;
+      if (r.rows.length) {
+        // Sin valor del bien un paso por tramos no tiene precio: queda en faltan_precios.
+        const calc = calculatePrice(r.rows[0]);
+        precio = calc.total;
+        dependeDelValor = calc.dependeDelValor;
+      }
       if (precio === null) faltan.push(p.servicio);
       else total += precio;
     }
-    pasos.push({ orden: p.orden, descripcion: p.descripcion, servicio: p.servicio || null, precio, preguntas: p.preguntas || [] });
+    pasos.push({ orden: p.orden, descripcion: p.descripcion, servicio: p.servicio || null, precio, depende_del_valor: dependeDelValor, preguntas: p.preguntas || [] });
   }
   return {
     nombre: t.nombre,

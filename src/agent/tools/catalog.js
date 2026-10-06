@@ -61,7 +61,8 @@ async function buscar_servicio(args = {}, ctx) {
         id: s.id,
         nombre: s.name,
         categoria: s.categoria || null,
-        precio: price.total,
+        precio: price.total, // null si depende del valor del bien: use calcular_precio con valor_del_bien
+        depende_del_valor: price.dependeDelValor,
         rango: price.rango,
         por_confirmar: price.porConfirmar,
         incluye: s.incluye || null,
@@ -86,7 +87,10 @@ async function calcular_precio(args = {}, ctx) {
     quantity: args.cantidad ?? 1,
     includeNotarization: args.con_notarizacion !== false,
   });
-  return { servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo };
+  return {
+    servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
+    falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
+  };
 }
 
 module.exports = { buscar_servicio, calcular_precio };

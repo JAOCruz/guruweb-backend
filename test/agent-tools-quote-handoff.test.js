@@ -23,7 +23,7 @@ test.beforeEach(async () => {
     CHECK (status IN ('draft','pending_approval','approved','sent','rejected','paid')), client_id INT, case_id INT, client_name TEXT, client_phone TEXT,
     items JSONB, notes TEXT, subtotal NUMERIC, itbis NUMERIC, total NUMERIC, created_by INT, source TEXT, discount_type TEXT, discount_value NUMERIC,
     discount_code TEXT, discount_amount NUMERIC, discount_reason TEXT, approved_by INT, approved_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW(), created_at TIMESTAMPTZ DEFAULT NOW())`);
-  await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT)`);
+  await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT, user_id INT, email VARCHAR(255), address TEXT, notes TEXT, source VARCHAR(20) DEFAULT 'whatsapp')`);
   await pool.query(`CREATE TABLE notifications (id SERIAL PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, title VARCHAR(255) NOT NULL, message TEXT NOT NULL, link TEXT, read BOOLEAN DEFAULT false, read_at TIMESTAMPTZ, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query('CREATE TABLE wa_bot_state (key TEXT PRIMARY KEY, value JSONB, updated_at TIMESTAMPTZ)');
   await runSqlFile('migrations/20261005_bot_agent.sql');
@@ -140,4 +140,53 @@ test('si pasar_a_humano ya avisó urgente, notifyUrgentAfterHandoff no repite', 
   assert.equal(await urgent(), 1);
   assert.equal(await notifyUrgentAfterHandoff(PHONE, 'urgente', CLOSED), false);
   assert.equal(await urgent(), 1);
+});
+
+// ---------- revisión final ----------
+
+test('preparar_cotizacion rechaza una partida por tramos sin valor del bien y dice que falta el valor', async () => {
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.acto }, { servicio_id: ids.copia }] }, ctx);
+  assert.equal(r.error, 'falta el valor del bien');
+  assert.deepEqual(r.falta_valor, ['Acto de Venta']);
+  assert.equal((await pool.query('SELECT count(*)::int c FROM invoices')).rows[0].c, 0);
+  // Con valor sí sale.
+  const ok = await preparar_cotizacion({ partidas: [{ servicio_id: ids.acto, valor_del_bien: 500000 }, { servicio_id: ids.copia }] }, ctx);
+  assert.equal(ok.total, 1650);
+});
+
+test('preparar_cotizacion sin cliente registrado lo crea por teléfono', async () => {
+  const NEW = '18095550222';
+  const c = { phone: NEW, client: null, botUserId, now: OPEN };
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.copia }] }, c);
+  assert.equal(r.total, 700);
+  const row = (await pool.query('SELECT * FROM clients WHERE phone=$1', [NEW])).rows[0];
+  assert.ok(row); assert.equal(row.name, NEW); assert.equal(row.source, 'whatsapp');
+  assert.equal(c.client.id, row.id);
+  const inv = (await pool.query('SELECT * FROM invoices')).rows[0];
+  assert.equal(inv.client_id, row.id);
+});
+
+test('un aviso urgente llega al asignado y también a cada admin activo', async () => {
+  await pool.query('UPDATE clients SET assigned_to=$1', [digId]);
+  ctx.client.assigned_to = digId;
+  await pasar_a_humano({ motivo: 'x' }, { ...ctx, now: CLOSED, lastText: 'es urgente' });
+  const ids1 = (await notifs('handoff')).map((x) => x.user_id).sort((a, b) => a - b);
+  assert.deepEqual(ids1, [adminId, digId].sort((a, b) => a - b));
+  // Después del traspaso (no urgente: solo al asignado), un "urgente" avisa a los dos.
+  await pool.query('DELETE FROM notifications');
+  await pasar_a_humano({ motivo: 'x' }, { ...ctx, now: CLOSED, lastText: 'hola' });
+  assert.deepEqual((await notifs('handoff')).map((x) => x.user_id), [digId]);
+  assert.equal(await notifyUrgentAfterHandoff(PHONE, 'urgente', CLOSED), true);
+  const urgent = (await notifs('handoff')).filter((n) => n.title.startsWith('🚨 URGENTE ')).map((x) => x.user_id).sort((a, b) => a - b);
+  assert.deepEqual(urgent, [adminId, digId].sort((a, b) => a - b));
+});
+
+test('dos "urgente" a la vez avisan una sola vez', async () => {
+  await pasar_a_humano({ motivo: 'x' }, { ...ctx, now: CLOSED, lastText: 'hola' });
+  const before = (await notifs('handoff')).length;
+  const r = await Promise.all([notifyUrgentAfterHandoff(PHONE, 'urgente', CLOSED), notifyUrgentAfterHandoff(PHONE, 'urgente', CLOSED)]);
+  assert.deepEqual(r.sort(), [false, true]);
+  assert.equal((await notifs('handoff')).length, before + 1);
+  const st = (await pool.query(`SELECT value FROM wa_bot_state WHERE key=$1`, [`handoff:${PHONE}`])).rows[0].value;
+  assert.equal(st.urgente_avisado, true); assert.equal(st.motivo, 'x');
 });

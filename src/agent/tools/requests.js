@@ -2,12 +2,13 @@ const pool = require('../../db/pool');
 const Case = require('../../models/Case');
 const { assigneeOrAdmins, notifyUsers } = require('./notify');
 const { generateCaseNumber } = require('../../conversation/flows/intake');
+const { ensureClient } = require('./client');
 
 async function crear_solicitud(args, ctx) {
   const servicio = args && typeof args.servicio === 'string' ? args.servicio.trim() : '';
   if (!servicio) return { error: 'servicio requerido' };
   const detalles = args.detalles == null ? null : String(args.detalles);
-  const client = ctx.client;
+  const client = await ensureClient(ctx);
   if (!client?.id) return { error: 'cliente no encontrado' };
   const clientName = client.name || ctx.phone;
 

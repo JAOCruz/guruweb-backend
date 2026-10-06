@@ -6,6 +6,12 @@ const { guardar_datos_cliente, leer_documento } = require('./client');
 const { crear_solicitud, estado_solicitud } = require('./requests');
 const { preparar_cotizacion } = require('./quote');
 const { pasar_a_humano } = require('./handoff');
+const { withTimeout } = require('../provider');
+
+// Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
+const TOOL_TIMEOUT_MS = 20000;
+let toolTimeoutOverride = null; // solo pruebas
+function _setToolTimeoutMs(ms) { toolTimeoutOverride = typeof ms === 'number' && ms > 0 ? ms : null; }
 
 // Los parámetros van en JSON Schema con tipos en minúsculas; cada adaptador los convierte a su formato.
 const TOOLS = [
@@ -14,7 +20,8 @@ const TOOLS = [
     description: 'Busca en el catálogo de Gurú por nombre o por como lo pide la gente ("traspaso", "venta del carro", "poder", ' +
       '"declaración de soltería"). Úsela apenas el cliente mencione un documento, certificación o servicio, para saber si lo hacemos, ' +
       'su id, qué incluye, sus reglas, requisitos y si lleva notarización. Devuelve hasta 5 resultados; el precio que trae es solo ' +
-      'de referencia: para decirle un monto al cliente use calcular_precio.',
+      'de referencia: para decirle un monto al cliente use calcular_precio. Si depende_del_valor es true, el precio viene nulo: ' +
+      'pregunte el valor del bien y páselo a calcular_precio.',
     parameters: {
       type: 'object',
       properties: {
@@ -27,8 +34,9 @@ const TOOLS = [
     name: 'calcular_precio',
     description: 'Calcula el precio real de un servicio con el catálogo. Úsela antes de dar cualquier precio: nunca escriba un monto ' +
       'que no haya salido de esta herramienta. Si el servicio depende del valor del bien (actos de venta, traspasos), pregunte el valor ' +
-      'primero y páselo en valor_del_bien. Si devuelve por_confirmar o total nulo, diga "se lo confirmo" y cree la solicitud; si ' +
-      'devuelve rango, dé el rango y diga que el digitador lo confirma.',
+      'primero y páselo en valor_del_bien; si devuelve falta: "valor_del_bien", pregúntelo y vuelva a llamar. Si devuelve ' +
+      'por_confirmar o total nulo, diga "se lo confirmo" y cree la solicitud; si devuelve rango, dé el rango y diga que el ' +
+      'digitador lo confirma.',
     parameters: {
       type: 'object',
       properties: {
@@ -112,7 +120,7 @@ const TOOLS = [
     name: 'preparar_cotizacion',
     description: 'Crea la cotización formal con los precios del catálogo; queda por aprobar por el admin, que la envía al cliente. ' +
       'Úsela solo después de que el cliente esté de acuerdo con el servicio y el precio calculado, y de tener los datos necesarios. ' +
-      'No la use con servicios por confirmar. Después de usarla, dígale al cliente que un miembro del equipo la revisa y se la ' +
+      'No la use con servicios por confirmar; las partidas que dependen del valor del bien llevan valor_del_bien. Después de usarla, dígale al cliente que un miembro del equipo la revisa y se la ' +
       'confirma en horario de atención, sin prometer un tiempo.',
     parameters: {
       type: 'object',
@@ -178,7 +186,7 @@ async function runTool(name, args, ctx = {}) {
       result = { error: `faltan datos: ${faltan.join(', ')}` };
     } else {
       try {
-        result = await HANDLERS[name](safeArgs, ctx);
+        result = await withTimeout(Promise.resolve(HANDLERS[name](safeArgs, ctx)), toolTimeoutOverride || TOOL_TIMEOUT_MS);
         if (!result || typeof result !== 'object') result = { error: 'no se pudo completar' };
       } catch (err) {
         console.error(`[Agent] ${name} falló:`, err.code || err.name || 'error');
@@ -200,4 +208,4 @@ async function runTool(name, args, ctx = {}) {
   return result;
 }
 
-module.exports = { TOOLS, runTool };
+module.exports = { TOOLS, runTool, _setToolTimeoutMs };

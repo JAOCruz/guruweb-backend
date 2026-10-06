@@ -8,10 +8,30 @@ function _setAnalyzer(fn) { analyzer = fn; }
 
 const looksLikePhone = (n) => !n || /^[\d\s+()-]+$/.test(String(n).trim());
 
+// El cliente del chat; si todavía no está registrado se crea por teléfono (nombre = el número, hasta que
+// lo dé) y queda en ctx.client. Sin asignado: las solicitudes avisan a los admins (asignación: fase 2).
+async function ensureClient(ctx) {
+  if (ctx.client?.id) return ctx.client;
+  const phone = String(ctx.phone || '').trim();
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return null;
+  let client = await Client.findByPhone(phone);
+  if (!client) {
+    try {
+      client = await Client.create({ name: digits, phone, userId: ctx.botUserId || null, source: 'whatsapp' });
+    } catch (err) {
+      if (err.code !== '23505') throw err; // otro turno lo creó al mismo tiempo
+      client = await Client.findByPhone(phone);
+    }
+  }
+  ctx.client = client;
+  return client;
+}
+
 async function guardar_datos_cliente(args, ctx) {
   const campos = args && args.campos;
   if (!campos || typeof campos !== 'object' || Array.isArray(campos)) return { error: 'campos inválidos' };
-  const clientId = ctx.client?.id;
+  const clientId = (await ensureClient(ctx))?.id;
   if (!clientId) return { error: 'cliente no encontrado' };
 
   const current = await legalProfile.get(clientId);
@@ -63,10 +83,10 @@ async function leer_documento(args, ctx) {
   const analyze = analyzer || require('../../llm/mediaAnalysis').analyzeDocument;
   let text = null;
   try { text = await analyze(media.file_path, media.mime_type, media.media_type); } catch (err) {
-    console.error('[Agent] leer_documento falló:', err.message);
+    console.error('[Agent] leer_documento falló:', err.code || err.name || 'error');
   }
   if (!text) return { error: 'no se pudo leer el documento' };
   return { tipo: media.media_type, datos_extraidos: text };
 }
 
-module.exports = { guardar_datos_cliente, leer_documento, _setAnalyzer };
+module.exports = { guardar_datos_cliente, leer_documento, ensureClient, _setAnalyzer };

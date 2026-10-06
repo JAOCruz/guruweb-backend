@@ -83,6 +83,7 @@ router.post('/calculate', async (req, res) => {
       total: calc.total,
       porConfirmar: calc.porConfirmar,
       rango: calc.rango,
+      falta: calc.falta, // 'valor_del_bien' si el servicio va por tramos y no se mandó assetValue
     });
   } catch (err) {
     console.error('Calculate price error:', err);
