@@ -98,3 +98,31 @@ test('ver_tramite desconocido devuelve los disponibles', async () => {
   assert.equal(r.error, 'trámite no encontrado');
   assert.ok(r.disponibles.includes('Traspaso de vehículo'));
 });
+
+async function addVentas() {
+  for (const [n, al] of [['Acto de Venta - Moto', ['motor']], ['Acto de Venta - Inmueble', ['casa']], ['Acto de Venta - Camión', ['camion']], ['Acto de Venta - Vehículo Pesado', ['vehiculo pesado', 'carro']]]) {
+    await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, alias) VALUES ($1,1,100,$2)`, [n, al]);
+  }
+}
+test('consulta natural sin alias exacto: gana el que tiene "carro"; "del"/"venta" solos no deciden', async () => {
+  await addVentas();
+  await pool.query(`UPDATE service_catalog SET alias='{}' WHERE id=$1`, [ids.venta]);
+  await pool.query(`UPDATE service_catalog SET alias=ARRAY['carro'] WHERE id=$1`, [ids.venta]);
+  const r = await buscar_servicio({ consulta: 'quiero la venta del carro' });
+  assert.equal(r.resultados[0].nombre, 'Acto de Venta - Vehículo Liviano');
+  const plural = await buscar_servicio({ consulta: 'ventas de carros' });
+  assert.ok(['Acto de Venta - Vehículo Liviano', 'Acto de Venta - Vehículo Pesado'].includes(plural.resultados[0].nombre));
+  const solo = await buscar_servicio({ consulta: 'del' });
+  assert.deepEqual(solo, { resultados: [] });
+});
+test('una consulta solo de stopwords devuelve lista vacía', async () => {
+  assert.deepEqual(await buscar_servicio({ consulta: 'quiero la del por' }), { resultados: [] });
+});
+test('empates: el mismo orden en cada llamada (por nombre y luego id)', async () => {
+  await addVentas();
+  const a = await buscar_servicio({ consulta: 'acto de venta' });
+  const b = await buscar_servicio({ consulta: 'acto de venta' });
+  assert.deepEqual(a.resultados.map((x) => x.id), b.resultados.map((x) => x.id));
+  const tied = a.resultados.map((x) => x.id);
+  assert.deepEqual(tied, [...tied].sort((x, y) => x - y));
+});
