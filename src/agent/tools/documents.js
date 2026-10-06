@@ -110,19 +110,22 @@ async function ver_modelo(args, ctx) {
   };
 }
 
-// La cotización a la que se liga el documento: la indicada si es del cliente; si no, la más reciente del cliente
-// que esté viva (por aprobar, aprobada, enviada o pagada: "Aprobar y enviar" la deja en sent, y el pago puede
-// confirmarse antes de que el bot termine el documento); si no hay, ninguna. Nunca la de otro cliente.
-const LINKABLE_STATUSES = ['pending_approval', 'approved', 'sent', 'paid'];
+// La cotización a la que se liga el documento. Explícita (invoice_id): debe ser del cliente y estar viva (por
+// aprobar, aprobada, enviada o pagada; borrador/rechazada se tratan como no indicada). Sin ella: la más reciente
+// del cliente por aprobar, aprobada o enviada y de las últimas 48 h; NUNCA una pagada (podría ser un pago viejo y
+// el documento saldría al aprobar sin un pago nuevo). Si no hay, ninguna. Nunca la de otro cliente.
+const EXPLICIT_STATUSES = ['pending_approval', 'approved', 'sent', 'paid'];
+const FALLBACK_STATUSES = ['pending_approval', 'approved', 'sent'];
 async function invoiceFor(clientId, given) {
   const id = Number(given);
   if (Number.isInteger(id) && id > 0) {
-    const { rows } = await pool.query('SELECT id FROM invoices WHERE id = $1 AND client_id = $2', [id, clientId]);
+    const { rows } = await pool.query(
+      'SELECT id FROM invoices WHERE id = $1 AND client_id = $2 AND status = ANY($3::text[])', [id, clientId, EXPLICIT_STATUSES]);
     if (rows[0]) return rows[0].id;
   }
   const { rows } = await pool.query(
-    `SELECT id FROM invoices WHERE client_id = $1 AND status = ANY($2::text[])
-     ORDER BY created_at DESC, id DESC LIMIT 1`, [clientId, LINKABLE_STATUSES]);
+    `SELECT id FROM invoices WHERE client_id = $1 AND status = ANY($2::text[]) AND created_at > NOW() - interval '48 hours'
+     ORDER BY created_at DESC, id DESC LIMIT 1`, [clientId, FALLBACK_STATUSES]);
   return rows[0] ? rows[0].id : null;
 }
 
@@ -189,4 +192,4 @@ async function preparar_documento(args, ctx) {
   return { documento_id: id, titulo: title, estado: 'por_aprobar' };
 }
 
-module.exports = { ver_modelo, preparar_documento };
+module.exports = { ver_modelo, preparar_documento, invoiceFor };

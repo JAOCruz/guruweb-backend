@@ -23,13 +23,14 @@ const DOC_SELECT = `
   SELECT d.id, d.title, d.client_id, c.name AS client_name, c.phone AS client_phone, d.template_id,
          d.created_by, COALESCE(NULLIF(u.name, ''), u.username) AS created_by_name,
          d.created_at, d.updated_at, d.approved_version_id,
-         d.prepared_by_bot, d.invoice_id, d.send_mode, d.sent_at, d.send_error,
+         d.prepared_by_bot, d.invoice_id, inv.status AS invoice_status, d.send_mode, d.sent_at, d.send_error,
          (SELECT MAX(version_number) FROM portfolio_versions v WHERE v.document_id = d.id) AS latest_version,
          (SELECT version_number FROM portfolio_versions v WHERE v.id = d.approved_version_id) AS approved_version,
          (SELECT COUNT(*)::int FROM portfolio_versions v WHERE v.document_id = d.id) AS versions_count
   FROM portfolio_documents d
   JOIN clients c ON c.id = d.client_id
-  LEFT JOIN users u ON u.id = d.created_by`;
+  LEFT JOIN users u ON u.id = d.created_by
+  LEFT JOIN invoices inv ON inv.id = d.invoice_id`;
 
 async function listClients(user, q) {
   const params = [];

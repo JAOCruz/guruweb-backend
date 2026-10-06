@@ -7,8 +7,9 @@ const config = require('../config');
 const { shouldBotRespond, bufferMessage } = require('./handler');
 const cloudApi = require('./cloudApi');
 
-// Meta accepted the send but could not deliver it: outside the 24 h window (131047) or undeliverable (131026)
-const WINDOW_CLOSED_CODES = new Set([131047, 131026]);
+// Meta accepted the send but could not deliver it: outside the 24 h window (131047 -> WINDOW_CLOSED) or
+// generic undeliverable (131026 -> SEND_FAILED, not the window)
+const REVERT_CODES = new Set([131047, 131026]);
 
 const processingIds = new Set();
 
@@ -347,10 +348,10 @@ async function processWebhookPayload(payload) {
         const e = (st.errors || [])[0] || {};
         // ids and codes only: never the recipient's phone
         console.error(`[WA Cloud] ❌ Not delivered: message=${st.id || '?'} code=${e.code || ''} ${e.title || ''}`.trim());
-        if (!WINDOW_CLOSED_CODES.has(Number(e.code))) continue;
+        if (!REVERT_CODES.has(Number(e.code))) continue;
         try {
           // A quote or document the panel sent with this id goes back to "ready, not sent" (see agent/delivery)
-          await require('../agent/delivery').revertWindowClosed(st.id);
+          await require('../agent/delivery').revertWindowClosed(st.id, Number(e.code) === 131047 ? 'WINDOW_CLOSED' : 'SEND_FAILED');
         } catch (err) {
           console.error('[WA Cloud] window-closed revert failed:', err.code || err.name || 'ERROR');
         }

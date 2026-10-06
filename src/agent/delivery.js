@@ -93,6 +93,7 @@ function failureText(kind, label, clientName, code) {
       : `El documento «${label}» de ${who} está aprobado, ${WINDOW_TEXT}`;
   }
   const what = kind === 'quote' ? `la cotización ${label}` : `el documento «${label}»`;
+  if (code === 'UNDELIVERABLE') return `No se pudo entregar por WhatsApp ${what} de ${who}; revise el número o envíelo por otro medio.`;
   if (code === 'PDF_FAILED') return `No se pudo generar el PDF de ${what} de ${who}. Revise el documento y pulse Enviar de nuevo.`;
   return `No se pudo enviar ${what} de ${who} por WhatsApp. Revise la conexión y pulse Enviar de nuevo.`;
 }
@@ -329,42 +330,46 @@ async function sendDocument(documentId, { actor } = {}) {
 // documento queda aprobado sin enviar, send_error = WINDOW_CLOSED, aviso a los admins con el texto de la spec
 // y registro en Actividad. El id se borra al revertir, así un webhook repetido no hace nada.
 // Devuelve cuántas entregas se revirtieron (0, 1 o 2).
-async function revertWindowClosed(messageId) {
+async function revertWindowClosed(messageId, code = 'WINDOW_CLOSED') {
+  // 131047 = ventana de 24 h (WINDOW_CLOSED); cualquier otro código (131026, no entregable) = SEND_FAILED, aviso genérico
+  const sendError = code === 'WINDOW_CLOSED' ? 'WINDOW_CLOSED' : 'SEND_FAILED';
+  const windowClosed = sendError === 'WINDOW_CLOSED';
+  const reason = windowClosed ? 'pasaron más de 24 h desde su último mensaje' : 'el número no pudo recibirlo (error de entrega)';
   const id = messageId == null ? '' : String(messageId).trim();
   if (!id) return 0;
   let n = 0;
   const { rows: invoices } = await pool.query(
     `UPDATE invoices
-     SET sent_by_bot_at = NULL, sent_at = NULL, send_error = 'WINDOW_CLOSED', delivery_wa_id = NULL,
+     SET sent_by_bot_at = NULL, sent_at = NULL, send_error = $2, delivery_wa_id = NULL,
          status = CASE WHEN status = 'sent' THEN 'approved' ELSE status END, updated_at = NOW()
      WHERE delivery_wa_id = $1 AND sent_by_bot_at IS NOT NULL
-     RETURNING id, doc_number, type, client_name, total`, [id]);
+     RETURNING id, doc_number, type, client_name, total`, [id, sendError]);
   for (const inv of invoices) {
     n++;
-    console.error('[delivery] cotización', inv.id, 'WINDOW_CLOSED (aviso tardío)');
-    await afterSend('cotización', inv.id, 'aviso', () => notifyAdmins(failureText('quote', inv.doc_number, inv.client_name, 'WINDOW_CLOSED'),
-      { invoice_id: inv.id, doc_number: inv.doc_number, code: 'WINDOW_CLOSED' }));
+    console.error('[delivery] cotización', inv.id, `${sendError} (aviso tardío)`);
+    await afterSend('cotización', inv.id, 'aviso', () => notifyAdmins(failureText('quote', inv.doc_number, inv.client_name, windowClosed ? 'WINDOW_CLOSED' : 'UNDELIVERABLE'),
+      { invoice_id: inv.id, doc_number: inv.doc_number, code: sendError }));
     await afterSend('cotización', inv.id, 'actividad', () => logActivity(null, {
       category: 'facturas', action: 'invoice.send_failed', entityType: 'invoice', entityId: inv.id,
-      summary: `WhatsApp no entregó ${quoteLabel(inv)} a ${inv.client_name || 'cliente sin nombre'}: pasaron más de 24 h desde su último mensaje`,
-      details: { doc_number: inv.doc_number, type: inv.type, client_name: inv.client_name, total: inv.total, code: 'WINDOW_CLOSED', via: 'webhook' },
+      summary: `WhatsApp no entregó ${quoteLabel(inv)} a ${inv.client_name || 'cliente sin nombre'}: ${reason}`,
+      details: { doc_number: inv.doc_number, type: inv.type, client_name: inv.client_name, total: inv.total, code: sendError, via: 'webhook' },
     }));
   }
   const { rows: docs } = await pool.query(
     `UPDATE portfolio_documents d
-     SET sent_at = NULL, send_error = 'WINDOW_CLOSED', delivery_wa_id = NULL, updated_at = NOW()
+     SET sent_at = NULL, send_error = $2, delivery_wa_id = NULL, updated_at = NOW()
      FROM clients c
      WHERE d.delivery_wa_id = $1 AND d.sent_at IS NOT NULL AND c.id = d.client_id
-     RETURNING d.id, d.title, d.invoice_id, c.name AS client_name`, [id]);
+     RETURNING d.id, d.title, d.invoice_id, c.name AS client_name`, [id, sendError]);
   for (const doc of docs) {
     n++;
-    console.error('[delivery] documento', doc.id, 'WINDOW_CLOSED (aviso tardío)');
-    await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(failureText('document', doc.title, doc.client_name, 'WINDOW_CLOSED'),
-      { document_id: doc.id, invoice_id: doc.invoice_id || undefined, code: 'WINDOW_CLOSED' }));
+    console.error('[delivery] documento', doc.id, `${sendError} (aviso tardío)`);
+    await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(failureText('document', doc.title, doc.client_name, windowClosed ? 'WINDOW_CLOSED' : 'UNDELIVERABLE'),
+      { document_id: doc.id, invoice_id: doc.invoice_id || undefined, code: sendError }));
     await afterSend('documento', doc.id, 'actividad', () => logActivity(null, {
       category: 'documentos', action: 'documento.send_failed', entityType: 'documento', entityId: doc.id,
-      summary: `WhatsApp no entregó «${doc.title}» a ${doc.client_name || 'cliente sin nombre'}: pasaron más de 24 h desde su último mensaje`,
-      details: { client_name: doc.client_name, invoice_id: doc.invoice_id, code: 'WINDOW_CLOSED', via: 'webhook' },
+      summary: `WhatsApp no entregó «${doc.title}» a ${doc.client_name || 'cliente sin nombre'}: ${reason}`,
+      details: { client_name: doc.client_name, invoice_id: doc.invoice_id, code: sendError, via: 'webhook' },
     }));
   }
   if (n) {

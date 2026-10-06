@@ -99,7 +99,7 @@ test('un status failed 131047/131026 revierte el envío de la cotización y del 
   const p = await invoiceRow(paid.id);
   assert.equal(p.status, 'paid');
   assert.equal(p.sent_by_bot_at, null);
-  assert.equal(p.send_error, 'WINDOW_CLOSED');
+  assert.equal(p.send_error, 'SEND_FAILED'); // 131026 es "no entregable" genérico, no la ventana de 24 h
   // Entregada: intacta
   const u = await invoiceRow(untouched.id);
   assert.equal(u.status, 'sent');
@@ -131,7 +131,10 @@ test('un status failed 131047/131026 revierte el envío de la cotización y del 
   const docN = n.find((x) => x.metadata.document_id === doc);
   assert.equal(docN.message, `El documento «Contrato de alquiler» de Juan Pérez está aprobado, ${WINDOW_TEXT}`);
   assert.equal(docN.link, '/documentos');
-  assert.ok(n.some((x) => x.metadata.invoice_id === paid.id));
+  const paidN = n.find((x) => x.metadata.invoice_id === paid.id);
+  assert.equal(paidN.message, 'No se pudo entregar por WhatsApp la cotización COT-2026-002 de Juan Pérez; revise el número o envíelo por otro medio.');
+  assert.equal(paidN.metadata.code, 'SEND_FAILED');
+  assert.ok(!/24 h/.test(paidN.message));
 
   // Actividad
   const log = (await pool.query('SELECT * FROM activity_log ORDER BY id')).rows;
@@ -162,4 +165,17 @@ test('el aviso de otro número de teléfono se ignora', async () => {
   await cloudHandler.processWebhookPayload(p);
   assert.equal((await invoiceRow(cot.id)).status, 'sent');
   assert.equal((await notices()).length, 0);
+});
+
+test('el documento trae invoice_status de su cotización ligada (null sin cotización)', async () => {
+  const portfolio = require('../src/documentos/portfolio');
+  const paid = await sentInvoice({ status: 'paid', waId: 'wamid.P', docNumber: 'COT-2026-010' });
+  const linked = await sentDoc({ title: 'Con cotización', waId: 'wamid.D1' });
+  const free = await sentDoc({ title: 'Sin cotización', waId: 'wamid.D2' });
+  await pool.query('UPDATE portfolio_documents SET invoice_id = $1 WHERE id = $2', [paid.id, linked]);
+  const admin = { id: adminId, role: 'admin' };
+  assert.equal((await portfolio.getDocument(admin, linked)).invoice_status, 'paid');
+  assert.equal((await portfolio.getDocument(admin, free)).invoice_status, null);
+  const list = await portfolio.listDocuments(admin, { clientId });
+  assert.equal(list.find((d) => d.id === linked).invoice_status, 'paid');
 });

@@ -8,7 +8,7 @@ const { spawnSync } = require('child_process');
 const legalProfile = require('../src/documentos/legalProfile');
 const { listBlocks } = require('../src/documentos/docxText');
 const { clearCache } = require('../src/agent/businessInfo');
-const { ver_modelo, preparar_documento } = require('../src/agent/tools/documents');
+const { ver_modelo, preparar_documento, invoiceFor } = require('../src/agent/tools/documents');
 
 // El llenado del Word pasa por docx_text.py (python-docx); sin él, esas pruebas se saltan como en documentos-etiquetas.
 const PY = process.env.PYTHON_BIN || 'python3';
@@ -263,7 +263,7 @@ test('un modelo con etiquetas pero sin versión aprobada no se puede usar', asyn
 
 // ── Revisión final: I1 enlace con cotizaciones enviadas/pagadas; I4 documentos para un tercero ──
 
-test('I1: el documento se liga a la cotización más reciente aunque ya esté enviada o pagada, y acepta el invoice_id de preparar_cotizacion', needsDocx, async () => {
+test('I1: el documento se liga a la cotización más reciente por aprobar/aprobada/enviada, y acepta el invoice_id de preparar_cotizacion', needsDocx, async () => {
   const inv = async (status, daysAgo) => (await pool.query(
     `INSERT INTO invoices (doc_number, status, client_id, total, created_at) VALUES ($1, $2, $3, 1, NOW() - ($4 || ' days')::interval) RETURNING id`,
     [`COT-${status}-${daysAgo}`, status, clientId, daysAgo])).rows[0].id;
@@ -277,17 +277,17 @@ test('I1: el documento se liga a la cotización más reciente aunque ya esté en
   assert.equal(r.estado, 'por_aprobar');
   assert.equal((await docs()).find((d) => d.id === r.documento_id).invoice_id, enviada);
 
-  // Pagada y más reciente: también cuenta
+  // Pagada y más reciente: sin invoice_id explícito NO se liga (podría ser un pago viejo)
   const pagada = await inv('paid', 0);
   const r2 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
-  assert.equal((await docs()).find((d) => d.id === r2.documento_id).invoice_id, pagada);
+  assert.equal((await docs()).find((d) => d.id === r2.documento_id).invoice_id, enviada);
 
   // El invoice_id que devolvió preparar_cotizacion (numérico) se respeta, aunque no sea la más reciente
   const r3 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' }, invoice_id: vieja }, ctx);
   assert.equal((await docs()).find((d) => d.id === r3.documento_id).invoice_id, vieja);
   // Nunca la de otro cliente
   const r4 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' }, invoice_id: ajena }, ctx);
-  assert.equal((await docs()).find((d) => d.id === r4.documento_id).invoice_id, pagada);
+  assert.equal((await docs()).find((d) => d.id === r4.documento_id).invoice_id, enviada);
 });
 
 test('I4: ver_modelo con un solo rol llena desde la ficha; para un tercero (para_tercero o rol_cliente NINGUNO) no', async () => {
@@ -340,4 +340,40 @@ test('I4: preparar_documento para un tercero no llena desde la ficha ni escribe 
   assert.equal(venta.estado, 'por_aprobar');
   assert.deepEqual(await legalProfile.get(clientId), ficha);
   assert.equal((await notifs()).length, 3);
+});
+
+// ── Residual: nunca ligar un documento nuevo a una cotización pagada vieja ──
+
+const mkInv = async (status, hoursAgo, client = clientId) => (await pool.query(
+  `INSERT INTO invoices (doc_number, status, client_id, total, created_at) VALUES ($1, $2, $3, 1, NOW() - ($4 || ' hours')::interval) RETURNING id`,
+  [`COT-${status}-${hoursAgo}`, status, client, String(hoursAgo)])).rows[0].id;
+
+test('invoiceFor: solo hay una cotización pagada vieja y no se pasa invoice_id -> null', async () => {
+  await mkInv('paid', 24 * 10);
+  await mkInv('paid', 1); // ni siquiera una pagada reciente
+  assert.equal(await invoiceFor(clientId, undefined), null);
+});
+
+test('invoiceFor: una pagada del cliente se liga si se pasa explícita', async () => {
+  const pagada = await mkInv('paid', 24 * 10);
+  assert.equal(await invoiceFor(clientId, pagada), pagada);
+  assert.equal(await invoiceFor(clientId, String(pagada)), pagada);
+  const ajena = await mkInv('paid', 1, 999);
+  assert.equal(await invoiceFor(clientId, ajena), null); // nunca de otro cliente
+});
+
+test('invoiceFor: una por aprobar de más de 48 h no la toma el respaldo; una de menos sí', async () => {
+  await mkInv('pending_approval', 49);
+  assert.equal(await invoiceFor(clientId, undefined), null);
+  const reciente = await mkInv('sent', 47);
+  assert.equal(await invoiceFor(clientId, undefined), reciente);
+});
+
+test('invoiceFor: un invoice_id explícito rechazado o en borrador se ignora (y aplica el respaldo)', async () => {
+  const rechazada = await mkInv('rejected', 1);
+  const borrador = await mkInv('draft', 1);
+  assert.equal(await invoiceFor(clientId, rechazada), null);
+  assert.equal(await invoiceFor(clientId, borrador), null);
+  const viva = await mkInv('approved', 2);
+  assert.equal(await invoiceFor(clientId, rechazada), viva);
 });
