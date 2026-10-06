@@ -25,8 +25,6 @@ const { generateInvoicePDF, generateDocNumber } = require('../documents/generate
 
 const Case = require('../models/Case');
 const Client = require('../models/Client');
-const Message = require('../models/Message');
-const outgoing = require('../whatsapp/outgoing');
 const delivery = require('../agent/delivery');
 const { logActivity, rd, safeLog } = require('../services/activityLog');
 
@@ -465,7 +463,7 @@ router.post('/:id/approve-and-send', requireRole('admin'), async (req, res) => {
     if (!result.ok) body.code = result.code;
     res.json(body);
   } catch (err) {
-    console.error('Approve and send invoice error:', err);
+    console.error('Approve and send invoice error:', err.code || err.name);
     res.status(500).json({ error: 'Failed to approve and send invoice' });
   }
 });
@@ -633,10 +631,14 @@ router.post('/:id/generate-pdf', async (req, res) => {
   }
 });
 
-// ── POST /api/invoices/:id/send-whatsapp ── generate PDF (if needed) and send it
-// to the client's WhatsApp chat. Nothing is sent automatically. Employees can only send
-// their own quotes once an admin approved them; the admin can send directly (which approves it).
-// A rejected quote is never sent.
+// ── POST /api/invoices/:id/send-whatsapp ── send the PDF to the client's WhatsApp chat.
+// Nothing is sent automatically. Employees can only send their own quotes once an admin approved
+// them; the admin can send directly (which approves it). A rejected quote is never sent.
+// The send goes through the delivery service (agent/delivery): the first send is exactly-once
+// (sent_by_bot_at claim, send_error cleared, message + Actividad recorded, WINDOW_CLOSED notice).
+// A quote the service already sent only goes out again with body { resend: true }, which the panel
+// sends after its confirm dialog (so a double click never resends); that path also records the
+// message and Actividad and clears send_error. Answers 200 { invoice, sent, code? }.
 router.post('/:id/send-whatsapp', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
@@ -650,44 +652,22 @@ router.post('/:id/send-whatsapp', async (req, res) => {
     if (isEmployee(req.user.role) && !['approved', 'sent', 'paid'].includes(invoice.status)) {
       return res.status(403).json({ error: 'El admin debe aprobar este documento antes de enviarlo al cliente', code: 'APPROVAL_REQUIRED' });
     }
+    if (!invoice.client_phone) return res.status(400).json({ error: 'Invoice has no client phone', code: 'NO_PHONE' });
     if (!isEmployee(req.user.role) && ['draft', 'pending_approval'].includes(invoice.status)) {
       await Invoice.approve(invoice.id, req.user.id);
     }
 
-    // Ensure PDF exists (generate if missing or file gone)
-    let pdfPath = invoice.pdf_path;
-    if (!pdfPath || !fs.existsSync(pdfPath)) {
-      const created = new Date(invoice.created_at || Date.now());
-      const dateStr = `${String(created.getDate()).padStart(2,'0')}-${String(created.getMonth()+1).padStart(2,'0')}-${created.getFullYear()}`;
-      pdfPath = await generateInvoicePDF({
-        clientName:  invoice.client_name,
-        clientPhone: invoice.client_phone,
-        docNumber:   invoice.doc_number,
-        date:        dateStr,
-        items:       typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
-        notes:       invoice.notes,
-        type:        invoice.type,
-        discountType: invoice.discount_type,
-        discountValue: invoice.discount_value,
-        discountAmount: invoice.discount_amount,
-        discountCode: invoice.discount_code,
-      });
-    }
-
-    // Resolve the chat target (handles @lid privacy accounts via last known JID)
-    const phone = invoice.client_phone;
-    if (!phone) return res.status(400).json({ error: 'Invoice has no client phone' });
-    const target = (await Message.getLastJid(phone)) || phone;
-
-    await outgoing.sendDocument(target, pdfPath, `${invoice.doc_number}.pdf`);
-
-    const updated = await Invoice.markSent(
-      invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'
-    );
-    res.json({ invoice: updated, message: `Invoice sent via WhatsApp to ${phone}` });
+    const result = invoice.sent_by_bot_at && req.body?.resend === true
+      ? await delivery.resendQuote(invoice.id, { actor: req.user })
+      : await delivery.sendQuote(invoice.id, { actor: req.user });
+    const fresh = await Invoice.findById(invoice.id);
+    const body = { invoice: fresh, sent: !!result.ok };
+    if (result.ok) body.message = `Invoice sent via WhatsApp to ${invoice.client_phone}`;
+    else body.code = result.code;
+    res.json(body);
   } catch (err) {
-    console.error('Send WhatsApp invoice error:', err);
-    res.status(500).json({ error: 'Failed to send invoice via WhatsApp: ' + err.message });
+    console.error('Send WhatsApp invoice error:', err.code || err.name);
+    res.status(500).json({ error: 'Failed to send invoice via WhatsApp' });
   }
 });
 

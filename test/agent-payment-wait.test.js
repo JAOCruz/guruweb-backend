@@ -186,7 +186,7 @@ test.describe('espera del lote', () => {
 test('la guía menciona el carrito, avisar_pago y confirmar los datos antes de preparar_documento', () => {
   const g = fs.readFileSync(GUIDE, 'utf8');
   for (const needle of ['avisar_pago', 'ver_modelo', 'preparar_documento', 'carrito', '¿es todo?', 'el equipo lo verifica',
-    'otra parte', 'retom']) {
+    'otra parte', 'retom', '¿el documento es para usted o para otra persona?', 'para_tercero']) {
     assert.ok(g.toLowerCase().includes(needle.toLowerCase()), `falta "${needle}" en la guía`);
   }
   // El resumen de los datos se confirma antes de preparar_documento

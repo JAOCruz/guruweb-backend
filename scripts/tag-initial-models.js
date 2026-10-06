@@ -7,12 +7,15 @@
 //      del lote de Documentos → Etiquetas (tagModels). No aprueba nada: eso lo hace un admin en Etiquetas.
 // Nunca imprime secretos: solo nombres de modelos y servicios, ids y conteos.
 //
-//   railway run node -r dotenv/config scripts/tag-initial-models.js --dry-run
-//   railway run node -r dotenv/config scripts/tag-initial-models.js [--user=<username>]
+//   Ensayo (solo lectura, desde la máquina local con las variables de Railway):
+//     railway run node -r dotenv/config scripts/tag-initial-models.js --dry-run
+//   Ejecución real (dentro del contenedor, donde está montado el volumen):
+//     railway ssh
+//     node scripts/tag-initial-models.js [--user=<username>]
 //
 // --dry-run: hace todo de solo lectura e imprime lo que haría (funciona sin el volumen).
 // Sin --dry-run exige que exista el volumen de Railway (RAILWAY_VOLUME_MOUNT_PATH): las versiones etiquetadas se
-// guardan ahí, así que el etiquetado real se corre dentro del contenedor (railway ssh), no con `railway run`.
+// guardan ahí, así que el etiquetado real se corre dentro del contenedor (railway ssh), nunca con `railway run`.
 // --user: usuario que figura como autor de las versiones (por defecto ninguno: "—" en Etiquetas).
 const fs = require('fs');
 const path = require('path');

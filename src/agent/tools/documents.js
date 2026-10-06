@@ -63,6 +63,13 @@ function clientRole(roles, given) {
   return roles.length === 1 ? roles[0] : null;
 }
 
+// Documento para otra persona (para_tercero: true o rol_cliente "NINGUNO"): el cliente no figura en el modelo,
+// así que no se llena nada desde su ficha ni se guarda nada en ella; todos los datos van al documento.
+const NINGUNO = 'NINGUNO';
+function forThirdParty(args) {
+  return args?.para_tercero === true || String(args?.rol_cliente || '').trim().toUpperCase() === NINGUNO;
+}
+
 async function ver_modelo(args, ctx) {
   const servicioId = args && args.servicio_id;
   const nombre = args && typeof args.nombre === 'string' ? args.nombre.trim() : '';
@@ -86,11 +93,13 @@ async function ver_modelo(args, ctx) {
   if (!version) return SIN_MODELO;
   const tags = Array.isArray(version.tags) ? version.tags : [];
   const roles = rolesOf(tags);
-  const role = clientRole(roles, args.rol_cliente);
+  const tercero = forThirdParty(args);
+  const role = tercero ? null : clientRole(roles, args.rol_cliente);
   if (role && role.error) return role;
-  const profile = ctx.client?.id ? await LegalProfile.get(ctx.client.id) : {};
-  // Con varios roles y sin saber cuál es el cliente no se adivina de quién es lo que hay en la ficha
-  const yaTenemos = roles.length > 1 && !role ? {} : LegalProfile.prefill(tags, profile, role);
+  const profile = !tercero && ctx.client?.id ? await LegalProfile.get(ctx.client.id) : {};
+  // Para un tercero no hay nada que tomar de la ficha. Con varios roles y sin saber cuál es el cliente
+  // tampoco se adivina de quién es lo que hay en la ficha.
+  const yaTenemos = tercero || (roles.length > 1 && !role) ? {} : LegalProfile.prefill(tags, profile, role);
   return {
     modelo_id: template.id,
     nombre: template.name,
@@ -101,8 +110,10 @@ async function ver_modelo(args, ctx) {
   };
 }
 
-// La cotización a la que se liga el documento: la indicada si es del cliente; si no, la más reciente
-// por aprobar o aprobada del cliente; si no hay, ninguna.
+// La cotización a la que se liga el documento: la indicada si es del cliente; si no, la más reciente del cliente
+// que esté viva (por aprobar, aprobada, enviada o pagada: "Aprobar y enviar" la deja en sent, y el pago puede
+// confirmarse antes de que el bot termine el documento); si no hay, ninguna. Nunca la de otro cliente.
+const LINKABLE_STATUSES = ['pending_approval', 'approved', 'sent', 'paid'];
 async function invoiceFor(clientId, given) {
   const id = Number(given);
   if (Number.isInteger(id) && id > 0) {
@@ -110,8 +121,8 @@ async function invoiceFor(clientId, given) {
     if (rows[0]) return rows[0].id;
   }
   const { rows } = await pool.query(
-    `SELECT id FROM invoices WHERE client_id = $1 AND status IN ('pending_approval', 'approved')
-     ORDER BY created_at DESC, id DESC LIMIT 1`, [clientId]);
+    `SELECT id FROM invoices WHERE client_id = $1 AND status = ANY($2::text[])
+     ORDER BY created_at DESC, id DESC LIMIT 1`, [clientId, LINKABLE_STATUSES]);
   return rows[0] ? rows[0].id : null;
 }
 
@@ -128,9 +139,10 @@ async function preparar_documento(args, ctx) {
 
   const tags = Array.isArray(version.tags) ? version.tags : [];
   const roles = rolesOf(tags);
-  const role = clientRole(roles, args.rol_cliente);
+  const tercero = forThirdParty(args);
+  const role = tercero ? null : clientRole(roles, args.rol_cliente);
   if (role && role.error) return role;
-  if (roles.length > 1 && !role) return { error: 'falta rol_cliente', roles };
+  if (!tercero && roles.length > 1 && !role) return { error: 'falta rol_cliente', roles };
 
   // Claves tal como las devolvió ver_modelo; se toleran mayúsculas/espacios distintos ("nombre_comprador")
   const keys = [...new Set(await listTags(version.file_path))];
@@ -141,7 +153,8 @@ async function preparar_documento(args, ctx) {
     const val = v == null ? '' : String(v).trim();
     if (key && val) clean[key] = val;
   }
-  const merged = { ...LegalProfile.prefill(tags, await LegalProfile.get(client.id), role), ...clean };
+  const fromProfile = tercero ? {} : LegalProfile.prefill(tags, await LegalProfile.get(client.id), role);
+  const merged = { ...fromProfile, ...clean };
   const faltan = keys.filter((k) => !merged[k]);
   if (faltan.length) return { error: 'faltan datos', faltan };
 
@@ -154,11 +167,13 @@ async function preparar_documento(args, ctx) {
     notes: 'Preparado por el bot', invoiceId, preparedByBot: true,
   });
   // El borrador ya existe: si fallan la ficha o el aviso, se registra y la herramienta igual responde bien
-  // (un error haría que el modelo reintentara y creara otro borrador).
-  try {
-    await LegalProfile.merge(client.id, LegalProfile.updatesFrom(tags, clean, role), ctx.botUserId || null);
-  } catch (err) {
-    console.error('[Agent] preparar_documento: no se guardó la ficha:', err.code || err.name || 'error');
+  // (un error haría que el modelo reintentara y creara otro borrador). Los datos de un tercero no van a la ficha.
+  if (!tercero) {
+    try {
+      await LegalProfile.merge(client.id, LegalProfile.updatesFrom(tags, clean, role), ctx.botUserId || null);
+    } catch (err) {
+      console.error('[Agent] preparar_documento: no se guardó la ficha:', err.code || err.name || 'error');
+    }
   }
   try {
     const recipients = new Set(await activeAdminIds());

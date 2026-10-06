@@ -1,4 +1,4 @@
-const { pool, resetDb } = require('./helpers/db');
+const { pool, resetDb, runSqlFile } = require('./helpers/db');
 const { resetAssignmentTables } = require('./helpers/assignments');
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -32,7 +32,16 @@ async function resetInvoices() {
     rejected_by INT, rejected_at TIMESTAMPTZ, sent_at TIMESTAMPTZ, paid_by INT, paid_at TIMESTAMPTZ,
     payment_method TEXT, payment_reference TEXT, discount_type TEXT, discount_value NUMERIC DEFAULT 0,
     discount_code TEXT, discount_amount NUMERIC DEFAULT 0, discount_reason TEXT,
+    sent_by_bot_at TIMESTAMPTZ, send_error TEXT, delivery_wa_id TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  // send-whatsapp goes through the delivery service, which records the send (messages, Actividad, notices)
+  await pool.query('DROP TABLE IF EXISTS messages, notifications, activity_log CASCADE');
+  await pool.query(`CREATE TABLE messages (id SERIAL PRIMARY KEY, wa_message_id VARCHAR(255), phone VARCHAR(20), client_id INT, case_id INT,
+    direction VARCHAR(10) NOT NULL, content TEXT NOT NULL, media_url TEXT, status VARCHAR(20) DEFAULT 'sent', wa_jid TEXT, push_name TEXT,
+    read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE notifications (id SERIAL PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL, link TEXT, read BOOLEAN DEFAULT false, read_at TIMESTAMPTZ, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await runSqlFile('migrations/20260927_activity_log.sql');
 }
 
 // A quote with a PDF already on disk, so routes never need to render one
@@ -93,6 +102,9 @@ test('an employee can WhatsApp their own quote once approved', async () => {
   const id = await quote('hengi', 'approved');
   const res = await call('POST', `/api/invoices/${id}/send-whatsapp`, 'hengi');
   assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.sent, true);
+  assert.equal(body.invoice.status, 'sent');
   assert.equal(sent.length, 1);
   assert.equal(await statusOf(id), 'sent');
 });

@@ -55,6 +55,7 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20260927_activity_log.sql');
   await runSqlFile('migrations/20260929_portfolio.sql');
   await runSqlFile('migrations/20261006_bot_fase2.sql');
+  await runSqlFile('migrations/20261007_delivery_wa_id.sql');
   adminId = await createUser('leandro', 'admin', 'Leandro');
   digitadorId = await createUser('hengi', 'digitador', 'Hengi');
   tok = {
@@ -65,10 +66,10 @@ test.beforeEach(async () => {
 });
 test.after(async () => { server.close(); await pool.end(); });
 
-const call = (p, who) => fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok[who]}` }, body: '{}' });
+const call = (p, who, body = {}) => fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok[who]}` }, body: JSON.stringify(body) });
 const invoiceRow = async (id) => (await pool.query('SELECT * FROM invoices WHERE id = $1', [id])).rows[0];
 
-async function makeInvoice(status = 'pending_approval') {
+async function makeInvoice(status = 'pending_approval', { createdBy = adminId, phone = PHONE } = {}) {
   const n = (await pool.query('SELECT COUNT(*)::int n FROM invoices')).rows[0].n + 1;
   const docNumber = `COT-2026-${String(n).padStart(3, '0')}`;
   const file = path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, `${docNumber}.pdf`);
@@ -76,7 +77,7 @@ async function makeInvoice(status = 'pending_approval') {
   const { rows } = await pool.query(
     `INSERT INTO invoices (doc_number, type, status, client_id, client_name, client_phone, items, subtotal, itbis, total, created_by, source, pdf_path)
      VALUES ($1, 'COTIZACIÓN', $2, $3, 'Juan Pérez', $4, '[]', 1500, 0, 1500, $5, 'bot', $6) RETURNING *`,
-    [docNumber, status, clientId, PHONE, adminId, file]);
+    [docNumber, status, clientId, phone, createdBy, file]);
   return rows[0];
 }
 
@@ -183,4 +184,123 @@ test('si el envío falla por 24 h, el pago sigue confirmado y la respuesta lo di
   } finally {
     delivery.deliverPaidDocuments = orig;
   }
+});
+
+// ── Revisión final: I2 el botón "Enviar por WhatsApp" pasa por el servicio de entregas ──────────
+
+const outbound = async () => (await pool.query(`SELECT * FROM messages WHERE direction = 'outbound' ORDER BY id`)).rows;
+const activity = async () => (await pool.query('SELECT action, actor_id, summary FROM activity_log ORDER BY id')).rows;
+const notices = async () => (await pool.query('SELECT * FROM notifications ORDER BY id')).rows;
+
+test('I2: send-whatsapp sin sent_by_bot_at marca una sola vez, registra mensaje y Actividad y responde sent:true', async () => {
+  const inv = await makeInvoice('approved');
+  const res = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.sent, true);
+  assert.equal(body.code, undefined);
+  assert.equal(body.invoice.status, 'sent');
+  assert.ok(body.invoice.sent_by_bot_at);
+  assert.equal(body.invoice.send_error, null);
+  assert.match(body.message, /WhatsApp/);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].caption, /^Le comparto su cotización/);
+  const msgs = await outbound();
+  assert.equal(msgs.length, 1);
+  assert.equal(msgs[0].content, sent[0].caption);
+  const log = await activity();
+  assert.deepEqual(log.map((l) => l.action), ['invoice.send']);
+  assert.equal(log[0].actor_id, adminId);
+  assert.ok((await notices()).some((x) => x.title === `📤 Enviado por WhatsApp: ${inv.doc_number}`));
+
+  // Doble clic simultáneo en una cotización nueva: un solo envío
+  const inv2 = await makeInvoice('approved');
+  const rs = await Promise.all([call(`/api/invoices/${inv2.id}/send-whatsapp`, 'admin'), call(`/api/invoices/${inv2.id}/send-whatsapp`, 'admin')]);
+  const bodies = await Promise.all(rs.map((r) => r.json()));
+  assert.deepEqual(bodies.map((b) => b.sent).sort(), [false, true]);
+  assert.equal(bodies.find((b) => !b.sent).code, 'ALREADY_SENT');
+  assert.equal(sent.length, 2);
+});
+
+test('I2: send-whatsapp tras WINDOW_CLOSED: no reintenta, avisa, y cuando el cliente escribe el mismo botón envía y limpia send_error', async () => {
+  const inv = await makeInvoice('approved');
+  sendImpl = () => { const e = new Error('Meta 131047'); e.code = 'WINDOW_CLOSED'; throw e; };
+  let res = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin');
+  assert.equal(res.status, 200);
+  let body = await res.json();
+  assert.deepEqual({ sent: body.sent, code: body.code }, { sent: false, code: 'WINDOW_CLOSED' });
+  assert.equal(body.invoice.send_error, 'WINDOW_CLOSED');
+  assert.equal(body.invoice.sent_by_bot_at, null);
+  assert.equal(body.invoice.status, 'approved');
+  assert.equal(sent.length, 1);
+  assert.equal((await outbound()).length, 0);
+  assert.equal((await activity()).length, 0);
+  const n = await notices();
+  assert.equal(n.length, 1);
+  assert.match(n[0].message, /24 h/);
+
+  sendImpl = null;
+  res = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin');
+  body = await res.json();
+  assert.equal(body.sent, true);
+  assert.equal(body.invoice.send_error, null);
+  assert.ok(body.invoice.sent_by_bot_at);
+  assert.equal(sent.length, 2);
+  assert.equal((await outbound()).length, 1);
+});
+
+test('I2: con sent_by_bot_at solo reenvía si el panel lo confirmó (resend: true); registra y limpia send_error', async () => {
+  const inv = await makeInvoice('approved');
+  await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin');
+  await pool.query('UPDATE invoices SET send_error = $2 WHERE id = $1', [inv.id, 'SEND_FAILED']);
+
+  // Sin confirmar (p. ej. un clic repetido): ya salió, no se repite
+  let res = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin');
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json().then((b) => ({ sent: b.sent, code: b.code })), { sent: false, code: 'ALREADY_SENT' });
+  assert.equal(sent.length, 1);
+
+  res = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin', { resend: true });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.sent, true);
+  assert.equal(body.invoice.send_error, null);
+  assert.equal(body.invoice.status, 'sent');
+  assert.equal(sent.length, 2);
+  assert.equal((await outbound()).length, 2);
+  assert.deepEqual((await activity()).map((l) => l.action), ['invoice.send', 'invoice.resend']);
+
+  // El reenvío que falla también responde con el código, sin tumbar el servidor
+  sendImpl = () => { const e = new Error('Meta 131047'); e.code = 'WINDOW_CLOSED'; throw e; };
+  const r2 = await call(`/api/invoices/${inv.id}/send-whatsapp`, 'admin', { resend: true });
+  assert.equal(r2.status, 200);
+  assert.deepEqual(await r2.json().then((b) => ({ sent: b.sent, code: b.code })), { sent: false, code: 'WINDOW_CLOSED' });
+  assert.equal((await invoiceRow(inv.id)).send_error, 'WINDOW_CLOSED');
+});
+
+test('I2: send-whatsapp conserva los permisos: el admin aprueba al enviar; el digitador solo lo suyo y ya aprobado; rechazada 400', async () => {
+  const pending = await makeInvoice('pending_approval');
+  let body = await (await call(`/api/invoices/${pending.id}/send-whatsapp`, 'admin')).json();
+  assert.equal(body.sent, true);
+  assert.equal(body.invoice.approved_by, adminId);
+  assert.equal(body.invoice.status, 'sent');
+
+  const mine = await makeInvoice('pending_approval', { createdBy: digitadorId });
+  let res = await call(`/api/invoices/${mine.id}/send-whatsapp`, 'hengi');
+  assert.equal(res.status, 403);
+  assert.equal((await res.json()).code, 'APPROVAL_REQUIRED');
+  await pool.query(`UPDATE invoices SET status = 'approved' WHERE id = $1`, [mine.id]);
+  res = await call(`/api/invoices/${mine.id}/send-whatsapp`, 'hengi');
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).sent, true);
+  assert.equal((await activity()).filter((l) => l.actor_id === digitadorId).length, 1);
+
+  const ajena = await makeInvoice('approved');
+  assert.equal((await call(`/api/invoices/${ajena.id}/send-whatsapp`, 'hengi')).status, 403);
+  const rejected = await makeInvoice('rejected');
+  assert.equal((await call(`/api/invoices/${rejected.id}/send-whatsapp`, 'admin')).status, 400);
+  const noPhone = await makeInvoice('approved', { phone: null });
+  assert.equal((await call(`/api/invoices/${noPhone.id}/send-whatsapp`, 'admin')).status, 400);
+  assert.equal((await call('/api/invoices/99999/send-whatsapp', 'admin')).status, 404);
+  assert.equal(sent.length, 2);
 });

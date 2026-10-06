@@ -21,14 +21,19 @@ const TAGS = [
   { key: 'NOMBRE_VENDEDOR', label: 'Nombre del vendedor', group: 'VENDEDOR' },
   { key: 'NOMBRE_COMPRADOR', label: 'Nombre del comprador', group: 'COMPRADOR' },
 ];
+// El mismo Word etiquetado con un solo rol (como una declaración jurada): las dos etiquetas son del VENDEDOR
+const ONE_ROLE_TAGS = [
+  { key: 'NOMBRE_VENDEDOR', label: 'Nombre', group: 'VENDEDOR' },
+  { key: 'NOMBRE_COMPRADOR', label: 'Nombre del testigo', group: 'VENDEDOR' },
+];
 
 const PHONE = '18095550121';
 let ctx, botUserId, adminId, digId, clientId, ids;
 
-async function version(templateId, { approve }) {
+async function version(templateId, { approve, tags = TAGS }) {
   const { rows } = await pool.query(
     `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, source) VALUES ($1, 1, $2, $3, 'ai') RETURNING id`,
-    [templateId, FIXTURE, JSON.stringify(TAGS)]);
+    [templateId, FIXTURE, JSON.stringify(tags)]);
   if (approve) await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [rows[0].id, templateId]);
   return rows[0].id;
 }
@@ -65,9 +70,11 @@ test.beforeEach(async () => {
     solar: await tpl('ACTO DE VENTA DE SOLAR', 'solar.docx'), // etiquetado, sin aprobar
     poder: await tpl('PODER GENERAL', 'poder.docx'),           // etiquetado, sin aprobar
     carta: await tpl('CARTA DE NO OBJECIÓN', 'carta.docx'),    // sin etiquetar
+    declaracion: await tpl('DECLARACIÓN JURADA', 'declaracion.docx'), // un solo rol
   };
   await version(ids.vehiculo, { approve: true });
   await version(ids.inmueble, { approve: true });
+  await version(ids.declaracion, { approve: true, tags: ONE_ROLE_TAGS });
   await version(ids.solar, { approve: false });
   await version(ids.poder, { approve: false });
 
@@ -163,7 +170,7 @@ test('preparar_documento llena el Word, crea el borrador del bot ligado a la cot
   await inv('pending_approval', 5);
   const vieja = await inv('approved', 3);
   const reciente = await inv('pending_approval', 1);
-  await inv('paid', 0);                 // pagada: no es la cotización en curso
+  await inv('paid', 10);                // pagada, pero más vieja que las otras
   const ajena = (await pool.query(`INSERT INTO invoices (doc_number, status, client_id, total) VALUES ('COT-X', 'approved', 999, 1) RETURNING id`)).rows[0].id;
 
   const r = await preparar_documento({
@@ -252,4 +259,85 @@ test('un modelo con etiquetas pero sin versión aprobada no se puede usar', asyn
   assert.deepEqual(await preparar_documento({ modelo_id: 99999, valores: {} }, ctx), { error: 'sin modelo aprobado' });
   assert.equal((await docs()).length, 0);
   assert.equal((await notifs()).length, 0);
+});
+
+// ── Revisión final: I1 enlace con cotizaciones enviadas/pagadas; I4 documentos para un tercero ──
+
+test('I1: el documento se liga a la cotización más reciente aunque ya esté enviada o pagada, y acepta el invoice_id de preparar_cotizacion', needsDocx, async () => {
+  const inv = async (status, daysAgo) => (await pool.query(
+    `INSERT INTO invoices (doc_number, status, client_id, total, created_at) VALUES ($1, $2, $3, 1, NOW() - ($4 || ' days')::interval) RETURNING id`,
+    [`COT-${status}-${daysAgo}`, status, clientId, daysAgo])).rows[0].id;
+  const vieja = await inv('approved', 3);
+  const enviada = await inv('sent', 1); // "Aprobar y enviar" la dejó en sent antes de que el bot preparara el documento
+  await inv('rejected', 0);
+  await inv('draft', 0);
+  const ajena = (await pool.query(`INSERT INTO invoices (doc_number, status, client_id, total) VALUES ('COT-X', 'sent', 999, 1) RETURNING id`)).rows[0].id;
+
+  const r = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
+  assert.equal(r.estado, 'por_aprobar');
+  assert.equal((await docs()).find((d) => d.id === r.documento_id).invoice_id, enviada);
+
+  // Pagada y más reciente: también cuenta
+  const pagada = await inv('paid', 0);
+  const r2 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
+  assert.equal((await docs()).find((d) => d.id === r2.documento_id).invoice_id, pagada);
+
+  // El invoice_id que devolvió preparar_cotizacion (numérico) se respeta, aunque no sea la más reciente
+  const r3 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' }, invoice_id: vieja }, ctx);
+  assert.equal((await docs()).find((d) => d.id === r3.documento_id).invoice_id, vieja);
+  // Nunca la de otro cliente
+  const r4 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' }, invoice_id: ajena }, ctx);
+  assert.equal((await docs()).find((d) => d.id === r4.documento_id).invoice_id, pagada);
+});
+
+test('I4: ver_modelo con un solo rol llena desde la ficha; para un tercero (para_tercero o rol_cliente NINGUNO) no', async () => {
+  const propio = await ver_modelo({ nombre: 'declaración jurada' }, ctx);
+  assert.equal(propio.error, undefined);
+  assert.deepEqual(propio.roles, ['VENDEDOR']);
+  assert.deepEqual(propio.ya_tenemos, { NOMBRE_VENDEDOR: 'ANA CLIENTE' });
+  assert.deepEqual(propio.faltan, ['NOMBRE_COMPRADOR']);
+
+  const tercero = await ver_modelo({ nombre: 'declaración jurada', para_tercero: true }, ctx);
+  assert.equal(tercero.error, undefined);
+  assert.deepEqual(tercero.ya_tenemos, {});
+  assert.deepEqual(tercero.faltan, ['NOMBRE_VENDEDOR', 'NOMBRE_COMPRADOR']);
+  assert.deepEqual(await ver_modelo({ nombre: 'declaración jurada', rol_cliente: 'ninguno' }, ctx), tercero);
+  // también con varios roles: ni se pide el rol ni se adivina nada
+  const venta = await ver_modelo({ servicio_id: ids.svcVehiculo, para_tercero: true }, ctx);
+  assert.equal(venta.error, undefined);
+  assert.deepEqual(venta.ya_tenemos, {});
+});
+
+test('I4: preparar_documento para un tercero no llena desde la ficha ni escribe en ella', needsDocx, async () => {
+  // Sin para_tercero: el nombre del cliente sale de la ficha y lo nuevo se guarda
+  const propio = await preparar_documento({ modelo_id: ids.declaracion, valores: { NOMBRE_COMPRADOR: 'PEDRO TESTIGO' } }, ctx);
+  assert.equal(propio.estado, 'por_aprobar');
+  let [v] = (await pool.query('SELECT file_path FROM portfolio_versions WHERE document_id = $1', [propio.documento_id])).rows;
+  assert.match((await listBlocks(v.file_path)).map((b) => b.text).join(' '), /ANA CLIENTE, vendo a PEDRO TESTIGO/);
+  const ficha = await legalProfile.get(clientId); // lo que quedó en la ficha tras el documento propio
+
+  // Para un tercero: hay que pasar todo
+  const faltan = await preparar_documento({ modelo_id: ids.declaracion, para_tercero: true, valores: { NOMBRE_COMPRADOR: 'PEDRO TESTIGO' } }, ctx);
+  assert.deepEqual(faltan, { error: 'faltan datos', faltan: ['NOMBRE_VENDEDOR'] });
+
+  const tercero = await preparar_documento({
+    modelo_id: ids.declaracion, para_tercero: true, valores: { NOMBRE_VENDEDOR: 'MARÍA GÓMEZ', NOMBRE_COMPRADOR: 'PEDRO TESTIGO' },
+  }, ctx);
+  assert.equal(tercero.estado, 'por_aprobar');
+  assert.equal(tercero.titulo, 'DECLARACIÓN JURADA — Ana Cliente');
+  const d = (await docs()).find((x) => x.id === tercero.documento_id);
+  assert.equal(d.client_id, clientId); // el pedido sigue siendo del cliente del chat
+  assert.equal(d.prepared_by_bot, true);
+  [v] = (await pool.query('SELECT file_path FROM portfolio_versions WHERE document_id = $1', [tercero.documento_id])).rows;
+  assert.match((await listBlocks(v.file_path)).map((b) => b.text).join(' '), /MARÍA GÓMEZ, vendo a PEDRO TESTIGO/);
+  // La ficha del cliente no cambió: MARÍA GÓMEZ no entra en ella
+  assert.deepEqual(await legalProfile.get(clientId), ficha);
+  assert.equal(ficha.NOMBRE, 'ANA CLIENTE');
+  assert.ok(!Object.values(ficha).includes('MARÍA GÓMEZ'));
+
+  // Con varios roles y para_tercero no hace falta rol_cliente, y tampoco se toca la ficha
+  const venta = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'NINGUNO', valores: { NOMBRE_VENDEDOR: 'JOSÉ PÉREZ', NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
+  assert.equal(venta.estado, 'por_aprobar');
+  assert.deepEqual(await legalProfile.get(clientId), ficha);
+  assert.equal((await notifs()).length, 3);
 });

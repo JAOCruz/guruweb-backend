@@ -75,12 +75,15 @@ async function sendWithRetry(target, filePath, fileName, caption) {
   return { code: 'SEND_FAILED', error: lastErr };
 }
 
-async function notifyAdmins(message, metadata) {
+async function notifyAdmins(message, metadata, title = 'Envío por WhatsApp pendiente') {
   await notifyUsers(await activeAdminIds(), {
-    type: 'delivery', title: 'Envío por WhatsApp pendiente', message,
+    type: 'delivery', title, message,
     link: metadata.invoice_id && !metadata.document_id ? '/cotizaciones' : '/documentos', metadata,
   });
 }
+
+// Aviso de "salió": uno por envío que salió bien (cotización o documento).
+const sentTitle = (label) => `📤 Enviado por WhatsApp: ${label}`;
 
 function failureText(kind, label, clientName, code) {
   const who = clientName || 'cliente sin nombre';
@@ -101,9 +104,24 @@ async function recordOutbound({ phone, clientId, content, waId, target }) {
   });
 }
 
+// Id del mensaje en WhatsApp: Baileys y la Cloud API (envuelta en outgoing) lo dan en key.id;
+// la respuesta cruda de Graph lo trae en messages[0].id. Sin id, null: el aviso tardío no se podrá casar.
 function waId(result) {
   return result?.key?.id || result?.messages?.[0]?.id || null;
 }
+
+// Texto que acompaña al PDF. Una factura no lleva la línea de formas de pago (ya se pagó).
+async function quoteCaption(invoice) {
+  const info = await getBusinessInfo().catch(() => ({}));
+  const where = info.direccion ? ` Estamos en ${info.direccion}.` : '';
+  if (invoice.type === 'FACTURA') {
+    return `Le comparto su factura ${invoice.doc_number} por ${rd(invoice.total)}.${where} Cualquier duda me escribe. 🦉`;
+  }
+  const formas = Array.isArray(info.formas_pago) && info.formas_pago.length ? info.formas_pago.join(' o ') : DEFAULT_PAYMENT_METHODS;
+  return `Le comparto su cotización ${invoice.doc_number} por ${rd(invoice.total)}. Formas de pago: ${formas}.${where} Cualquier duda me escribe. 🦉`;
+}
+
+const quoteLabel = (invoice) => `${invoice.type === 'FACTURA' ? 'la factura' : 'la cotización'} ${invoice.doc_number}`;
 
 // ── Cotizaciones ─────────────────────────────────────────────────────────────
 
@@ -149,10 +167,7 @@ async function sendQuote(invoiceId, { actor } = {}) {
     if (!pdfPath) {
       code = 'PDF_FAILED';
     } else {
-      const info = await getBusinessInfo().catch(() => ({}));
-      const formas = Array.isArray(info.formas_pago) && info.formas_pago.length ? info.formas_pago.join(' o ') : DEFAULT_PAYMENT_METHODS;
-      caption = `Le comparto su cotización ${invoice.doc_number} por ${rd(invoice.total)}. Formas de pago: ${formas}.`
-        + (info.direccion ? ` Estamos en ${info.direccion}.` : '') + ' Cualquier duda me escribe. 🦉';
+      caption = await quoteCaption(invoice);
       phone = invoice.client_phone;
       target = (await Message.getLastJid(phone)) || phone;
       sent = await sendWithRetry(target, pdfPath, `${invoice.doc_number}.pdf`, caption);
@@ -164,13 +179,65 @@ async function sendQuote(invoiceId, { actor } = {}) {
   }
   if (code) return fail(code);
 
+  const messageId = waId(sent.result);
   await afterSend('cotización', invoice.id, 'mensaje', () =>
-    recordOutbound({ phone, clientId: invoice.client_id, content: caption, waId: waId(sent.result), target }));
-  await afterSend('cotización', invoice.id, 'estado', () =>
-    Invoice.markSent(invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'));
+    recordOutbound({ phone, clientId: invoice.client_id, content: caption, waId: messageId, target }));
+  await afterSend('cotización', invoice.id, 'estado', async () => {
+    await Invoice.markSent(invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume');
+    await pool.query('UPDATE invoices SET delivery_wa_id = $2 WHERE id = $1', [invoice.id, messageId]);
+  });
   await afterSend('cotización', invoice.id, 'actividad', () => logActivity(null, {
     actor, category: 'facturas', action: 'invoice.send', entityType: 'invoice', entityId: invoice.id,
-    summary: `Envió la cotización ${invoice.doc_number} a ${invoice.client_name || 'cliente sin nombre'} por WhatsApp (${rd(invoice.total)})`,
+    summary: `Envió ${quoteLabel(invoice)} a ${invoice.client_name || 'cliente sin nombre'} por WhatsApp (${rd(invoice.total)})`,
+    details: { doc_number: invoice.doc_number, type: invoice.type, client_name: invoice.client_name, total: invoice.total, via: 'delivery' },
+  }));
+  await afterSend('cotización', invoice.id, 'aviso', () => notifyAdmins(
+    `${quoteLabel(invoice).replace(/^la/, 'La')} de ${invoice.client_name || 'cliente sin nombre'} salió por WhatsApp (${rd(invoice.total)}).`,
+    { invoice_id: invoice.id, doc_number: invoice.doc_number, sent: true }, sentTitle(invoice.doc_number)));
+  return { ok: true };
+}
+
+// Reenvío deliberado (confirmado en el panel) de una cotización que ya salió por el servicio: no es de una sola vez,
+// no toca sent_by_bot_at ni delivery_wa_id (la marca y el id vigilado son los del primer envío), pero sí registra
+// el mensaje y la Actividad y limpia send_error. Devuelve { ok } o { ok:false, code } como sendQuote.
+async function resendQuote(invoiceId, { actor } = {}) {
+  const invoice = await Invoice.findById(invoiceId);
+  if (!invoice) return { ok: false, code: 'NOT_FOUND' };
+  if (!SENDABLE_STATUSES.has(invoice.status)) return { ok: false, code: 'NOT_APPROVED' };
+  if (!invoice.client_phone) return { ok: false, code: 'NO_PHONE' };
+
+  let pdfPath, caption, phone, target, sent, code = null;
+  try {
+    pdfPath = invoice.pdf_path;
+    if (!pdfPath || !fs.existsSync(pdfPath)) pdfPath = await generateQuotePdf(invoice).catch(() => null);
+    if (!pdfPath) {
+      code = 'PDF_FAILED';
+    } else {
+      caption = await quoteCaption(invoice);
+      phone = invoice.client_phone;
+      target = (await Message.getLastJid(phone)) || phone;
+      sent = await sendWithRetry(target, pdfPath, `${invoice.doc_number}.pdf`, caption);
+      code = sent.code || null;
+    }
+  } catch (err) {
+    console.error('[delivery] reenvío', invoice.id, 'inesperado', err.code || 'ERROR');
+    code = 'SEND_FAILED';
+  }
+  if (code) {
+    await pool.query('UPDATE invoices SET send_error = $2 WHERE id = $1', [invoice.id, code]);
+    console.error('[delivery] reenvío', invoice.id, code);
+    return { ok: false, code };
+  }
+
+  await afterSend('reenvío', invoice.id, 'mensaje', () =>
+    recordOutbound({ phone, clientId: invoice.client_id, content: caption, waId: waId(sent.result), target }));
+  await afterSend('reenvío', invoice.id, 'estado', async () => {
+    await Invoice.markSent(invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume');
+    await pool.query('UPDATE invoices SET send_error = NULL WHERE id = $1', [invoice.id]);
+  });
+  await afterSend('reenvío', invoice.id, 'actividad', () => logActivity(null, {
+    actor, category: 'facturas', action: 'invoice.resend', entityType: 'invoice', entityId: invoice.id,
+    summary: `Reenvió ${quoteLabel(invoice)} a ${invoice.client_name || 'cliente sin nombre'} por WhatsApp (${rd(invoice.total)})`,
     details: { doc_number: invoice.doc_number, type: invoice.type, client_name: invoice.client_name, total: invoice.total, via: 'delivery' },
   }));
   return { ok: true };
@@ -240,16 +307,71 @@ async function sendDocument(documentId, { actor } = {}) {
   }
   if (code) return fail(code);
 
+  const messageId = waId(sent.result);
   await afterSend('documento', doc.id, 'mensaje', () =>
-    recordOutbound({ phone, clientId: doc.client_id, content: caption, waId: waId(sent.result), target }));
+    recordOutbound({ phone, clientId: doc.client_id, content: caption, waId: messageId, target }));
   await afterSend('documento', doc.id, 'estado', () =>
-    pool.query('UPDATE portfolio_documents SET updated_at = NOW() WHERE id = $1', [doc.id]));
+    pool.query('UPDATE portfolio_documents SET delivery_wa_id = $2, updated_at = NOW() WHERE id = $1', [doc.id, messageId]));
   await afterSend('documento', doc.id, 'actividad', () => logActivity(null, {
     actor, category: 'documentos', action: 'documento.send', entityType: 'documento', entityId: doc.id,
     summary: `Envió «${doc.title}» a ${doc.client_name || 'cliente sin nombre'} por WhatsApp`,
     details: { client_name: doc.client_name, version_id: version.id, invoice_id: doc.invoice_id, via: 'delivery' },
   }));
+  await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(
+    `El documento «${doc.title}» de ${doc.client_name || 'cliente sin nombre'} salió por WhatsApp.`,
+    { document_id: doc.id, invoice_id: doc.invoice_id || undefined, sent: true }, sentTitle(doc.title)));
   return { ok: true };
+}
+
+// ── Ventana de 24 h avisada después (webhook de Meta) ────────────────────────
+// Meta acepta el envío y más tarde manda un status "failed" 131047/131026. Se busca la entrega por el id del
+// mensaje y se deshace la marca de enviado: la cotización vuelve a aprobada (una pagada sigue pagada), el
+// documento queda aprobado sin enviar, send_error = WINDOW_CLOSED, aviso a los admins con el texto de la spec
+// y registro en Actividad. El id se borra al revertir, así un webhook repetido no hace nada.
+// Devuelve cuántas entregas se revirtieron (0, 1 o 2).
+async function revertWindowClosed(messageId) {
+  const id = messageId == null ? '' : String(messageId).trim();
+  if (!id) return 0;
+  let n = 0;
+  const { rows: invoices } = await pool.query(
+    `UPDATE invoices
+     SET sent_by_bot_at = NULL, sent_at = NULL, send_error = 'WINDOW_CLOSED', delivery_wa_id = NULL,
+         status = CASE WHEN status = 'sent' THEN 'approved' ELSE status END, updated_at = NOW()
+     WHERE delivery_wa_id = $1 AND sent_by_bot_at IS NOT NULL
+     RETURNING id, doc_number, type, client_name, total`, [id]);
+  for (const inv of invoices) {
+    n++;
+    console.error('[delivery] cotización', inv.id, 'WINDOW_CLOSED (aviso tardío)');
+    await afterSend('cotización', inv.id, 'aviso', () => notifyAdmins(failureText('quote', inv.doc_number, inv.client_name, 'WINDOW_CLOSED'),
+      { invoice_id: inv.id, doc_number: inv.doc_number, code: 'WINDOW_CLOSED' }));
+    await afterSend('cotización', inv.id, 'actividad', () => logActivity(null, {
+      category: 'facturas', action: 'invoice.send_failed', entityType: 'invoice', entityId: inv.id,
+      summary: `WhatsApp no entregó ${quoteLabel(inv)} a ${inv.client_name || 'cliente sin nombre'}: pasaron más de 24 h desde su último mensaje`,
+      details: { doc_number: inv.doc_number, type: inv.type, client_name: inv.client_name, total: inv.total, code: 'WINDOW_CLOSED', via: 'webhook' },
+    }));
+  }
+  const { rows: docs } = await pool.query(
+    `UPDATE portfolio_documents d
+     SET sent_at = NULL, send_error = 'WINDOW_CLOSED', delivery_wa_id = NULL, updated_at = NOW()
+     FROM clients c
+     WHERE d.delivery_wa_id = $1 AND d.sent_at IS NOT NULL AND c.id = d.client_id
+     RETURNING d.id, d.title, d.invoice_id, c.name AS client_name`, [id]);
+  for (const doc of docs) {
+    n++;
+    console.error('[delivery] documento', doc.id, 'WINDOW_CLOSED (aviso tardío)');
+    await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(failureText('document', doc.title, doc.client_name, 'WINDOW_CLOSED'),
+      { document_id: doc.id, invoice_id: doc.invoice_id || undefined, code: 'WINDOW_CLOSED' }));
+    await afterSend('documento', doc.id, 'actividad', () => logActivity(null, {
+      category: 'documentos', action: 'documento.send_failed', entityType: 'documento', entityId: doc.id,
+      summary: `WhatsApp no entregó «${doc.title}» a ${doc.client_name || 'cliente sin nombre'}: pasaron más de 24 h desde su último mensaje`,
+      details: { client_name: doc.client_name, invoice_id: doc.invoice_id, code: 'WINDOW_CLOSED', via: 'webhook' },
+    }));
+  }
+  if (n) {
+    await afterSend('mensaje', id, 'estado', () =>
+      pool.query(`UPDATE messages SET status = 'failed' WHERE wa_message_id = $1 AND direction = 'outbound'`, [id]));
+  }
+  return n;
 }
 
 // Al confirmar el pago: salen los documentos de esa cotización aprobados con "Enviar cuando pague".
@@ -269,4 +391,7 @@ async function deliverPaidDocuments(invoiceId, { actor } = {}) {
   return n;
 }
 
-module.exports = { sendQuote, sendDocument, deliverPaidDocuments, _setSender, _setConverter, _setInvoicePdf };
+module.exports = {
+  sendQuote, resendQuote, sendDocument, deliverPaidDocuments, revertWindowClosed,
+  _setSender, _setConverter, _setInvoicePdf,
+};

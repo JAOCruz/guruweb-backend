@@ -57,6 +57,7 @@ test('preparar_cotizacion recalcula con el catálogo, la crea por aprobar como e
   assert.equal(r.total, 950); assert.equal(r.estado, 'pending_approval');
   assert.match(r.cotizacion, /^COT-/);
   const inv = (await pool.query('SELECT * FROM invoices')).rows[0];
+  assert.equal(r.invoice_id, inv.id); // I1: el id numérico, para ligar el documento con preparar_documento
   assert.equal(inv.created_by, botUserId); assert.equal(inv.status, 'pending_approval');
   assert.equal(inv.source, 'bot'); assert.equal(inv.type, 'COTIZACIÓN');
   assert.equal(Number(inv.total), 950); assert.equal(Number(inv.itbis), 0);

@@ -56,7 +56,8 @@ async function preparar_cotizacion(args, ctx) {
     message: `${inv.doc_number} — ${client.name || ctx.phone}: RD$${subtotal}`,
     link: '/cotizaciones', metadata: { invoice_id: inv.id, doc_number: inv.doc_number },
   });
-  return { cotizacion: inv.doc_number, total: subtotal, estado: (pending || inv).status };
+  // invoice_id: para que preparar_documento ligue el documento a esta cotización
+  return { cotizacion: inv.doc_number, invoice_id: inv.id, total: subtotal, estado: (pending || inv).status };
 }
 
 module.exports = { preparar_cotizacion };

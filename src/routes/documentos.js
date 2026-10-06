@@ -249,6 +249,9 @@ router.post('/documents/:id/approve', async (req, res) => {
   const body = req.body || {};
   const sendMode = body.send_mode == null || body.send_mode === '' ? (doc.invoice_id ? 'al_pagar' : 'manual') : String(body.send_mode);
   if (!SEND_MODES.has(sendMode)) return sendError(res, 400, 'INVALID_SEND_MODE', 'Elige cómo se envía: al pagar, ya o manual');
+  if (sendMode === 'al_pagar' && !doc.invoice_id) {
+    return sendError(res, 400, 'NO_INVOICE', 'Este documento no tiene cotización: elige «Enviar ya» o «Solo aprobar»');
+  }
   try {
     const n = await Portfolio.approve(doc.id, Number(body.version_id), req.user.id, sendMode);
     if (!n) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este documento');

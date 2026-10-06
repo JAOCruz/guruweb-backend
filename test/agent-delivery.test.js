@@ -50,6 +50,8 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20260929_portfolio.sql');
   await runSqlFile('migrations/20261006_bot_fase2.sql');
   await runSqlFile('migrations/20261006_bot_fase2.sql'); // idempotente
+  await runSqlFile('migrations/20261007_delivery_wa_id.sql');
+  await runSqlFile('migrations/20261007_delivery_wa_id.sql'); // idempotente
   adminId = await createUser('leandro', 'admin', 'Leandro');
   actor = { id: adminId, username: 'leandro', name: 'Leandro', role: 'admin' };
   clientId = (await pool.query(`INSERT INTO clients (phone, name) VALUES ($1, 'Juan Pérez') RETURNING id`, [PHONE])).rows[0].id;
@@ -62,14 +64,14 @@ function tmpFile(name, content) {
   return p;
 }
 
-async function makeInvoice({ total = 1500, pdf = true, status = 'approved' } = {}) {
+async function makeInvoice({ total = 1500, pdf = true, status = 'approved', type = 'COTIZACIÓN' } = {}) {
   const n = (await pool.query('SELECT COUNT(*)::int n FROM invoices')).rows[0].n + 1;
-  const docNumber = `COT-2026-${String(n).padStart(3, '0')}`;
+  const docNumber = `${type === 'FACTURA' ? 'FAC' : 'COT'}-2026-${String(n).padStart(3, '0')}`;
   const pdfPath = pdf ? tmpFile(`${docNumber}.pdf`, PDF) : null;
   const { rows } = await pool.query(
     `INSERT INTO invoices (doc_number, type, status, client_id, client_name, client_phone, items, subtotal, itbis, total, created_by, source, pdf_path)
-     VALUES ($1, 'COTIZACIÓN', $2, $3, 'Juan Pérez', $4, '[]', $5, 0, $5, $6, 'bot', $7) RETURNING *`,
-    [docNumber, status, clientId, PHONE, total, adminId, pdfPath]
+     VALUES ($1, $8, $2, $3, 'Juan Pérez', $4, '[]', $5, 0, $5, $6, 'bot', $7) RETURNING *`,
+    [docNumber, status, clientId, PHONE, total, adminId, pdfPath, type]
   );
   return rows[0];
 }
@@ -102,7 +104,8 @@ test('migración: columnas, check de send_mode y switch de digitadores (idempote
   const pd = await cols('portfolio_documents');
   for (const c of ['invoice_id', 'prepared_by_bot', 'send_mode', 'sent_at', 'send_error']) assert.ok(pd.includes(c), c);
   const inv = await cols('invoices');
-  for (const c of ['sent_by_bot_at', 'send_error']) assert.ok(inv.includes(c), c);
+  for (const c of ['sent_by_bot_at', 'send_error', 'delivery_wa_id']) assert.ok(inv.includes(c), c);
+  assert.ok(pd.includes('delivery_wa_id'));
   await assert.rejects(pool.query(`INSERT INTO portfolio_documents (client_id, title, send_mode) VALUES ($1, 'x', 'luego')`, [clientId]), /send_mode/);
   const sw = await pool.query(`SELECT valor FROM business_info WHERE clave = 'digitadores_aprueban_documentos'`);
   assert.equal(sw.rows[0].valor, false);
@@ -197,7 +200,9 @@ test('si falla el registro después de enviar, el envío cuenta y no se repite',
   assert.ok(row.sent_by_bot_at);
   assert.equal(row.status, 'sent');
   assert.equal(row.send_error, null);
-  assert.equal((await notices()).length, 0);
+  const n = await notices();
+  assert.equal(n.length, 1); // solo el aviso de "enviado"; ningún aviso de fallo
+  assert.match(n[0].title, /^📤 Enviado por WhatsApp/);
   assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: false, code: 'ALREADY_SENT' });
   assert.equal(sent.length, 1);
 });
@@ -332,7 +337,8 @@ test('otro error: reintenta una vez y luego SEND_FAILED', async () => {
   assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
   assert.equal(sent.length, 2);
   assert.equal((await invoiceRow(inv.id)).status, 'sent');
-  assert.equal((await notices()).length, 0);
+  assert.equal((await notices()).length, 1); // el aviso de "enviado", ninguno de fallo
+  assert.match((await notices())[0].title, /^📤 Enviado/);
 
   // Los dos fallan → SEND_FAILED, se revierte y se avisa
   sent = [];
@@ -344,9 +350,9 @@ test('otro error: reintenta una vez y luego SEND_FAILED', async () => {
   assert.equal(dr.sent_at, null);
   assert.equal(dr.send_error, 'SEND_FAILED');
   const n = await notices();
-  assert.equal(n.length, 1);
-  assert.equal(n[0].type, 'delivery');
-  assert.match(n[0].message, /No se pudo enviar/);
+  assert.equal(n.length, 2);
+  assert.equal(n[1].type, 'delivery');
+  assert.match(n[1].message, /No se pudo enviar/);
 
   // Si el reintento devuelve WINDOW_CLOSED, manda ese código
   sent = [];
@@ -428,4 +434,105 @@ test('cada envío queda en messages y en activity_log', async () => {
   await delivery.sendDocument(doc2.id, { actor });
   assert.equal((await pool.query(`SELECT COUNT(*)::int n FROM messages WHERE direction = 'outbound'`)).rows[0].n, 2);
   assert.equal((await pool.query('SELECT COUNT(*)::int n FROM activity_log')).rows[0].n, 2);
+});
+
+// ── Revisión final: M1 aviso de enviado, M4 factura, I3 id del mensaje, I2 reenvío ─────────────
+
+test('M1: cada envío que sale avisa a los admins una sola vez, con 📤 y el nombre del documento', async () => {
+  const otherAdmin = await createUser('ana', 'admin', 'Ana');
+  const digitador = await createUser('hengi', 'digitador', 'Hengi');
+  const inv = await makeInvoice({ total: 1500 });
+  assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
+  const doc = await makeDoc({ title: 'Poder especial' });
+  assert.deepEqual(await delivery.sendDocument(doc.id, { actor }), { ok: true });
+
+  const n = await notices();
+  assert.equal(n.length, 4); // 2 envíos × 2 admins
+  assert.ok(n.every((x) => x.type === 'delivery'));
+  assert.ok(!n.some((x) => x.user_id === digitador));
+  const quote = n.filter((x) => x.title === `📤 Enviado por WhatsApp: ${inv.doc_number}`);
+  assert.deepEqual(quote.map((x) => x.user_id).sort(), [adminId, otherAdmin].sort());
+  assert.match(quote[0].message, /Juan Pérez/);
+  assert.match(quote[0].message, /RD\$ 1,500\.00/);
+  assert.equal(quote[0].link, '/cotizaciones');
+  assert.equal(quote[0].metadata.invoice_id, inv.id);
+  const docN = n.filter((x) => x.title === '📤 Enviado por WhatsApp: Poder especial');
+  assert.equal(docN.length, 2);
+  assert.match(docN[0].message, /Juan Pérez/);
+  assert.equal(docN[0].link, '/documentos');
+  assert.equal(docN[0].metadata.document_id, doc.id);
+
+  // El segundo clic (ALREADY_SENT) no avisa otra vez
+  await delivery.sendQuote(inv.id, { actor });
+  await delivery.sendDocument(doc.id, { actor });
+  assert.equal((await notices()).length, 4);
+});
+
+test('M4: una factura sale con "su factura" y sin la línea de formas de pago', async () => {
+  const fac = await makeInvoice({ total: 2000, type: 'FACTURA' });
+  assert.deepEqual(await delivery.sendQuote(fac.id, { actor }), { ok: true });
+  assert.equal(sent[0].fileName, `${fac.doc_number}.pdf`);
+  assert.equal(sent[0].caption,
+    `Le comparto su factura ${fac.doc_number} por RD$ 2,000.00. Estamos en Av. Independencia 1607, Santo Domingo. Cualquier duda me escribe. 🦉`);
+  assert.doesNotMatch(sent[0].caption, /cotización|Formas de pago/);
+  const log = (await pool.query('SELECT * FROM activity_log ORDER BY id')).rows;
+  assert.match(log[0].summary, /Envió la factura/);
+
+  const cot = await makeInvoice({ total: 1500 });
+  await delivery.sendQuote(cot.id, { actor });
+  assert.match(sent[1].caption, /^Le comparto su cotización .* Formas de pago: transferencia o efectivo\./);
+});
+
+test('I3: el envío guarda el id del mensaje de WhatsApp (delivery_wa_id) en la cotización y en el documento', async () => {
+  const inv = await makeInvoice();
+  sendImpl = () => ({ key: { id: 'wamid.COT1' } });
+  assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
+  assert.equal((await invoiceRow(inv.id)).delivery_wa_id, 'wamid.COT1');
+
+  // Respuesta de la Cloud API sin envolver (messages[0].id) también sirve
+  const doc = await makeDoc();
+  sendImpl = () => ({ messages: [{ id: 'wamid.DOC1' }] });
+  assert.deepEqual(await delivery.sendDocument(doc.id, { actor }), { ok: true });
+  assert.equal((await docRow(doc.id)).delivery_wa_id, 'wamid.DOC1');
+  assert.equal((await pool.query('SELECT wa_message_id FROM messages WHERE direction = $1 ORDER BY id', ['outbound'])).rows.map((r) => r.wa_message_id).join(','), 'wamid.COT1,wamid.DOC1');
+
+  // Sin id (Baileys sin key) queda null, y el envío cuenta igual
+  const doc2 = await makeDoc();
+  sendImpl = () => ({});
+  assert.deepEqual(await delivery.sendDocument(doc2.id, { actor }), { ok: true });
+  assert.equal((await docRow(doc2.id)).delivery_wa_id, null);
+  assert.ok((await docRow(doc2.id)).sent_at);
+});
+
+test('I2: resendQuote reenvía una cotización ya enviada, registra el mensaje y la actividad y limpia send_error', async () => {
+  const inv = await makeInvoice();
+  assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
+  await pool.query('UPDATE invoices SET send_error = $2 WHERE id = $1', [inv.id, 'SEND_FAILED']); // un intento viejo
+  const before = await invoiceRow(inv.id);
+
+  assert.deepEqual(await delivery.resendQuote(inv.id, { actor }), { ok: true });
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].fileName, `${inv.doc_number}.pdf`);
+  assert.equal(sent[1].caption, sent[0].caption);
+  const row = await invoiceRow(inv.id);
+  assert.equal(row.send_error, null);
+  assert.equal(row.status, 'sent');
+  assert.equal(String(row.sent_by_bot_at), String(before.sent_by_bot_at)); // la marca del primer envío no cambia
+  assert.equal(row.delivery_wa_id, 'wa-1'); // el id que se vigila sigue siendo el del primer envío
+  const msgs = (await pool.query(`SELECT * FROM messages WHERE direction = 'outbound' ORDER BY id`)).rows;
+  assert.equal(msgs.length, 2);
+  assert.equal(msgs[1].wa_message_id, 'wa-2');
+  assert.equal(msgs[1].content, sent[1].caption);
+  const log = (await pool.query('SELECT * FROM activity_log ORDER BY id')).rows;
+  assert.deepEqual(log.map((l) => l.action), ['invoice.send', 'invoice.resend']);
+  assert.match(log[1].summary, new RegExp(`Reenvió la cotización ${inv.doc_number} a Juan Pérez por WhatsApp`));
+  assert.equal(log[1].actor_id, adminId);
+
+  // Si falla, devuelve el código, guarda send_error y no registra nada
+  sendImpl = () => { const e = new Error('Meta 131047'); e.code = 'WINDOW_CLOSED'; throw e; };
+  assert.deepEqual(await delivery.resendQuote(inv.id, { actor }), { ok: false, code: 'WINDOW_CLOSED' });
+  assert.equal((await invoiceRow(inv.id)).send_error, 'WINDOW_CLOSED');
+  assert.ok((await invoiceRow(inv.id)).sent_by_bot_at);
+  assert.equal((await pool.query('SELECT COUNT(*)::int n FROM activity_log')).rows[0].n, 2);
+  assert.deepEqual(await delivery.resendQuote(99999, { actor }), { ok: false, code: 'NOT_FOUND' });
 });

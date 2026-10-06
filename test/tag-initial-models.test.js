@@ -141,3 +141,12 @@ test('a model or service that does not exist aborts before any write', async () 
   assert.equal(await versions(), 1);
   fs.rmSync(tmp, { force: true });
 });
+
+test('M8: the header shows railway run for the dry run and railway ssh + node for the real run', () => {
+  const header = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'tag-initial-models.js'), 'utf8').split('\n').slice(0, 30).join('\n');
+  assert.match(header, /railway run [^\n]*tag-initial-models\.js --dry-run/);
+  assert.match(header, /railway ssh/);
+  assert.match(header, /node scripts\/tag-initial-models\.js/);
+  // the real run is never shown as `railway run` (the volume is not mounted there)
+  assert.doesNotMatch(header, /railway run [^\n]*tag-initial-models\.js(?! --dry-run)[^\n]*$/m);
+});

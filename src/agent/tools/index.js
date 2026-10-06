@@ -156,14 +156,17 @@ const TOOLS = [
     description: 'Busca el modelo de Word aprobado que corresponde a un servicio y devuelve sus etiquetas (clave, etiqueta, rol), ' +
       'lo que ya está en la ficha del cliente (ya_tenemos) y lo que falta (faltan). Úsela cuando el cliente pide un documento, ' +
       'para saber qué datos pedir: pida solo lo que falte, de a poco. Si devuelve varios roles (vendedor, comprador…), pregunte ' +
-      'cuál es el cliente y vuelva a llamar con rol_cliente. Si devuelve "sin modelo aprobado", no prometa el documento: cree la ' +
-      'solicitud y una persona lo hace a mano. No devuelve precios.',
+      'cuál es el cliente y vuelva a llamar con rol_cliente. Si el modelo tiene un solo rol, pregunte si el documento es para el ' +
+      'cliente o para otra persona; si es para otra persona, vuelva a llamar con para_tercero: true (ya_tenemos vuelve vacío: todos ' +
+      'los datos se piden). Si devuelve "sin modelo aprobado", no prometa el documento: cree la solicitud y una persona lo hace a mano. ' +
+      'No devuelve precios.',
     parameters: {
       type: 'object',
       properties: {
         servicio_id: { type: 'integer', description: 'Id del servicio, tomado de buscar_servicio.' },
         nombre: { type: 'string', description: 'Nombre del documento si no tiene el id del servicio (p. ej. "acto de venta de vehículo").' },
-        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento, tal como viene en roles (p. ej. VENDEDOR).' },
+        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento, tal como viene en roles (p. ej. VENDEDOR), o NINGUNO si el documento es para otra persona.' },
+        para_tercero: { type: 'boolean', description: 'true si el documento es para otra persona y el cliente no figura en él: no se usa la ficha del cliente.' },
       },
       required: [],
     },
@@ -174,14 +177,17 @@ const TOOLS = [
       'nunca se envía solo. Úsela solo después de que el cliente confirmó el resumen de los datos y el carrito (y de haber hecho ' +
       'preparar_cotizacion si hay precio). Pase en valores todas las etiquetas que faltaban según ver_modelo (las de la ficha se completan solas); ' +
       'si devuelve "faltan datos", pida esas etiquetas al cliente y vuelva a llamar: nunca se preparan documentos con espacios en ' +
-      'blanco. Después, dígale al cliente que el equipo lo revisa y se lo envía una vez aprobado y pagado, sin prometer un tiempo.',
+      'blanco. Si el documento es para otra persona (el cliente no figura en él), pase para_tercero: true y todos los valores: ' +
+      'no se toma nada de la ficha del cliente ni se guarda nada en ella. Después, dígale al cliente que el equipo lo revisa y ' +
+      'se lo envía una vez aprobado y pagado, sin prometer un tiempo.',
     parameters: {
       type: 'object',
       properties: {
         modelo_id: { type: 'integer', description: 'Id del modelo, tomado de ver_modelo.' },
         valores: { type: 'object', description: 'Pares clave de etiqueta → valor, con las claves que devolvió ver_modelo (p. ej. NOMBRE_COMPRADOR).' },
-        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento (p. ej. VENDEDOR), obligatorio si el modelo tiene varios roles.' },
-        invoice_id: { type: 'integer', description: 'Id de la cotización a la que se liga el documento, si la tiene; si no, se usa la más reciente del cliente.' },
+        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento (p. ej. VENDEDOR), obligatorio si el modelo tiene varios roles; NINGUNO si es para otra persona.' },
+        para_tercero: { type: 'boolean', description: 'true si el documento es para otra persona y el cliente no figura en él.' },
+        invoice_id: { type: 'integer', description: 'Id de la cotización a la que se liga el documento (el invoice_id que devolvió preparar_cotizacion); si no, se usa la más reciente del cliente.' },
       },
       required: ['modelo_id', 'valores'],
     },

@@ -55,6 +55,7 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20260927_activity_log.sql');
   await runSqlFile('migrations/20260929_portfolio.sql');
   await runSqlFile('migrations/20261006_bot_fase2.sql');
+  await runSqlFile('migrations/20261007_delivery_wa_id.sql');
   ids = {
     admin: await createUser('leandro', 'admin', 'Leandro'),
     hengi: await createUser('hengi', 'digitador', 'Hengi'),
@@ -361,4 +362,24 @@ test('solo el admin cambia el switch', async () => {
   assert.ok(log.every((l) => l.actor_id === ids.admin && l.category === 'documentos'));
   assert.match(log[0].summary, /digitadores/i);
   assert.match(log[1].summary, /digitadores/i);
+});
+
+test('T3: aprobar con al_pagar un documento sin cotización responde 400 NO_INVOICE y no aprueba nada', async () => {
+  const doc = await makeDoc({ invoiceId: null });
+  const res = await call('POST', `/api/documentos/documents/${doc.id}/approve`, 'admin', { version_id: doc.versionId, send_mode: 'al_pagar' });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.code, 'NO_INVOICE');
+  assert.match(body.error, /cotización/);
+  assert.equal((await docRow(doc.id)).approved_version_id, null);
+  assert.equal((await docRow(doc.id)).send_mode, null);
+  assert.equal(sent.length, 0);
+  assert.equal((await pool.query('SELECT COUNT(*)::int n FROM activity_log')).rows[0].n, 0);
+
+  // Con cotización sí
+  const inv = await makeInvoice('approved');
+  const ok = await makeDoc({ invoiceId: inv.id });
+  const r2 = await call('POST', `/api/documentos/documents/${ok.id}/approve`, 'admin', { version_id: ok.versionId, send_mode: 'al_pagar' });
+  assert.equal(r2.status, 200);
+  assert.equal((await r2.json()).document.send_mode, 'al_pagar');
 });
