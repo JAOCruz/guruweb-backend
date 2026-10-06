@@ -17,12 +17,33 @@ const { notifyUrgentAfterHandoff } = require('../agent/tools/handoff');
 // ── Per-phone message buffer (debounce for multi-image bursts) ──
 // When a user sends multiple images at once, WhatsApp fires them as separate
 // message events within ~1s. We buffer them and process as one logical turn.
-const MESSAGE_BUFFER_MS = 3000; // wait 3s after last message before processing
-const phoneBuffers = new Map(); // phone → { messages: [], timer, sock }
+// Motor viejo: 3 s después del último mensaje.
+// Chats del agente (engineFor === 'agent'): 8 s después del último mensaje, y cada mensaje (texto, foto,
+// documento o audio) reinicia la espera; pero el lote nunca espera más de 30 s desde su primer mensaje:
+// al llegar al tope se procesa aunque sigan llegando mensajes (los que lleguen después abren otro lote).
+// Así el bot recibe todo lo que el cliente manda de golpe y responde una sola vez.
+const MESSAGE_BUFFER_MS = 3000;
+const AGENT_BUFFER_MS = 8000;
+const AGENT_BUFFER_MAX_MS = 30000;
+const phoneBuffers = new Map(); // phone → { messages: [], timer, sock, firstAt }
+
+let bufferTimingOverride = null;   // solo pruebas: { agentMs, agentMaxMs, legacyMs }
+let batchProcessorOverride = null; // solo pruebas: reemplaza processBatch para ver los lotes sin correr el motor
+function _setBufferTiming(t) { bufferTimingOverride = t && typeof t === 'object' ? t : null; }
+function _setBatchProcessor(fn) { batchProcessorOverride = typeof fn === 'function' ? fn : null; }
+
+// Cuánto espera el lote de este teléfono después del mensaje que acaba de llegar.
+function bufferDelayMs(phone, buf) {
+  const t = bufferTimingOverride || {};
+  if (engineFor(phone) !== 'agent') return t.legacyMs ?? MESSAGE_BUFFER_MS;
+  const wait = t.agentMs ?? AGENT_BUFFER_MS;
+  const max = t.agentMaxMs ?? AGENT_BUFFER_MAX_MS;
+  return Math.max(0, Math.min(wait, buf.firstAt + max - Date.now()));
+}
 
 function bufferMessage(phone, payload, sock) {
   if (!phoneBuffers.has(phone)) {
-    phoneBuffers.set(phone, { messages: [], timer: null, sock });
+    phoneBuffers.set(phone, { messages: [], timer: null, sock, firstAt: Date.now() });
   }
   const buf = phoneBuffers.get(phone);
   buf.messages.push(payload);
@@ -31,10 +52,10 @@ function bufferMessage(phone, payload, sock) {
   buf.timer = setTimeout(() => {
     const batch = buf.messages.splice(0);
     phoneBuffers.delete(phone);
-    processBatch(phone, batch, sock).catch(err =>
+    (batchProcessorOverride || processBatch)(phone, batch, sock).catch(err =>
       console.error('[WA] Batch processing error:', err.message)
     );
-  }, MESSAGE_BUFFER_MS);
+  }, bufferDelayMs(phone, buf));
 }
 
 // ── AI quota-backoff retry queue ──
@@ -757,9 +778,12 @@ function handleHistoryMessage(msg) {
 
 module.exports = {
   bufferMessage,
-  processBatch, // exportado para las pruebas (bufferMessage espera 3 s)
+  processBatch, // exportado para las pruebas (bufferMessage espera 3 s, o de 8 a 30 s con el agente)
+  BUFFER_TIMING: { MESSAGE_BUFFER_MS, AGENT_BUFFER_MS, AGENT_BUFFER_MAX_MS },
   _setAIRetryDelayMs, // solo pruebas
   _setMediaAnalysis, // solo pruebas
+  _setBufferTiming, // solo pruebas
+  _setBatchProcessor, // solo pruebas
   clearHandoffState,
   handleIncomingMessage,
   handleHistoryMessage,

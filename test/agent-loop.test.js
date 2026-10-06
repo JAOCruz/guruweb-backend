@@ -3,7 +3,7 @@ const { pool } = require('./helpers/db');
 const { createAgentSchema, createUser, seedCatalog } = require('./helpers/agentDb');
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { respond, attachToolLogs, collectAmounts, AI_DEFERRED, _resetBotUserCache } = require('../src/agent/agent');
+const { respond, attachToolLogs, collectAmounts, AI_DEFERRED, _resetBotUserCache, WRITE_TOOLS } = require('../src/agent/agent');
 const { priceGuard } = require('../src/agent/priceGuard');
 const { createFakeProvider } = require('../src/agent/provider');
 const { clearCache } = require('../src/agent/businessInfo');
@@ -45,7 +45,7 @@ test('pregunta de precio: busca, calcula y responde con el monto de la herramien
   assert.match(out, /RD\$950/);
   assert.equal(p.calls.length, 3);
   assert.equal(p.calls[0].timeoutMs, 25000);
-  assert.equal(p.calls[0].tools.length, 11);
+  assert.equal(p.calls[0].tools.length, 12);
   assert.deepEqual(p.calls[0].messages, [{ role: 'user', text: 'cuanto es un acto de venta de un carro de 500 mil' }]);
   // el tercer llamado lleva la llamada y el resultado de cada herramienta
   const m = p.calls[2].messages;
@@ -173,6 +173,12 @@ test('cuota agotada después de una herramienta que escribe: pasa a una persona 
   assert.equal((await pool.query('SELECT count(*)::int c FROM cases')).rows[0].c, 1);
   assert.equal(handler.isManualMode(PHONE), true);
   assert.deepEqual((await logs()).map((x) => x.herramienta), ['crear_solicitud', 'pasar_a_humano']);
+});
+
+test('preparar_documento cuenta como herramienta que escribe: un fallo después no difiere el turno (duplicaría el borrador)', () => {
+  // El llenado real del Word necesita python-docx (ver agent-tools-documents.test.js); aquí se fija la regla del ciclo.
+  assert.deepEqual([...WRITE_TOOLS].sort(), ['crear_solicitud', 'preparar_cotizacion', 'preparar_documento']);
+  assert.equal(WRITE_TOOLS.has('avisar_pago'), false, 'avisar_pago solo avisa: repetirlo no duplica nada');
 });
 
 test('un turno reintentado nunca pasa de 6 herramientas en total', async () => {

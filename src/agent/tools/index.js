@@ -7,6 +7,7 @@ const { crear_solicitud, estado_solicitud } = require('./requests');
 const { preparar_cotizacion } = require('./quote');
 const { pasar_a_humano } = require('./handoff');
 const { ver_modelo, preparar_documento } = require('./documents');
+const { avisar_pago } = require('./payment');
 const { withTimeout } = require('../provider');
 
 // Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
@@ -186,9 +187,27 @@ const TOOLS = [
     },
   },
   {
+    name: 'avisar_pago',
+    description: 'Avisa a los admins que el cliente mandó un comprobante de pago (transferencia, depósito, captura del banco) para que ' +
+      'una persona lo verifique. Úsela cuando el análisis de una foto o archivo parezca un comprobante: pase el monto, el banco y la ' +
+      'referencia si se leyeron, y el id del medio. Nunca confirma el pago ni cambia la cotización: después de usarla, dígale al ' +
+      'cliente que lo recibió y que el equipo lo verifica, sin decir "confirmado" ni prometer un tiempo.',
+    parameters: {
+      type: 'object',
+      properties: {
+        monto: { type: 'string', description: 'Monto que aparece en el comprobante, tal como se leyó (con su moneda).' },
+        banco: { type: 'string', description: 'Banco o medio de pago que aparece en el comprobante.' },
+        referencia: { type: 'string', description: 'Número de referencia o de transacción, si aparece.' },
+        media_id: { type: 'integer', description: 'Id del medio del comprobante, como aparece en "[Foto/Documento enviado, id N]".' },
+      },
+      required: [],
+    },
+  },
+  {
     name: 'pasar_a_humano',
     description: 'Pasa el chat a una persona del equipo: lo pone en modo manual, avisa al asignado o al admin y devuelve el mensaje de ' +
-      'espera, que debe enviarse tal cual. Úsela con reclamaciones, pagos y comprobantes, reembolsos, asesoría legal, casos en tribunal, ' +
+      'espera, que debe enviarse tal cual. Úsela con reclamaciones, dudas o disputas de pagos (un comprobante va con avisar_pago), ' +
+      'reembolsos, asesoría legal, casos en tribunal, ' +
       'descuentos, cuando el cliente pida hablar con una persona, esté molesto, repita lo mismo, o con cualquier cosa que no pueda ' +
       'resolver con las demás herramientas.',
     parameters: {
@@ -203,7 +222,7 @@ const TOOLS = [
 
 const HANDLERS = {
   buscar_servicio, calcular_precio, ver_tramite, guardar_datos_cliente, leer_documento,
-  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento,
+  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento, avisar_pago,
 };
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 

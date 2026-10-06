@@ -25,7 +25,8 @@ const FALLBACK_WAIT = 'Un miembro de nuestro equipo se comunicará con usted a l
 
 const ALLOWED_WINDOW_HOURS = 24;   // resultados de herramientas de este teléfono que siguen valiendo como "dichos"
 const MAX_TOTALS_FOR_SUMS = 30;
-const WRITE_TOOLS = new Set(['crear_solicitud', 'preparar_cotizacion']); // si corrieron, un reintento diferido podría duplicar
+// Si corrieron, un reintento diferido podría duplicar lo creado (caso, cotización o borrador del documento).
+const WRITE_TOOLS = new Set(['crear_solicitud', 'preparar_cotizacion', 'preparar_documento']);
 
 const queues = new Map(); // phone → Promise del último ciclo (turno + entrega), en serie por teléfono
 
@@ -349,5 +350,5 @@ async function attachToolLogs(messageId, ids) {
 
 module.exports = {
   respond, runSerial, attachToolLogs, AI_DEFERRED, collectAmounts, collectArgAmounts, addSums, priceGuard,
-  turnText, normalize, dropCurrentBatch, _resetBotUserCache,
+  turnText, normalize, dropCurrentBatch, _resetBotUserCache, WRITE_TOOLS,
 };
