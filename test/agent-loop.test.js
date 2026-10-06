@@ -341,6 +341,18 @@ test('deliver no se llama con AI_DEFERRED ni con un turno vacío, y si falla el 
   assert.equal(await respond(PHONE, 'hola', { provider: createFakeProvider([{ text: 'Buenas' }]), deliver: boom }), 'Buenas');
 });
 
+test('si deliver se cuelga, el ciclo termina por tiempo y el siguiente turno del mismo teléfono corre y entrega', async () => {
+  const delivered = [];
+  const hang = () => new Promise(() => {});
+  const t0 = Date.now();
+  const a = await respond(PHONE, 'uno', { provider: createFakeProvider([{ text: 'A' }]), deliver: hang, deliverTimeoutMs: 100 });
+  assert.equal(a, 'A');
+  assert.ok(Date.now() - t0 < 2000, 'no espera para siempre');
+  const b = await respond(PHONE, 'dos', { provider: createFakeProvider([{ text: 'B' }]), deliver: async (t) => { delivered.push(t); return null; } });
+  assert.equal(b, 'B');
+  assert.deepEqual(delivered, ['B']);
+});
+
 test('un turno que falla no bloquea el siguiente del mismo teléfono', async () => {
   const bad = { name: 'fake', calls: [], async chat() { throw new Error('boom'); } };
   const good = createFakeProvider([{ text: 'bien' }]);
@@ -450,6 +462,11 @@ test('priceGuard entiende "mil", grupos con espacio, marcadores después y grupo
   assert.deepEqual(priceGuard('Son 1,200 RD$.', ok), { text: 'Son (se lo confirmo).', blocked: [1200] });
   assert.deepEqual(priceGuard('Son DOP 1200.', ok), { text: 'Son (se lo confirmo).', blocked: [1200] });
   assert.deepEqual(priceGuard('Son 3 mil de valor y 2 originales.', ok), { text: 'Son 3 mil de valor y 2 originales.', blocked: [] });
+  assert.deepEqual(priceGuard('Cuesta RD$950  mil.', new Set([950000])), { text: 'Cuesta RD$950  mil.', blocked: [] });
+  assert.deepEqual(priceGuard('Cuesta RD$950  mil.', ok), { text: 'Cuesta (se lo confirmo).', blocked: [950000] });
+  assert.deepEqual(priceGuard('Cuesta RD$950 millones.', new Set([950, 950000])), { text: 'Cuesta (se lo confirmo).', blocked: [950000000] });
+  assert.deepEqual(priceGuard('Cuesta RD$1 5000 hoy.', new Set([15000, 1500, 5000, 1])), { text: 'Cuesta (se lo confirmo) hoy.', blocked: [15000] });
+  assert.deepEqual(priceGuard('Cuesta RD$1 500 000 hoy.', new Set([1500000])), { text: 'Cuesta RD$1 500 000 hoy.', blocked: [] });
 });
 
 test('priceGuard no toca cédulas, fechas, horas, teléfonos, porcentajes ni cantidades sin moneda', () => {

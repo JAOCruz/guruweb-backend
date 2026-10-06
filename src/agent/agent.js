@@ -16,6 +16,7 @@ const { priceGuard } = require('./priceGuard');
 const AI_DEFERRED = '<<AI_DEFERRED>>';
 const MAX_TOOLS = 6;
 const TIMEOUT_MS = 25000;
+const DELIVER_TIMEOUT_MS = 20000; // tope para deliver dentro del candado: si el envío se cuelga, la cola del teléfono sigue
 const REPEAT_LIMIT = 3;
 const CURRENT_TURN_MS = 2 * 60 * 1000; // un inbound guardado hace menos de esto es el lote actual (como en memory.js)
 // Solo si no se pudo leer el de business_info (mismo texto que la migración).
@@ -289,6 +290,8 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
  * @param {Date}   [opts.now]
  * @param {(text: string) => Promise<number|null>} [opts.deliver] envía y guarda la respuesta; devuelve el id del
  *   mensaje guardado (o null). Corre dentro del candado del teléfono y las herramientas del turno se ligan a ese id.
+ *   Tiene un tope de opts.deliverTimeoutMs (20 s por defecto): pasado ese tiempo el ciclo sigue sin ligar nada.
+ * @param {number} [opts.deliverTimeoutMs]
  * @returns {Promise<string>} el texto enviado/por enviar; '' significa "nada que mandar" (lote vacío);
  *   AI_DEFERRED significa "sin cuota, reintente después". deliver no se llama en esos dos casos.
  *
@@ -300,7 +303,7 @@ function respond(phone, text, opts = {}) {
     const { reply, toolLogIds } = await respondNow(phone, text, opts);
     if (typeof opts.deliver === 'function' && reply && reply !== AI_DEFERRED) {
       try {
-        const messageId = await opts.deliver(reply);
+        const messageId = await withTimeout(Promise.resolve(opts.deliver(reply)), opts.deliverTimeoutMs || DELIVER_TIMEOUT_MS);
         await attachToolLogs(messageId, toolLogIds);
       } catch (err) {
         console.error(`[Agent] ${phone} entrega falló:`, err.code || err.name || 'error');

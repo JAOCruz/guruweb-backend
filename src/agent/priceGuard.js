@@ -1,15 +1,16 @@
 // Filtro de precios: un monto en la respuesta del modelo solo pasa si salió de una herramienta en esta conversación.
 // Un monto es dinero solo cuando lleva moneda, antes ("RD$ 1,500", "RD$1500", "$1500", "RD $950", "US$100", "DOP 1,500")
-// o después ("1,500 pesos", "1,500 RD$", "1,500 RD", "1500 DOP"), con "mil" opcional ("2 mil pesos", "RD$5 mil").
+// o después ("1,500 pesos", "1,500 RD$", "1,500 RD", "1500 DOP"), con "mil"/"millones" opcional ("2 mil pesos", "RD$5 mil").
 // Cédulas, fechas, horas, teléfonos, porcentajes y cantidades sin moneda no se tocan.
 const REPLACEMENT = '(se lo confirmo)';
 
-// Número "suelto": dígitos con separadores . , y espacio (el espacio solo si le sigue un grupo de 3 cifras: "1 500").
-// Es permisivo a propósito: un grupo mal formado ("1,5000") se toma completo y se bloquea entero.
-const NUM = '\\d(?:[\\d.,]|\\s(?=\\d{3}(?!\\d)))*';
+// Número "suelto": dígitos con separadores . , y espacio (el espacio solo si le siguen 3 cifras o más: "1 500").
+// Es permisivo a propósito: un grupo mal formado ("1,5000", "1 5000") se toma completo y se bloquea entero.
+const NUM = '\\d(?:[\\d.,]|\\s(?=\\d{3}))*';
 const PREFIX = '(?:(?:RD|US)\\s?\\$\\s?|\\$\\s?|DOP\\s?)';
 const POSTFIX = '(?:\\s?(?:pesos|RD\\$|RD|DOP))';
-const MIL = '(?:\\s?(mil)\\b)?';
+const MIL = '(?:\\s*(mil|millones)\\b)?';
+const FACTOR = { mil: 1000, millones: 1000000 };
 const MONEY = new RegExp(
   `${PREFIX}(${NUM})${MIL}(?:\\s?pesos\\b)?` +                      // grupos 1 (número) y 2 ("mil")
   `|(?<![\\d.,\\-$])(${NUM})${MIL}${POSTFIX}(?![A-Za-z0-9$])`,       // grupos 3 (número) y 4 ("mil")
@@ -35,7 +36,7 @@ function priceGuard(text, allowed = new Set()) {
   const out = String(text == null ? '' : text).replace(MONEY, (match, n1, mil1, n2, mil2) => {
     const raw = n1 !== undefined ? n1 : n2;
     const mil = n1 !== undefined ? mil1 : mil2;
-    const factor = mil ? 1000 : 1;
+    const factor = mil ? FACTOR[mil.toLowerCase()] : 1;
     const parsed = parseAmount(raw);
     // Separadores que el número arrastró al final ("RD$950.") no son parte del monto: se conservan.
     const tail = (raw.match(/[.,\s]+$/) || [''])[0];
