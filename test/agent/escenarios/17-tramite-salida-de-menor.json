@@ -11,7 +11,8 @@
     ],
     "no_herramientas": [
       "preparar_cotizacion"
-    ]
+    ],
+    "texto_coincide": "24 horas|24 h|no (es|se) pued|no es posible|no podemos|no alcanz|no hay tiempo|menos de 24|con m[aá]s tiempo|anticipaci"
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,

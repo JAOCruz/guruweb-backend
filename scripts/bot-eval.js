@@ -5,6 +5,9 @@
 // LOCAL guru_test (el catálogo sale de test/agent/catalog-snapshot.json), revisa `espera` y `prohibido` con
 // scripts/bot-eval-checks.js, pide una nota de tono a un segundo modelo y escribe
 // test/agent/resultados/<fecha>-<proveedor>.md. Sale con código 1 si algún escenario viola `prohibido`.
+// El juez de tono usa el mismo proveedor que se evalúa, salvo que se pase --judge.
+// El costo de Claude solo se estima si se definen BOT_EVAL_PRICE_CLAUDE_IN y BOT_EVAL_PRICE_CLAUDE_OUT (USD por millón de
+// tokens); el de Gemini usa precios por defecto (BOT_EVAL_PRICE_GEMINI_IN/OUT los reemplazan).
 // En la consola solo van conteos y nombres de escenarios, nunca texto de mensajes.
 const fs = require('fs');
 const os = require('os');
@@ -150,9 +153,9 @@ async function runScenario(sc, index, provider) {
   }
   const { rows: log } = await pool.query(
     'SELECT herramienta, args, resultado, ok FROM bot_tool_log WHERE phone = $1 ORDER BY id', [phone]);
-  const { fallas, violaciones } = evaluateScenario(sc, replies, log);
+  const { fallas, violaciones, bloqueos } = evaluateScenario(sc, replies, log);
   if (error) fallas.push(`el escenario falló con error técnico (${error})`);
-  return { sc, replies, transcript, log, fallas, violaciones, ms: Date.now() - t0, turnos: sc.turnos.length };
+  return { sc, replies, transcript, log, fallas, violaciones, bloqueos, ms: Date.now() - t0, turnos: sc.turnos.length };
 }
 
 // ---------- juez de tono ----------
@@ -178,6 +181,7 @@ function buildReport(providerName, date, results, stats, info, judgeName) {
   const viol = results.filter((r) => r.violaciones.length);
   const fail = results.filter((r) => r.fallas.length && !r.violaciones.length);
   const pass = results.filter((r) => !r.fallas.length && !r.violaciones.length);
+  const bloqueos = results.reduce((a, r) => a + r.bloqueos, 0);
   const turns = results.reduce((a, r) => a + r.turnos, 0);
   const meanTurnMs = turns ? results.reduce((a, r) => a + r.ms, 0) / turns : NaN;
   const notas = results.map((r) => r.tono?.nota).filter((n) => Number.isFinite(n));
@@ -191,6 +195,7 @@ function buildReport(providerName, date, results, stats, info, judgeName) {
   const L = [];
   L.push(`# Batería del bot — ${providerName} — ${date}`, '');
   L.push(`- Escenarios: ${total} | aprobados: ${pass.length} | fallas de \`espera\`: ${fail.length} | violaciones de \`prohibido\`: ${viol.length}`);
+  L.push(`- Bloqueos del filtro: ${bloqueos} en ${results.filter((r) => r.bloqueos).length} escenario(s) (advertencia: el filtro cambió un monto por "se lo confirmo")`);
   L.push(`- Tiempo medio por turno (incluye herramientas): ${fmt(meanTurnMs)} ms`);
   L.push(`- Tokens aprox. (entrada/salida): ${known ? `${stats.input} / ${stats.output} (total ${tokens})` : 'n/d'}`);
   if (known && Number.isFinite(cost)) L.push(`- Costo estimado: USD ${fmt(cost, 4)} en total, USD ${fmt(cost / total, 4)} por conversación`);
@@ -199,7 +204,7 @@ function buildReport(providerName, date, results, stats, info, judgeName) {
   L.push('| # | Escenario | Resultado | Tono | ms | Motivos |', '|---|---|---|---|---|---|');
   results.forEach((r, i) => {
     const res = r.violaciones.length ? 'VIOLA PROHIBIDO' : r.fallas.length ? 'FALLA' : 'OK';
-    const why = [...r.violaciones.map((v) => `PROHIBIDO: ${v}`), ...r.fallas].join('; ').replace(/\|/g, '/');
+    const why = [...(r.bloqueos ? [`ADVERTENCIA: ${r.bloqueos} bloqueo(s) del filtro`] : []), ...r.violaciones.map((v) => `PROHIBIDO: ${v}`), ...r.fallas].join('; ').replace(/\|/g, '/');
     L.push(`| ${i + 1} | ${r.sc.nombre} | ${res} | ${r.tono ? r.tono.nota : 'n/d'} | ${r.ms} | ${why} |`);
   });
   const bad = results.filter((r) => r.fallas.length || r.violaciones.length);
@@ -254,4 +259,4 @@ async function main() {
 
 main()
   .then(async (code) => { await pool.end(); process.exit(code); })
-  .catch(async (err) => { console.error('[eval] error:', err.message); try { await pool.end(); } catch {} process.exit(2); });
+  .catch(async (err) => { console.error('[eval] error:', String(err.message).replace(/postgres(ql)?:\/\/[^\s]*/gi, '[url]')); try { await pool.end(); } catch {} process.exit(2); });

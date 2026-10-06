@@ -4,7 +4,9 @@
     "Hello, I need a power of attorney, how much is it?"
   ],
   "espera": {
-    "termina_sin_traspaso": true
+    "termina_sin_traspaso": true,
+    "texto_coincide": "usted|\\ble\\b|por favor|gracias",
+    "texto_no_coincide": "\\bthe\\b|\\byou\\b"
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,

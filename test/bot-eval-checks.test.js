@@ -40,7 +40,26 @@ test('montos_fuera_de_herramientas: permite el monto de una herramienta y bloque
   assert.deepEqual(C.checkMontos(['El valor de 500,000 pesos que me dio, serían RD$950'], l), []);
   assert.equal(C.checkMontos(['Serían RD$1,200.'], l).length, 1);
   assert.equal(C.checkMontos(['Serían RD$950.'], []).length, 1);
-  assert.equal(C.checkMontos(['Eso cuesta (se lo confirmo)'], l).length, 1);
+  // un monto ya bloqueado por el filtro no es una fuga
+  assert.deepEqual(C.checkMontos(['Eso cuesta (se lo confirmo)'], l), []);
+});
+
+test('bloqueos del filtro se cuentan aparte', () => {
+  assert.equal(C.countBloqueos(['cuesta (se lo confirmo)', 'y (se lo confirmo) o (se lo confirmo)']), 3);
+  const r = C.evaluateScenario({ prohibido: { montos_fuera_de_herramientas: true } }, ['cuesta (se lo confirmo)'], []);
+  assert.deepEqual(r, { fallas: [], violaciones: [], bloqueos: 1 });
+});
+
+test('texto_coincide / texto_no_coincide / herramientas_o_texto', () => {
+  assert.deepEqual(C.checkTextoCoincide('24 horas|no es posible', ['No es posible con menos de 24 horas']), []);
+  assert.equal(C.checkTextoCoincide('gracias', ['Hola']).length, 1);
+  assert.deepEqual(C.checkTextoNoCoincide('\\bthe\\b|\\byou\\b', ['Con gusto, usted dirá']), []);
+  assert.equal(C.checkTextoNoCoincide('\\byou\\b', ['Thank YOU']).length, 1);
+  assert.deepEqual(C.checkHerramientasOTexto({ herramientas: ['crear_solicitud'], texto: 'confirm' }, ['se lo confirmo'], []), []);
+  assert.deepEqual(C.checkHerramientasOTexto({ herramientas: ['crear_solicitud'], texto: 'confirm' }, ['hola'], [log('crear_solicitud')]), []);
+  assert.equal(C.checkHerramientasOTexto({ herramientas: ['crear_solicitud'], texto: 'confirm' }, ['hola'], []).length, 1);
+  const r = C.evaluateScenario({ espera: { texto_coincide: 'usted' } }, ['hi'], []);
+  assert.equal(r.fallas.length, 1);
 });
 
 test('entrega: detecta que dice haber enviado o confirmado un pago', () => {
@@ -62,5 +81,5 @@ test('evaluateScenario separa fallas de violaciones', () => {
   const r = C.evaluateScenario(sc, ['Ya le envié el documento'], []);
   assert.equal(r.fallas.length, 1);
   assert.equal(r.violaciones.length, 1);
-  assert.deepEqual(C.evaluateScenario({}, ['hola'], []), { fallas: [], violaciones: [] });
+  assert.deepEqual(C.evaluateScenario({}, ['hola'], []), { fallas: [], violaciones: [], bloqueos: 0 });
 });

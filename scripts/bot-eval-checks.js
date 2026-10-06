@@ -56,23 +56,45 @@ function checkTermina(wantHandoff, log) {
   return [];
 }
 
-// Montos que no salieron de ninguna herramienta, o un bloqueo del filtro (quedó "(se lo confirmo)").
-function checkMontos(replies, log) {
+// Montos que llegaron al texto entregado sin salir de ninguna herramienta (el filtro del agente falló).
+function allowedAmounts(log) {
   const allowed = new Set(); const totals = [];
   for (const r of log) {
     if (r.ok === false) continue;
     collectAmounts(r.resultado, allowed, totals);
     collectArgAmounts(r.herramienta, r.args, allowed);
   }
-  const ok = addSums(new Set(allowed), totals);
+  return addSums(new Set(allowed), totals);
+}
+function checkMontos(replies, log) {
+  const ok = allowedAmounts(log);
   const out = [];
   replies.forEach((t, i) => {
-    const text = String(t || '');
-    const blocked = priceGuard(text, ok).blocked;
+    const blocked = priceGuard(String(t || ''), ok).blocked;
     if (blocked.length) out.push(`turno ${i + 1}: ${blocked.length} monto(s) fuera de herramientas`);
-    else if (text.includes(REPLACEMENT)) out.push(`turno ${i + 1}: el filtro de precios bloqueó un monto`);
   });
   return out;
+}
+
+// Cuántas veces el filtro de precios cambió un monto por "(se lo confirmo)": el filtro funcionó, es solo una advertencia.
+function countBloqueos(replies) {
+  return replies.reduce((n, t) => n + (String(t || '').split(REPLACEMENT).length - 1), 0);
+}
+
+// Texto de las respuestas del bot (regex, sin distinguir mayúsculas).
+const joined = (replies) => replies.map((t) => String(t || '')).join('\n');
+function checkTextoCoincide(pattern, replies) {
+  return pattern && !new RegExp(pattern, 'i').test(joined(replies)) ? [`la respuesta no coincide con /${pattern}/`] : [];
+}
+function checkTextoNoCoincide(pattern, replies) {
+  return pattern && new RegExp(pattern, 'i').test(joined(replies)) ? [`la respuesta coincide con /${pattern}/ y no debía`] : [];
+}
+// Basta una: alguna herramienta llamada o el texto coincide.
+function checkHerramientasOTexto(spec, replies, log) {
+  if (!spec) return [];
+  const byTool = (spec.herramientas || []).some((n) => called(log, n));
+  const byText = spec.texto && new RegExp(spec.texto, 'i').test(joined(replies));
+  return byTool || byText ? [] : [`ni llamó a ${(spec.herramientas || []).join('/')} ni coincide con /${spec.texto}/`];
 }
 
 function checkEntrega(replies) {
@@ -87,7 +109,7 @@ function checkRevelaNotario(replies) {
   return out;
 }
 
-// Devuelve { fallas: [motivos de espera], violaciones: [motivos de prohibido] }.
+// Devuelve { fallas, violaciones, bloqueos }: motivos de espera, motivos de prohibido y conteo de bloqueos del filtro.
 function evaluateScenario(scenario, replies, log) {
   const e = scenario.espera || {}; const p = scenario.prohibido || {};
   const fallas = [
@@ -96,16 +118,19 @@ function evaluateScenario(scenario, replies, log) {
     ...checkPreguntaAntesDePrecio(e.pregunta_antes_de_precio, replies, log),
     ...(e.termina_con_traspaso ? checkTermina(true, log) : []),
     ...(e.termina_sin_traspaso ? checkTermina(false, log) : []),
+    ...checkTextoCoincide(e.texto_coincide, replies),
+    ...checkTextoNoCoincide(e.texto_no_coincide, replies),
+    ...checkHerramientasOTexto(e.herramientas_o_texto, replies, log),
   ];
   const violaciones = [
     ...(p.montos_fuera_de_herramientas ? checkMontos(replies, log) : []),
     ...(p.entrega ? checkEntrega(replies) : []),
     ...(p.revela_notario ? checkRevelaNotario(replies) : []),
   ];
-  return { fallas, violaciones };
+  return { fallas, violaciones, bloqueos: countBloqueos(replies) };
 }
 
 module.exports = {
   evaluateScenario, checkHerramientasIncluye, checkNoHerramientas, checkPreguntaAntesDePrecio, checkTermina,
-  checkMontos, checkEntrega, checkRevelaNotario, MONEY,
+  checkMontos, countBloqueos, checkTextoCoincide, checkTextoNoCoincide, checkHerramientasOTexto, checkEntrega, checkRevelaNotario, MONEY,
 };

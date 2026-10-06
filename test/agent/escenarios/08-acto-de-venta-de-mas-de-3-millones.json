@@ -8,7 +8,14 @@
     "herramientas_incluye": [
       "buscar_servicio"
     ],
-    "termina_sin_traspaso": true
+    "termina_sin_traspaso": true,
+    "texto_no_coincide": "RD\\s?\\$",
+    "herramientas_o_texto": {
+      "herramientas": [
+        "crear_solicitud"
+      ],
+      "texto": "confirm"
+    }
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,
