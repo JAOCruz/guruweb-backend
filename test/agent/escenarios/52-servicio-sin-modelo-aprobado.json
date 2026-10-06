@@ -1,0 +1,19 @@
+{
+  "nombre": "servicio sin modelo aprobado",
+  "turnos": [
+    "necesito un poder para que mi hermano venda un solar",
+    "soy Carlos Matos, cedula 001-5555555-5, mi hermano es Luis Matos"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "crear_solicitud"
+    ],
+    "no_herramientas": [
+      "preparar_documento"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

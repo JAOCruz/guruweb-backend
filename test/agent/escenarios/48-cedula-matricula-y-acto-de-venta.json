@@ -1,0 +1,41 @@
+{
+  "nombre": "cedula matricula y acto de venta",
+  "turnos": [
+    "hola buenas, quiero hacer un acto de venta de mi carro",
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 101,
+          "media_type": "image",
+          "analysis": "Cédula de identidad dominicana. Nombre: JUAN PEREZ MARTINEZ. Cédula: 001-1234567-8. Nacionalidad: dominicana."
+        }
+      ]
+    },
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 102,
+          "media_type": "image",
+          "analysis": "Matrícula (certificado de propiedad) de vehículo. Marca: TOYOTA. Modelo: COROLLA. Año: 2015. Color: GRIS. Chasis: JTDBR32E560123456. Placa: A123456."
+        }
+      ]
+    },
+    "yo soy el vendedor, el comprador es Pedro Gomez"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_modelo",
+      "guardar_datos_cliente"
+    ],
+    "termina_sin_traspaso": true,
+    "no_herramientas": [
+      "preparar_documento"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

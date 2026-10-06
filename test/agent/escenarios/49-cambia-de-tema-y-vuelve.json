@@ -1,0 +1,21 @@
+{
+  "nombre": "cambia de tema y vuelve",
+  "turnos": [
+    "necesito un acto de venta de un carro, yo lo vendo",
+    "oye, a que hora abren hoy?",
+    "ok perfecto, y sigamos con lo del acto de venta"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_modelo"
+    ],
+    "termina_sin_traspaso": true,
+    "no_herramientas": [
+      "preparar_documento"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

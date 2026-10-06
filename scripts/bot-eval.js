@@ -74,7 +74,32 @@ async function setupDb() {
   await pool.query(`SELECT setval(pg_get_serial_sequence('service_categories','id'), COALESCE((SELECT MAX(id) FROM service_categories),1))`);
   await pool.query(`SELECT setval(pg_get_serial_sequence('service_catalog','id'), COALESCE((SELECT MAX(id) FROM service_catalog),1))`);
   const r = await seedBotKnowledge({ dir: path.join(ROOT, 'seeds', 'bot') });
+  await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
+}
+
+// Modelo etiquetado y aprobado para los escenarios de documentos: "Acto de Venta - Vehículo Liviano" con el .docx
+// de prueba (test/fixtures/venta-etiquetada.docx, {{NOMBRE_VENDEDOR}} y {{NOMBRE_COMPRADOR}}), ligado al servicio del catálogo.
+// Los demás servicios quedan sin modelo (escenario "sin modelo aprobado").
+const MODELO_FIXTURE = path.join(ROOT, 'test', 'fixtures', 'venta-etiquetada.docx');
+const MODELO_TAGS = [
+  { key: 'NOMBRE_VENDEDOR', label: 'Nombre del vendedor', group: 'VENDEDOR' },
+  { key: 'NOMBRE_COMPRADOR', label: 'Nombre del comprador', group: 'COMPRADOR' },
+];
+async function seedModeloAprobado() {
+  await pool.query(`DROP TABLE IF EXISTS template_tag_versions, portfolio_versions, portfolio_documents, doc_templates, doc_categories CASCADE`);
+  await pool.query('CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)');
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  for (const f of ['20260929_portfolio.sql', '20261002_template_tags.sql', '20261006_bot_fase2.sql']) {
+    await pool.query(fs.readFileSync(path.join(ROOT, 'migrations', f), 'utf8'));
+  }
+  const { rows: [tpl] } = await pool.query(
+    `INSERT INTO doc_templates (name, file_path, file_name) VALUES ('ACTO DE VENTA - VEHÍCULO LIVIANO', 'venta-etiquetada.docx', 'venta-etiquetada.docx') RETURNING id`);
+  const { rows: [ver] } = await pool.query(
+    `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, source) VALUES ($1, 1, $2, $3, 'ai') RETURNING id`,
+    [tpl.id, MODELO_FIXTURE, JSON.stringify(MODELO_TAGS)]);
+  await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [ver.id, tpl.id]);
+  await pool.query(`UPDATE service_catalog SET template_id = $1 WHERE name = 'Acto de Venta - Vehículo Liviano'`, [String(tpl.id)]);
 }
 
 // ---------- proveedores ----------

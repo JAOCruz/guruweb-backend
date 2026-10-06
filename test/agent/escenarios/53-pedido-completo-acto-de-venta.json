@@ -1,0 +1,32 @@
+{
+  "nombre": "pedido completo acto de venta",
+  "turnos": [
+    "hola, quiero un acto de venta de un carro",
+    "yo soy el vendedor, Juan Perez Martinez, cedula 001-1234567-8",
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 104,
+          "media_type": "image",
+          "analysis": "Matrícula (certificado de propiedad) de vehículo. Marca: TOYOTA. Modelo: COROLLA. Año: 2015. Color: GRIS. Chasis: JTDBR32E560123456. Placa: A123456."
+        }
+      ]
+    },
+    "el comprador es Pedro Gomez Rodriguez, cedula 001-9999999-9",
+    "el carro lo vendo en 800 mil",
+    "si, esta bien, adelante con la cotizacion"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_modelo",
+      "preparar_cotizacion",
+      "preparar_documento"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

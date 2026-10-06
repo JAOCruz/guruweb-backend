@@ -1,0 +1,21 @@
+{
+  "nombre": "faltan datos del comprador",
+  "turnos": [
+    "quiero un acto de venta de mi carro, yo soy la vendedora, me llamo Maria Lopez",
+    "la cedula es 001-7654321-0, el carro vale 600 mil",
+    "el comprador? ahorita no tengo sus datos, hagalo asi"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_modelo"
+    ],
+    "no_herramientas": [
+      "preparar_documento"
+    ],
+    "texto_coincide": "comprador"
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "nombre": "comprobante de pago",
+  "turnos": [
+    "buenas, ya hice el pago del acto de venta",
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 103,
+          "media_type": "image",
+          "analysis": "Comprobante de transferencia bancaria. Banco Popular. Monto: RD$ 950.00. Fecha: 06/10/2026. Referencia 884412."
+        }
+      ]
+    },
+    "me confirma que llego?"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "avisar_pago"
+    ],
+    "texto_no_coincide": "pago.{0,20}confirmad|confirmamos su pago|ya (?:se )?(?:acredit|recibi)",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}
