@@ -1,0 +1,22 @@
+[
+  { "modelo": "ACTO DE VENTA DE VEHICULO", "servicio": "Acto de Venta - Vehículo Liviano" },
+  { "modelo": "ACTO DE VENTA DE VEHICULO - CON APODERADO", "servicio": null },
+  { "modelo": "PROMESA DE VENTA DE VEHICULO CONDICIONAL", "servicio": "Acto de Venta Condicional - Vehículo" },
+  { "modelo": "ACTO DE VENTA DE INMUEBLE", "servicio": "Acto de Venta - Bien Inmueble" },
+  { "modelo": "PROMESA DE VENTA", "servicio": "Promesa de Compra-Venta" },
+  { "modelo": "CONTRATO DE VENTA DE PUNTO COMERCIAL", "servicio": "Acto de Venta - Punto Comercial" },
+  { "modelo": "PODER DE AUTORIZACION AMPLIATORIO MULTIUSO", "servicio": "Poder - Ampliatorio" },
+  { "modelo": "PODER DE AUTORIZACIÓN PARA VIAJE DE MENOR", "servicio": "Poder - Viaje de Menor" },
+  { "modelo": "PODER DE REPRESENTACION DE GUARDA Y CUSTODIA A MENOR DE EDAD", "servicio": "Poder - Guarda y Tutela de Menor" },
+  { "modelo": "PODER CUOTA LITIS", "servicio": "Poder Cuota Litis" },
+  { "modelo": "PODER DE AUTORIZACION PARA EXPEDIR CERTIFICACION DE NO ANTECEDENTES PENALES", "servicio": "Poder - Retirar Certificaciones" },
+  { "modelo": "DECLARACION DE SOLTERIA", "servicio": "Declaración Jurada - Soltería" },
+  { "modelo": "DECLARACION DE UNION LIBRE", "servicio": "Declaración Jurada - Unión Libre" },
+  { "modelo": "DECLARACION JURADA DE BIENES E INGRESOS", "servicio": "Declaración Jurada - Bienes e Ingresos" },
+  { "modelo": "DECLARACION JURADA DE RESIDENCIA O DOMICILIO", "servicio": "Declaración Jurada - Residencia/Domicilio" },
+  { "modelo": "DECLARACIÓN JURADA DE NO CONVIVENCIA", "servicio": "Declaración Jurada - No Convivencia" },
+  { "modelo": "CONTRATO DE ALQUILER DE VIVIENDA", "servicio": "Contrato de Alquiler - Vivienda Sencillo" },
+  { "modelo": "CONTRATO DE ALQUILER LOCAL COMERCIAL", "servicio": "Contrato de Renta - Local Comercial" },
+  { "modelo": "CONTRATO DE RENTA O ALQUILER DE VEHICULO", "servicio": "Contrato de Renta - Vehículo" },
+  { "modelo": "CONTRATO EMPLEADO ASISTENTE LABORAL POR 3 MESES", "servicio": null }
+]

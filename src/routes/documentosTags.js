@@ -93,21 +93,38 @@ const fail = (res, err, context) => {
   return sendError(res, 500, 'SERVER_ERROR', 'No se pudo completar; intenta de nuevo');
 };
 
+// Tags the models with those ids one at a time; a model that fails does not stop the rest.
+// `tagger` is tagModel unless a test or script injects another one. Returns { done, failed }.
+async function tagModels(ids, userId, { tagger = tagModel, onStart, onDone } = {}) {
+  const failed = [];
+  for (const id of ids) {
+    if (onStart) onStart(id);
+    let error = null;
+    try {
+      await tagger(id, userId);
+    } catch (err) {
+      error = err;
+      failed.push({ id, error: err.message });
+    }
+    if (onDone) onDone(id, error);
+  }
+  return { done: ids.length, failed };
+}
+
 // ── Batch: tag every untagged .docx model, one at a time (resumable: tagged ones are skipped) ──
 const batch = { running: false, total: 0, done: 0, failed: [], current: null, started_at: null, finished_at: null };
 
 async function runBatch(userId) {
   const todo = (await Tags.listStatuses()).filter((m) => m.status === 'untagged' && originalFile(m));
   batch.total = todo.length;
-  for (const m of todo) {
-    batch.current = m.name;
-    try {
-      await tagModel(m.id, userId);
-    } catch (err) {
-      batch.failed.push({ id: m.id, name: m.name, error: err.message });
-    }
-    batch.done += 1;
-  }
+  const nameOf = new Map(todo.map((m) => [m.id, m.name]));
+  await tagModels(todo.map((m) => m.id), userId, {
+    onStart: (id) => { batch.current = nameOf.get(id); },
+    onDone: (id, err) => {
+      if (err) batch.failed.push({ id, name: nameOf.get(id), error: err.message });
+      batch.done += 1;
+    },
+  });
   Object.assign(batch, { running: false, current: null, finished_at: new Date() });
 }
 
@@ -527,3 +544,6 @@ router.post('/models/:id/fill', async (req, res) => {
 
 module.exports = router;
 module.exports.batch = batch;
+module.exports.tagModel = tagModel;
+module.exports.tagModels = tagModels;
+module.exports.originalFile = originalFile;
