@@ -25,7 +25,10 @@ function toGeminiContents(messages) {
       for (const tc of m.toolCalls || []) parts.push({ functionCall: { name: tc.name, args: tc.args || {} } });
       if (parts.length) out.push({ role: 'model', parts });
     } else if (m.role === 'tool') {
-      const part = { functionResponse: { name: m.name, response: m.result } };
+      // Gemini exige un objeto en response: lo que no lo sea (lista, texto, null) va envuelto.
+      const r = m.result;
+      const response = r && typeof r === 'object' && !Array.isArray(r) ? r : { result: r === undefined ? null : r };
+      const part = { functionResponse: { name: m.name, response } };
       const last = out[out.length - 1];
       if (last && last.role === 'function') last.parts.push(part);
       else out.push({ role: 'function', parts: [part] });

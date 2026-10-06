@@ -37,6 +37,14 @@ test('gemini: toGeminiContents convierte una llamada y su resultado', () => {
   assert.deepEqual(c[1].parts[0].functionCall, { name: 'x', args: { q: 1 } });
 });
 
+test('gemini: un resultado que no es un objeto plano se envuelve en { result }', () => {
+  const mk = (result) => toGeminiContents([{ role: 'tool', toolCallId: 'a', name: 'x', result }])[0].parts[0].functionResponse.response;
+  assert.deepEqual(mk([1, 2]), { result: [1, 2] });
+  assert.deepEqual(mk('texto'), { result: 'texto' });
+  assert.deepEqual(mk(null), { result: null });
+  assert.deepEqual(mk({ ok: true }), { ok: true });
+});
+
 test('gemini: toGeminiSchema pone los tipos en mayúsculas, también los anidados', () => {
   assert.equal(toGeminiSchema({ type: 'object', properties: { a: { type: 'array', items: { type: 'string' } } } }).properties.a.items.type, 'STRING');
 });

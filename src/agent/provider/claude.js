@@ -28,7 +28,7 @@ async function chat({ system, messages, tools = [], timeoutMs }) {
       max_tokens: 1024,
       ...(tools.length ? { tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })) } : {}),
       messages: toClaudeMessages(messages),
-    }), timeoutMs);
+    }, { timeout: timeoutMs, maxRetries: 0 }), timeoutMs); // el ciclo del agente decide los reintentos
     const blocks = res.content || [];
     return {
       text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join(''),
