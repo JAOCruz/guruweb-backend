@@ -112,7 +112,8 @@ const TOOLS = [
     name: 'preparar_cotizacion',
     description: 'Crea la cotización formal con los precios del catálogo; queda por aprobar por el admin, que la envía al cliente. ' +
       'Úsela solo después de que el cliente esté de acuerdo con el servicio y el precio calculado, y de tener los datos necesarios. ' +
-      'No la use con servicios por confirmar. Después de usarla, dígale al cliente que se la confirma enseguida.',
+      'No la use con servicios por confirmar. Después de usarla, dígale al cliente que un miembro del equipo la revisa y se la ' +
+      'confirma en horario de atención, sin prometer un tiempo.',
     parameters: {
       type: 'object',
       properties: {

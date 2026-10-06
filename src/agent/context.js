@@ -9,11 +9,13 @@ const { getBusinessInfo, isOpen, formatForPrompt } = require('./businessInfo');
 
 const HISTORY_LIMIT = 30;
 const ZONA = 'America/Santo_Domingo';
-// Estados que ya no cuentan como "solicitud abierta".
-const CLOSED_STATES = ['completed', 'delivered', 'cancelled', 'closed', 'rejected'];
+// Estados reales de `cases` (cases_status_check en migrations/20250716_case_certifications.sql).
+// Cerrados: los que User.OPEN_CASE excluye (resolved/closed/paid/cancelled) más los finales del flujo de certificaciones.
+const CLOSED_STATES = ['resolved', 'closed', 'paid', 'cancelled', 'completed', 'delivered', 'rejected'];
 const ESTADO = {
-  new: 'nueva', open: 'abierta', in_progress: 'en proceso', awaiting_institution: 'esperando a la institución',
-  pending: 'pendiente', awaiting_payment: 'esperando pago', awaiting_documents: 'esperando documentos',
+  open: 'abierta', in_progress: 'en proceso', pending_payment: 'pendiente de pago', paid: 'pagada', resolved: 'resuelta',
+  new: 'nueva', awaiting_institution: 'esperando a la institución', rejected: 'rechazada', completed: 'completada',
+  delivered: 'entregada', closed: 'cerrada', cancelled: 'cancelada', escalated: 'escalada a una persona',
 };
 
 let guideCache = null;
@@ -92,4 +94,4 @@ async function buildContext({ phone, client, now = new Date() }) {
   return { system, messages };
 }
 
-module.exports = { buildContext, loadGuide, formatNow };
+module.exports = { buildContext, loadGuide, formatNow, CLOSED_STATES, ESTADO };

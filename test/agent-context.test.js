@@ -175,7 +175,8 @@ test('buildContext incluye la ficha y el resumen, pero no HISTORIAL', async () =
     HISTORIAL: [{ clave: 'ESTADO CIVIL', antes: 'soltera', fecha: '2026-09-01' }],
   })]);
   await pool.query(`INSERT INTO cases (case_number, title, status, client_id) VALUES ('CASO-1', 'Acto de Venta — Ana Cliente', 'in_progress', $1),
-    ('CASO-2', 'Poder — Ana Cliente', 'completed', $1)`, [clientId]);
+    ('CASO-2', 'Poder — Ana Cliente', 'completed', $1), ('CASO-3', 'Carta — Ana Cliente', 'resolved', $1),
+    ('CASO-4', 'Copias — Ana Cliente', 'paid', $1), ('CASO-5', 'Apostilla — Ana Cliente', 'awaiting_institution', $1)`, [clientId]);
   await pool.query(`INSERT INTO bot_memory (client_id, resumen, hasta_mensaje_id) VALUES ($1, 'Pidió un acto de venta; quedó en mandar la matrícula.', 3)`, [clientId]);
   const { system } = await buildContext({ phone: PHONE, client: ctx.client, now: MONDAY });
   assert.ok(system.includes('Ana Cliente'));
@@ -183,10 +184,27 @@ test('buildContext incluye la ficha y el resumen, pero no HISTORIAL', async () =
   assert.ok(system.includes('PROFESION: contadora'));
   assert.ok(!system.includes('HISTORIAL'));
   assert.ok(!system.includes('soltera'));
-  assert.ok(system.includes('CASO-1'));
-  assert.ok(system.includes('Acto de Venta — Ana Cliente'));
-  assert.ok(!system.includes('CASO-2'));
+  assert.ok(system.includes('CASO-1 — Acto de Venta — Ana Cliente (en proceso)'));
+  assert.ok(system.includes('CASO-5 — Apostilla — Ana Cliente (esperando a la institución)'));
+  assert.ok(!system.includes('CASO-2'), 'completed no es abierta');
+  assert.ok(!system.includes('CASO-3'), 'resolved (cierre normal del panel) no es abierta');
+  assert.ok(!system.includes('CASO-4'), 'paid no es abierta');
   assert.ok(system.includes('quedó en mandar la matrícula'));
+});
+
+test('ESTADO traduce exactamente los estados de cases_status_check y CLOSED_STATES cubre los cierres del panel', () => {
+  const { ESTADO, CLOSED_STATES } = require('../src/agent/context');
+  const check = fs.readFileSync(path.join(__dirname, '..', 'migrations', '20250716_case_certifications.sql'), 'utf8')
+    .match(/cases_status_check\s*CHECK \(status IN \(([\s\S]*?)\)\)/)[1].match(/'([a-z_]+)'/g).map((s) => s.replace(/'/g, ''));
+  assert.deepEqual(Object.keys(ESTADO).sort(), [...check].sort());
+  for (const s of ['resolved', 'closed', 'paid', 'cancelled']) assert.ok(CLOSED_STATES.includes(s), `${s} debe contar como cerrado`);
+  assert.ok(CLOSED_STATES.every((s) => check.includes(s)));
+});
+
+test('la guía no promete tiempos de confirmación', () => {
+  const g = fs.readFileSync(GUIDE, 'utf8');
+  assert.doesNotMatch(g, /confirm\w* (?:enseguida|en un momento|ahora mismo|de inmediato|hoy mismo)/i);
+  assert.ok(g.includes('en horario de atención'));
 });
 
 test('buildContext trae la guía, los datos del negocio y los temas que van a una persona', async () => {
