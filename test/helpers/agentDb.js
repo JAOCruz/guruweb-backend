@@ -19,7 +19,8 @@ async function createAgentSchema() {
     items JSONB, notes TEXT, subtotal NUMERIC, itbis NUMERIC, total NUMERIC, created_by INT, source TEXT, discount_type TEXT, discount_value NUMERIC,
     discount_code TEXT, discount_amount NUMERIC, discount_reason TEXT, approved_by INT, approved_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW(), created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE cases (id SERIAL PRIMARY KEY, case_number TEXT, title TEXT, description TEXT, status TEXT DEFAULT 'new',
-    case_type TEXT, client_id INT, user_id INT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), source TEXT, service_id INT)`);
+    case_type TEXT, case_subtype TEXT, client_id INT, user_id INT, court TEXT, institution TEXT, service_id INT, expected_completion_date DATE,
+    next_hearing TIMESTAMPTZ, reminder_sent_at TIMESTAMPTZ, source TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE messages (id SERIAL PRIMARY KEY, wa_message_id VARCHAR(255), phone VARCHAR(20), client_id INT, case_id INT,
     direction VARCHAR(10) NOT NULL, content TEXT NOT NULL, media_url TEXT, status VARCHAR(20) DEFAULT 'sent', wa_jid TEXT, push_name TEXT,
     read BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW())`);

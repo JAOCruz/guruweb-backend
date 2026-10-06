@@ -22,8 +22,11 @@ const CURRENT_TURN_MS = 2 * 60 * 1000; // un inbound guardado hace menos de esto
 const FALLBACK_WAIT = 'Un miembro de nuestro equipo se comunicará con usted a la brevedad. ⏰ Horario de atención: Lunes a Viernes, ' +
   "9:00 a 18:00 hrs. Si su asunto es urgente fuera de horario, por favor indíquelo escribiendo 'urgente'.";
 
-const queues = new Map();         // phone → Promise del último turno (turnos en serie por teléfono)
-const lastToolLogIds = new Map(); // phone → ids de bot_tool_log del último turno, hasta attachToolLogs
+const ALLOWED_WINDOW_HOURS = 24;   // resultados de herramientas de este teléfono que siguen valiendo como "dichos"
+const MAX_TOTALS_FOR_SUMS = 30;
+const WRITE_TOOLS = new Set(['crear_solicitud', 'preparar_cotizacion']); // si corrieron, un reintento diferido podría duplicar
+
+const queues = new Map(); // phone → Promise del último ciclo (turno + entrega), en serie por teléfono
 
 let botUserIdCache = null;
 async function getBotUserId() {
@@ -42,19 +45,55 @@ const isObj = (v) => v && typeof v === 'object';
 
 // Junta en `set` todos los montos que devolvió una herramienta: total, precio, rango.min/max, desglose.* y
 // cantidad × precio. El desglose de un resultado por confirmar (total nulo) no cuenta: ese monto no se dice.
-function collectAmounts(value, set, depth = 0) {
+// Cada `total` también va a `totals` (para permitir sumas de 2 o 3 totales).
+function collectAmounts(value, set, totals = [], depth = 0) {
   if (!isObj(value) || depth > 8) return set;
-  if (Array.isArray(value)) { for (const v of value) collectAmounts(v, set, depth + 1); return set; }
+  if (Array.isArray(value)) { for (const v of value) collectAmounts(v, set, totals, depth + 1); return set; }
   for (const [k, v] of Object.entries(value)) {
-    if ((k === 'total' || k === 'precio') && positive(v)) set.add(v);
+    if ((k === 'total' || k === 'precio') && positive(v)) { set.add(v); if (k === 'total') totals.push(v); }
     else if (k === 'rango' && isObj(v)) { if (positive(v.min)) set.add(v.min); if (positive(v.max)) set.add(v.max); }
     else if (k === 'desglose' && isObj(v)) {
       if (value.por_confirmar !== true && value.total !== null) for (const d of Object.values(v)) if (positive(d)) set.add(d);
-    } else if (isObj(v)) collectAmounts(v, set, depth + 1);
+    } else if (isObj(v)) collectAmounts(v, set, totals, depth + 1);
   }
   const unit = positive(value.precio) ? value.precio : positive(value.total) ? value.total : null;
   if (unit !== null && positive(value.cantidad)) set.add(unit * value.cantidad);
   return set;
+}
+
+// El valor del bien que el modelo pasó a calcular_precio / preparar_cotizacion (lo dio el cliente y la
+// herramienta lo usó): el modelo puede repetirlo con "RD$". Solo de llamadas que salieron bien.
+function collectArgAmounts(name, args, set) {
+  if (!isObj(args)) return set;
+  const add = (v) => { const n = Number(v); if (Number.isFinite(n) && n > 0) set.add(n); };
+  if (name === 'calcular_precio') add(args.valor_del_bien);
+  if (name === 'preparar_cotizacion' && Array.isArray(args.partidas)) for (const p of args.partidas) if (isObj(p)) add(p.valor_del_bien);
+  return set;
+}
+
+// Sumas de 2 o 3 totales (los últimos MAX_TOTALS_FOR_SUMS): "RD$950 + RD$700 = RD$1,650".
+function addSums(set, totals) {
+  const t = totals.slice(-MAX_TOTALS_FOR_SUMS);
+  for (let i = 0; i < t.length; i++) {
+    for (let j = i + 1; j < t.length; j++) {
+      set.add(t[i] + t[j]);
+      for (let k = j + 1; k < t.length; k++) set.add(t[i] + t[j] + t[k]);
+    }
+  }
+  return set;
+}
+
+// Lo que las herramientas de este teléfono devolvieron en las últimas 24 h ya se le dijo (o se pudo decir)
+// al cliente: esos montos siguen permitidos. Solo llamadas ok; los montos del cliente nunca entran.
+async function seedAllowed(phone, now, set, totals) {
+  const { rows } = await pool.query(
+    `SELECT herramienta, args, resultado FROM bot_tool_log
+     WHERE phone = $1 AND ok = true AND created_at > $2::timestamptz - make_interval(hours => $3)
+     ORDER BY id DESC LIMIT 200`, [phone, now.toISOString(), ALLOWED_WINDOW_HOURS]);
+  for (const r of rows.reverse()) {
+    collectAmounts(r.resultado, set, totals);
+    collectArgAmounts(r.herramienta, r.args, set);
+  }
 }
 
 // ---------- texto del turno e historial ----------
@@ -114,7 +153,8 @@ function normalize(messages) {
 // es reciente, es el mensaje actual y no se cuenta dos veces.
 async function isRepeating(phone, text, now) {
   const current = fold(text);
-  if (!current) return false;
+  // Respuestas cortas ("si", "ok", "2") se repiten con naturalidad: no cuentan.
+  if (!current || current.length <= 3 || /^\d+$/.test(current)) return false;
   const { rows } = await pool.query(
     `SELECT content, created_at FROM messages WHERE phone = $1 AND direction = 'inbound' ORDER BY created_at DESC, id DESC LIMIT $2`,
     [phone, REPEAT_LIMIT]);
@@ -140,11 +180,23 @@ async function handoff(ctx, motivo) {
 
 class TooManyTools extends Error { constructor() { super('demasiados pasos'); this.code = 'TOO_MANY_TOOLS'; } }
 
-// Un intento completo del turno. Devuelve el texto final o lanza (QUOTA, TIMEOUT, TooManyTools, otro).
-// turn.handoffMessage queda puesto si pasar_a_humano corrió en este intento (el chat ya está en manual).
-async function attempt({ provider, system, history, ctx, allowed, stats, turn }) {
-  const messages = history.map((m) => ({ ...m }));
-  let toolCount = 0;
+// Si una falla dejó una llamada del asistente sin todos sus resultados, se quita para retomar limpio.
+function trimPartial(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== 'assistant' || !m.toolCalls) continue;
+    const results = messages.slice(i + 1).filter((x) => x.role === 'tool').length;
+    if (results !== m.toolCalls.length) messages.splice(i);
+    break;
+  }
+  return messages;
+}
+
+// Un intento del turno sobre el estado acumulado en `turn` (mensajes, herramientas corridas, traspaso, escrituras).
+// Un reintento retoma desde donde iba: no repite herramientas ya corridas. Devuelve el texto final o lanza
+// (QUOTA, TIMEOUT, TooManyTools, otro).
+async function attempt({ provider, system, ctx, turn, stats }) {
+  const messages = trimPartial(turn.messages);
   for (;;) {
     // Copia por llamada: el adaptador (y el proveedor falso en pruebas) recibe lo que vio el modelo en ese momento.
     const out = await withTimeout(provider.chat({ system, messages: messages.slice(), tools: TOOLS, timeoutMs: TIMEOUT_MS }), TIMEOUT_MS);
@@ -157,25 +209,30 @@ async function attempt({ provider, system, history, ctx, allowed, stats, turn })
     }
     messages.push({ role: 'assistant', text, toolCalls });
     for (const tc of toolCalls) {
-      if (toolCount >= MAX_TOOLS) throw new TooManyTools();
-      toolCount++;
+      if (turn.toolCount >= MAX_TOOLS) throw new TooManyTools();
+      turn.toolCount++;
       stats.tools++;
       const result = await runTool(tc.name, tc.args, ctx);
-      collectAmounts(result, allowed);
+      const ok = isObj(result) && !Object.prototype.hasOwnProperty.call(result, 'error');
+      collectAmounts(result, turn.allowed, turn.totals);
+      if (ok) collectArgAmounts(tc.name, tc.args, turn.allowed);
+      if (ok && WRITE_TOOLS.has(tc.name)) turn.wrote = true;
       if (tc.name === 'pasar_a_humano' && result && result.mensaje) turn.handoffMessage = result.mensaje;
       messages.push({ role: 'tool', toolCallId: tc.id, name: tc.name, result });
     }
   }
 }
 
+// Un turno: devuelve { reply, toolLogIds }. reply es '' (nada que mandar), AI_DEFERRED o el texto.
 async function respondNow(phone, text, { media = [], provider, now = new Date() } = {}) {
   const t0 = Date.now();
   const stats = { calls: 0, tools: 0 };
   const ctx = { phone, client: null, botUserId: null, now, lastText: String(text || ''), toolLogIds: [] };
-  lastToolLogIds.set(phone, ctx.toolLogIds);
-  const done = (result, note) => {
+  // Estado del turno, fuera del try: si algo falla después de un traspaso, se reutiliza su mensaje.
+  const turn = { messages: [], toolCount: 0, allowed: new Set(), totals: [], handoffMessage: null, wrote: false };
+  const done = (reply, note) => {
     console.log(`[Agent] ${phone} ${note} calls=${stats.calls} tools=${stats.tools} ${Date.now() - t0}ms`);
-    return result;
+    return { reply, toolLogIds: ctx.toolLogIds };
   };
   try {
     provider = provider || getProvider();
@@ -191,25 +248,25 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
     maybeSummarize({ phone, client: ctx.client, provider, now }).catch(() => {});
 
     const { system, messages } = await buildContext({ phone, client: ctx.client, now });
-    const history = normalize([...dropCurrentBatch(messages, current, media.length > 0), { role: 'user', text: current }]);
+    turn.messages = normalize([...dropCurrentBatch(messages, current, media.length > 0), { role: 'user', text: current }]);
+    await seedAllowed(phone, now, turn.allowed, turn.totals);
 
-    const allowed = new Set(); // montos de las herramientas de los dos intentos
-    const turn = { handoffMessage: null };
     let answer = null;
     for (let tries = 0; tries < 2 && answer === null; tries++) {
       try {
-        answer = await attempt({ provider, system, history, ctx, allowed, stats, turn });
+        answer = await attempt({ provider, system, ctx, turn, stats });
       } catch (err) {
         if (err.code === 'TOO_MANY_TOOLS') return done(turn.handoffMessage || await handoff(ctx, 'demasiados pasos'), 'demasiados pasos');
         // Si ya se pasó a una persona en este intento, el chat está en manual: se manda el mensaje de espera y no se reintenta.
         if (turn.handoffMessage) return done(turn.handoffMessage, `${err.code || 'error'} tras traspaso`);
-        if (err.code === 'QUOTA') return done(AI_DEFERRED, 'cuota');
+        // Sin cuota: se difiere, salvo que ya se haya creado algo (un reintento diferido lo duplicaría): pasa a una persona.
+        if (err.code === 'QUOTA' && !turn.wrote) return done(AI_DEFERRED, 'cuota');
         console.error(`[Agent] ${phone} intento ${tries + 1} falló:`, err.code || err.name || 'error');
-        if (tries === 1) return done(await handoff(ctx, 'falla del modelo'), 'falla del modelo');
+        if (tries === 1 || err.code === 'QUOTA') return done(await handoff(ctx, 'falla del modelo'), 'falla del modelo');
       }
     }
 
-    const guarded = priceGuard(answer, allowed);
+    const guarded = priceGuard(answer, addSums(new Set(turn.allowed), turn.totals));
     if (guarded.blocked.length) console.warn(`[Agent] ${phone} filtro de precios: ${guarded.blocked.length} monto(s) bloqueado(s)`);
     let reply = guarded.text;
     if (turn.handoffMessage && !fold(reply).includes(fold(turn.handoffMessage))) {
@@ -218,28 +275,51 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
     return done(reply, 'ok');
   } catch (err) {
     console.error(`[Agent] ${phone} turno falló:`, err.code || err.name || 'error');
-    return done(await handoff(ctx, 'falla del agente'), 'falla del agente');
+    return done(turn.handoffMessage || await handoff(ctx, 'falla del agente'), 'falla del agente');
   }
 }
 
-// Turnos en serie por teléfono: cada respond espera al anterior del mismo número.
-function respond(phone, text, opts) {
+/**
+ * Responde un lote del cliente con el agente.
+ * @param {string} phone
+ * @param {string} text texto del lote (puede ir vacío si solo hay medios)
+ * @param {object} [opts]
+ * @param {Array}  [opts.media] medios del lote: { id, media_type, analysis?, transcription? }
+ * @param {object} [opts.provider] adaptador del modelo (por defecto getProvider())
+ * @param {Date}   [opts.now]
+ * @param {(text: string) => Promise<number|null>} [opts.deliver] envía y guarda la respuesta; devuelve el id del
+ *   mensaje guardado (o null). Corre dentro del candado del teléfono y las herramientas del turno se ligan a ese id.
+ * @returns {Promise<string>} el texto enviado/por enviar; '' significa "nada que mandar" (lote vacío);
+ *   AI_DEFERRED significa "sin cuota, reintente después". deliver no se llama en esos dos casos.
+ *
+ * Los ciclos de un mismo teléfono (turno + entrega) van en serie: el siguiente arranca cuando el anterior entregó.
+ */
+function respond(phone, text, opts = {}) {
   const prev = queues.get(phone) || Promise.resolve();
-  const run = prev.catch(() => {}).then(() => respondNow(phone, text, opts));
+  const run = prev.catch(() => {}).then(async () => {
+    const { reply, toolLogIds } = await respondNow(phone, text, opts);
+    if (typeof opts.deliver === 'function' && reply && reply !== AI_DEFERRED) {
+      try {
+        const messageId = await opts.deliver(reply);
+        await attachToolLogs(messageId, toolLogIds);
+      } catch (err) {
+        console.error(`[Agent] ${phone} entrega falló:`, err.code || err.name || 'error');
+      }
+    }
+    return reply;
+  });
   queues.set(phone, run);
   return run.finally(() => { if (queues.get(phone) === run) queues.delete(phone); });
 }
 
-// Liga las herramientas del último turno al mensaje del bot ya guardado. Devuelve cuántas ligó.
-async function attachToolLogs(phone, messageId) {
-  const ids = lastToolLogIds.get(phone);
-  lastToolLogIds.delete(phone);
-  if (!ids || !ids.length || !messageId) return 0;
+// Liga las herramientas de un turno (ids de bot_tool_log) al mensaje del bot ya guardado. Devuelve cuántas ligó.
+async function attachToolLogs(messageId, ids) {
+  if (!messageId || !Array.isArray(ids) || !ids.length) return 0;
   const { rowCount } = await pool.query('UPDATE bot_tool_log SET message_id = $1 WHERE id = ANY($2)', [messageId, ids]);
   return rowCount;
 }
 
 module.exports = {
-  respond, attachToolLogs, AI_DEFERRED, collectAmounts, priceGuard,
+  respond, attachToolLogs, AI_DEFERRED, collectAmounts, collectArgAmounts, addSums, priceGuard,
   turnText, normalize, dropCurrentBatch, _resetBotUserCache,
 };

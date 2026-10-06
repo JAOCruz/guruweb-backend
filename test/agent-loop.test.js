@@ -128,7 +128,7 @@ test('un TIMEOUT se reintenta una vez y, si el reintento sale bien, responde nor
   assert.equal(handler.isManualMode(PHONE), false);
 });
 
-test('las herramientas del intento fallido quedan registradas y sus montos siguen valiendo', async () => {
+test('tras una falla con herramientas ya corridas, el reintento sigue desde donde iba y no las repite', async () => {
   let n = 0;
   const p = {
     name: 'fake', calls: [],
@@ -141,12 +141,63 @@ test('las herramientas del intento fallido quedan registradas y sus montos sigue
   };
   assert.equal(await respond(PHONE, 'poder', { provider: p }), 'El poder cuesta RD$700.');
   assert.equal(p.calls.length, 3);
-  assert.deepEqual(p.calls[2].messages, [{ role: 'user', text: 'poder' }], 'el reintento arranca de cero');
+  assert.deepEqual(p.calls[2].messages.map((m) => m.role), ['user', 'assistant', 'tool'], 'el reintento retoma con el resultado de la herramienta');
+  assert.equal(p.calls[2].messages[2].result.total, 700);
   const l = await logs();
   assert.equal(l.length, 1);
-  const mid = await save('outbound', 'El poder cuesta RD$700.');
-  assert.equal(await attachToolLogs(PHONE, mid), 1);
-  assert.equal((await logs())[0].message_id, mid);
+});
+
+test('sin duplicar la solicitud: un TIMEOUT después de crear_solicitud retoma el turno con el caso ya creado', async () => {
+  let n = 0;
+  const p = { name: 'fake', calls: [], async chat(req) {
+    this.calls.push(req); n++;
+    if (n === 1) return { text: '', toolCalls: [{ id: '1', name: 'crear_solicitud', args: { servicio: 'Poder', detalles: 'para su mamá' } }] };
+    if (n === 2) { const e = new Error('x'); e.code = 'TIMEOUT'; throw e; }
+    return { text: 'Listo, su solicitud quedó creada.', toolCalls: [] };
+  } };
+  assert.equal(await respond(PHONE, 'si, creela', { provider: p }), 'Listo, su solicitud quedó creada.');
+  assert.equal((await pool.query('SELECT count(*)::int c FROM cases')).rows[0].c, 1);
+  assert.deepEqual((await logs()).map((x) => x.herramienta), ['crear_solicitud']);
+  assert.equal(handler.isManualMode(PHONE), false);
+});
+
+test('cuota agotada después de una herramienta que escribe: pasa a una persona en vez de diferir (sin repetir el caso)', async () => {
+  let n = 0;
+  const p = { name: 'fake', calls: [], async chat(req) {
+    this.calls.push(req); n++;
+    if (n === 1) return { text: '', toolCalls: [{ id: '1', name: 'crear_solicitud', args: { servicio: 'Poder' } }] };
+    const e = new Error('x'); e.code = 'QUOTA'; throw e;
+  } };
+  assert.equal(await respond(PHONE, 'si', { provider: p }), WAIT);
+  assert.equal(p.calls.length, 2);
+  assert.equal((await pool.query('SELECT count(*)::int c FROM cases')).rows[0].c, 1);
+  assert.equal(handler.isManualMode(PHONE), true);
+  assert.deepEqual((await logs()).map((x) => x.herramienta), ['crear_solicitud', 'pasar_a_humano']);
+});
+
+test('un turno reintentado nunca pasa de 6 herramientas en total', async () => {
+  const tc = (from, k) => Array.from({ length: k }, (_, i) => ({ id: String(from + i), name: 'buscar_servicio', args: { consulta: 'poder' } }));
+  let n = 0;
+  const p = { name: 'fake', calls: [], async chat(req) {
+    this.calls.push(req); n++;
+    if (n === 1) return { text: '', toolCalls: tc(1, 4) };
+    if (n === 2) throw new Error('boom');
+    return { text: '', toolCalls: tc(5, 3) };
+  } };
+  assert.equal(await respond(PHONE, 'hola', { provider: p }), WAIT);
+  const l = await logs();
+  assert.deepEqual(l.map((x) => x.herramienta), [...Array(6).fill('buscar_servicio'), 'pasar_a_humano']);
+  assert.equal(l[6].args.motivo, 'demasiados pasos');
+});
+
+test('tres "si" o tres números seguidos no cuentan como repetición', async () => {
+  for (const t of ['si', 'Sí', 'ok', '2', '1500']) {
+    await pool.query('DELETE FROM messages');
+    await save('inbound', t, 10); await save('inbound', t, 5);
+    const p = createFakeProvider([{ text: 'Perfecto' }]);
+    assert.equal(await respond(PHONE, t, { provider: p }), 'Perfecto', t);
+    assert.equal(handler.isManualMode(PHONE), false, t);
+  }
 });
 
 test('el mismo mensaje 3 veces pasa a una persona sin llamar al modelo', async () => {
@@ -255,32 +306,39 @@ test('si el modelo falla después de pasar_a_humano, se manda el mensaje de espe
   }
 });
 
-test('dos turnos del mismo teléfono no se cruzan', async () => {
+test('dos turnos del mismo teléfono no se cruzan: el segundo ve la respuesta entregada del primero y cada uno liga sus herramientas', async () => {
   const calls = [];
-  const p = {
-    name: 'fake', calls,
-    async chat(req) {
-      const started = Date.now();
-      if (calls.length === 0) {
-        calls.push({ ...req, started });
-        await new Promise((r) => setTimeout(r, 200));
-        await save('outbound', 'respuesta uno'); // lo que el handler guarda al enviar
-        calls[0].finished = Date.now();
-        return { text: 'respuesta uno', toolCalls: [] };
-      }
-      calls.push({ ...req, started, finished: Date.now() });
-      return { text: 'respuesta dos', toolCalls: [] };
-    },
-  };
+  let n = 0;
+  const p = { name: 'fake', calls, async chat(req) {
+    const rec = { ...req, started: Date.now() }; calls.push(rec); n++;
+    if (n === 1) return { text: '', toolCalls: [{ id: '1', name: 'buscar_servicio', args: { consulta: 'poder' } }] };
+    if (n === 2) { await new Promise((r) => setTimeout(r, 200)); rec.finished = Date.now(); return { text: 'respuesta uno', toolCalls: [] }; }
+    if (n === 3) return { text: '', toolCalls: [{ id: '2', name: 'estado_solicitud', args: {} }] };
+    rec.finished = Date.now(); return { text: 'respuesta dos', toolCalls: [] };
+  } };
+  const delivered = [];
+  const deliver = async (text) => { const id = await save('outbound', text); delivered.push({ text, id }); return id; };
   await save('inbound', 'primero');
-  const a = respond(PHONE, 'primero', { provider: p });
-  const b = respond(PHONE, 'segundo', { provider: p });
+  const a = respond(PHONE, 'primero', { provider: p, deliver });
+  const b = respond(PHONE, 'segundo', { provider: p, deliver });
   assert.deepEqual(await Promise.all([a, b]), ['respuesta uno', 'respuesta dos']);
-  assert.equal(calls.length, 2);
-  assert.ok(calls[1].started >= calls[0].finished, 'el segundo turno arranca cuando termina el primero');
-  assert.deepEqual(calls[0].messages, [{ role: 'user', text: 'primero' }]);
-  assert.deepEqual(calls[1].messages, [
+  assert.equal(calls.length, 4);
+  assert.ok(calls[2].started >= calls[1].finished, 'el segundo turno arranca cuando el primero ya entregó');
+  assert.deepEqual(calls[2].messages, [
     { role: 'user', text: 'primero' }, { role: 'assistant', text: 'respuesta uno' }, { role: 'user', text: 'segundo' }]);
+  assert.deepEqual(delivered.map((d) => d.text), ['respuesta uno', 'respuesta dos']);
+  const l = await logs();
+  assert.deepEqual(l.map((x) => [x.herramienta, x.message_id]), [['buscar_servicio', delivered[0].id], ['estado_solicitud', delivered[1].id]]);
+});
+
+test('deliver no se llama con AI_DEFERRED ni con un turno vacío, y si falla el turno igual devuelve el texto', async () => {
+  const delivered = [];
+  const deliver = async (t) => { delivered.push(t); return null; };
+  assert.equal(await respond(PHONE, 'hola', { provider: failing('QUOTA'), deliver }), AI_DEFERRED);
+  assert.equal(await respond(PHONE, '', { provider: createFakeProvider([]), deliver }), '');
+  assert.deepEqual(delivered, []);
+  const boom = async () => { throw new Error('socket'); };
+  assert.equal(await respond(PHONE, 'hola', { provider: createFakeProvider([{ text: 'Buenas' }]), deliver: boom }), 'Buenas');
 });
 
 test('un turno que falla no bloquea el siguiente del mismo teléfono', async () => {
@@ -291,7 +349,7 @@ test('un turno que falla no bloquea el siguiente del mismo teléfono', async () 
   assert.equal(b, 'bien');
 });
 
-test('attachToolLogs liga las herramientas al mensaje del bot', async () => {
+test('attachToolLogs(messageId, ids) liga las herramientas al mensaje del bot', async () => {
   const p = createFakeProvider([
     { toolCalls: [{ id: '1', name: 'buscar_servicio', args: { consulta: 'poder' } }, { id: '2', name: 'estado_solicitud', args: {} }] },
     { text: 'Listo' }]);
@@ -300,10 +358,10 @@ test('attachToolLogs liga las herramientas al mensaje del bot', async () => {
   assert.equal(before.length, 2);
   assert.ok(before.every((x) => x.message_id === null));
   const mid = await save('outbound', 'Listo');
-  assert.equal(await attachToolLogs(PHONE, mid), 2);
+  assert.equal(await attachToolLogs(mid, before.map((x) => x.id)), 2);
   assert.ok((await logs()).every((x) => x.message_id === mid));
-  assert.equal(await attachToolLogs(PHONE, mid + 1), 0, 'ya no quedan ids pendientes');
-  assert.equal(await attachToolLogs('18090000000', mid), 0);
+  assert.equal(await attachToolLogs(mid, []), 0);
+  assert.equal(await attachToolLogs(null, [before[0].id]), 0);
 });
 
 test('un cliente nuevo (sin fila en clients) también recibe respuesta', async () => {
@@ -325,6 +383,43 @@ test('collectAmounts junta total, precio, rango, desglose y cantidad por precio;
   assert.deepEqual([...s].sort((a, b) => a - b), [100, 300, 450, 500, 700, 800, 950, 1200]);
 });
 
+test('el valor del bien que el modelo pasó a calcular_precio se puede repetir con RD$', async () => {
+  const p = createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'calcular_precio', args: { servicio_id: ids.acto, valor_del_bien: 500000 } }] },
+    { text: 'Para un carro de RD$500,000 le sale en RD$950.' }]);
+  assert.equal(await respond(PHONE, 'carro de 500 mil', { provider: p }), 'Para un carro de RD$500,000 le sale en RD$950.');
+  const p2 = createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'preparar_cotizacion', args: { partidas: [{ servicio_id: ids.acto, valor_del_bien: 650000 }] } }] },
+    { text: 'Cotización por RD$950 (vehículo de RD$650,000).' }]);
+  assert.equal(await respond(PHONE, 'cotice', { provider: p2 }), 'Cotización por RD$950 (vehículo de RD$650,000).');
+});
+
+test('la suma de dos o tres totales de herramientas se puede decir', async () => {
+  const p = createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'calcular_precio', args: { servicio_id: ids.acto, valor_del_bien: 500000 } },
+      { id: '2', name: 'calcular_precio', args: { servicio_id: ids.poder } }] },
+    { text: 'RD$950 + RD$700 = RD$1,650 en total; RD$1,700 no.' }]);
+  assert.equal(await respond(PHONE, 'ambos', { provider: p }), 'RD$950 + RD$700 = RD$1,650 en total; (se lo confirmo) no.');
+});
+
+test('un precio dado por una herramienta en un turno anterior se puede repetir; un precio de otro teléfono no', async () => {
+  const p = createFakeProvider([{ toolCalls: [{ id: '1', name: 'calcular_precio', args: { servicio_id: ids.poder } }] }, { text: 'El poder cuesta RD$700.' }]);
+  assert.equal(await respond(PHONE, 'poder', { provider: p }), 'El poder cuesta RD$700.');
+  const p2 = createFakeProvider([{ text: 'Como le dije, el poder cuesta RD$700 🦉' }]);
+  assert.equal(await respond(PHONE, 'cuanto era?', { provider: p2 }), 'Como le dije, el poder cuesta RD$700 🦉');
+  const p3 = createFakeProvider([{ text: 'El poder cuesta RD$700.' }]);
+  assert.equal(await respond('18095550177', 'poder', { provider: p3 }), 'El poder cuesta (se lo confirmo).');
+  await pool.query(`UPDATE bot_tool_log SET created_at = NOW() - interval '25 hours'`);
+  const p4 = createFakeProvider([{ text: 'El poder cuesta RD$700.' }]);
+  assert.equal(await respond(PHONE, 'y ahora?', { provider: p4 }), 'El poder cuesta (se lo confirmo).');
+});
+
+test('un monto escrito por el cliente nunca se vuelve permitido', async () => {
+  await save('inbound', 'me dijeron 500 pesos', 5);
+  const p = createFakeProvider([{ text: 'Sí, son RD$500.' }]);
+  assert.equal(await respond(PHONE, 'me dijeron 500 pesos', { provider: p }), 'Sí, son (se lo confirmo).');
+});
+
 // ---------- priceGuard ----------
 
 test('priceGuard detecta RD$ 1,500, RD$1500, 1,500 pesos y $1500 y compara formatos', () => {
@@ -342,6 +437,19 @@ test('priceGuard detecta RD$ 1,500, RD$1500, 1,500 pesos y $1500 y compara forma
   assert.deepEqual(r.blocked, [1200, 300]);
   assert.deepEqual(priceGuard('RD$1,200', new Set()).blocked, [1200]);
   assert.deepEqual(priceGuard('', new Set()), { text: '', blocked: [] });
+});
+
+test('priceGuard entiende "mil", grupos con espacio, marcadores después y grupos mal formados', () => {
+  const ok = new Set([1500, 950, 2000, 5000]);
+  for (const t of ['2 mil pesos', 'RD$5 mil', 'RD$1 500', '1,500 RD$', '1,500 RD', '1500 DOP', 'DOP 1,500', 'RD$2 MIL pesos', '$1 500.00']) {
+    assert.deepEqual(priceGuard(`Cuesta ${t}.`, ok), { text: `Cuesta ${t}.`, blocked: [] }, t);
+  }
+  assert.deepEqual(priceGuard('Cuesta RD$950 mil.', ok), { text: 'Cuesta (se lo confirmo).', blocked: [950000] });
+  assert.deepEqual(priceGuard('Son 3 mil pesos.', ok), { text: 'Son (se lo confirmo).', blocked: [3000] });
+  assert.deepEqual(priceGuard('Cuesta RD$1,5000 hoy.', new Set([15000, 1500, 5000])), { text: 'Cuesta (se lo confirmo) hoy.', blocked: [15000] });
+  assert.deepEqual(priceGuard('Son 1,200 RD$.', ok), { text: 'Son (se lo confirmo).', blocked: [1200] });
+  assert.deepEqual(priceGuard('Son DOP 1200.', ok), { text: 'Son (se lo confirmo).', blocked: [1200] });
+  assert.deepEqual(priceGuard('Son 3 mil de valor y 2 originales.', ok), { text: 'Son 3 mil de valor y 2 originales.', blocked: [] });
 });
 
 test('priceGuard no toca cédulas, fechas, horas, teléfonos, porcentajes ni cantidades sin moneda', () => {
