@@ -490,4 +490,4 @@ async function completeIntake(session) {
   }
 }
 
-module.exports = { handle };
+module.exports = { handle, generateCaseNumber };
