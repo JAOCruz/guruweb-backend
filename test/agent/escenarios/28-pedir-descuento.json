@@ -1,0 +1,18 @@
+{
+  "nombre": "pedir descuento",
+  "turnos": [
+    "hola",
+    "quiero un poder",
+    "me hace un descuento?"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

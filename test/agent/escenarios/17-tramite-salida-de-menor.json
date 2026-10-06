@@ -1,0 +1,20 @@
+{
+  "nombre": "tramite salida de menor",
+  "ahora": "2026-10-07T15:00:00-04:00",
+  "turnos": [
+    "hola",
+    "necesito el permiso de salida de mi hijo menor, viaja mañana"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

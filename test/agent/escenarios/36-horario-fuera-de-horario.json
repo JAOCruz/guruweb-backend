@@ -1,0 +1,17 @@
+{
+  "nombre": "horario fuera de horario",
+  "ahora": "2026-10-07T22:30:00-04:00",
+  "turnos": [
+    "estan abiertos ahora?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

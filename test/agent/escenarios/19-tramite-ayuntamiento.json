@@ -1,0 +1,20 @@
+{
+  "nombre": "tramite ayuntamiento",
+  "turnos": [
+    "hola",
+    "necesito registrar un contrato en el ayuntamiento"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

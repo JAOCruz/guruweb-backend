@@ -1,0 +1,16 @@
+{
+  "nombre": "formas de pago",
+  "turnos": [
+    "como se paga? aceptan tarjeta?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

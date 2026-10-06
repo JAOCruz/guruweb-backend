@@ -1,0 +1,21 @@
+{
+  "nombre": "acto de venta con valor",
+  "turnos": [
+    "hola",
+    "necesito un acto de venta de un carro que lo vendi en 500 mil"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio",
+      "calcular_precio"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

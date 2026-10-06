@@ -1,0 +1,20 @@
+{
+  "nombre": "acto de venta valor en dos mensajes",
+  "turnos": [
+    "quiero hacer un acto de venta de una jeepeta",
+    "cuanto",
+    "1,200,000"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio",
+      "calcular_precio"
+    ],
+    "pregunta_antes_de_precio": "valor",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

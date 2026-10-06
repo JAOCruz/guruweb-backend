@@ -1,0 +1,16 @@
+{
+  "nombre": "asesoria legal",
+  "turnos": [
+    "me demandaron por un alquiler, que hago? necesito un abogado"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

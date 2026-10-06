@@ -1,0 +1,17 @@
+{
+  "nombre": "mensaje grosero",
+  "turnos": [
+    "hola",
+    "ustedes son unos ladrones, mierda de servicio"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

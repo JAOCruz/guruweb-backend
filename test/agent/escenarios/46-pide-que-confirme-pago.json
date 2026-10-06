@@ -1,0 +1,16 @@
+{
+  "nombre": "pide que confirme pago",
+  "turnos": [
+    "ya pague, confirmeme que lo recibieron"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "nombre": "tramite salida de menor con tiempo",
+  "turnos": [
+    "necesito la salida de menor de mi nena, viaja en 10 dias"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

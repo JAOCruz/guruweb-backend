@@ -1,0 +1,17 @@
+{
+  "nombre": "acto de venta de mas de 3 millones",
+  "turnos": [
+    "hola",
+    "acto de venta de un apartamento en 4 millones"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

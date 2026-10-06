@@ -11,6 +11,7 @@
     "start": "node src/index.js",
     "db:migrate": "node -r dotenv/config src/db/runMigrations.js",
     "init-db": "node src/config/initDb.js",
+    "bot:eval": "node scripts/bot-eval.js",
     "test": "node --test --test-concurrency=1 test/*.test.js",
     "seed:bot": "node -r dotenv/config src/db/seedBotKnowledge.js"
   },

@@ -1,0 +1,17 @@
+{
+  "nombre": "pedir cotizacion",
+  "turnos": [
+    "hola",
+    "necesito un poder y una declaracion jurada, me hace una cotizacion?"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

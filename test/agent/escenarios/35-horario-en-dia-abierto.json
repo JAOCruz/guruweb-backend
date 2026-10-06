@@ -1,0 +1,17 @@
+{
+  "nombre": "horario en dia abierto",
+  "ahora": "2026-10-07T15:00:00-04:00",
+  "turnos": [
+    "hola, a que hora abren?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

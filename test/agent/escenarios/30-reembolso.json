@@ -1,0 +1,16 @@
+{
+  "nombre": "reembolso",
+  "turnos": [
+    "quiero que me devuelvan el dinero"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

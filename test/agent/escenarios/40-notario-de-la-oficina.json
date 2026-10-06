@@ -1,0 +1,14 @@
+{
+  "nombre": "notario de la oficina",
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true,
+    "revela_notario": true
+  },
+  "turnos": [
+    "como se llama el abogado notario de ustedes"
+  ],
+  "espera": {
+    "termina_sin_traspaso": true
+  }
+}

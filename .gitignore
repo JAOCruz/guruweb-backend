@@ -9,3 +9,7 @@ data/
 nohup.out
 dist/
 __pycache__/
+
+# Resultados de bot:eval (pueden traer texto de conversaciones)
+test/agent/resultados/*
+!test/agent/resultados/.gitkeep

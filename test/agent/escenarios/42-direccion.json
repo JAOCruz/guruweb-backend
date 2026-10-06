@@ -1,0 +1,16 @@
+{
+  "nombre": "direccion",
+  "turnos": [
+    "donde estan ubicados?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

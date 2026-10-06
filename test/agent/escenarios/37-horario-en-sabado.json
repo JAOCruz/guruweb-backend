@@ -1,0 +1,17 @@
+{
+  "nombre": "horario en sabado",
+  "ahora": "2026-10-10T11:00:00-04:00",
+  "turnos": [
+    "abren los sabados?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

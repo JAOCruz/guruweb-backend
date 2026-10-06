@@ -1,0 +1,16 @@
+{
+  "nombre": "cotizacion formal",
+  "turnos": [
+    "hola",
+    "necesito un acto de venta de un carro de 800 mil, me manda la cotizacion?"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

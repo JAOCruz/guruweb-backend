@@ -1,0 +1,18 @@
+{
+  "nombre": "precio sin decir que necesita",
+  "turnos": [
+    "hola",
+    "cuanto cuesta"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "calcular_precio",
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

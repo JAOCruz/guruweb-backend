@@ -1,0 +1,18 @@
+{
+  "nombre": "saludo",
+  "turnos": [
+    "hola buenas"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "preparar_cotizacion",
+      "crear_solicitud",
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

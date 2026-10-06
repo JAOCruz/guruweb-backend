@@ -1,0 +1,16 @@
+{
+  "nombre": "rango apostilla",
+  "turnos": [
+    "cuanto cuesta una apostilla"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

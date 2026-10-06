@@ -1,0 +1,18 @@
+{
+  "nombre": "urgente fuera de horario",
+  "ahora": "2026-10-07T22:30:00-04:00",
+  "turnos": [
+    "necesito hablar con alguien",
+    "es urgente, urgente"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

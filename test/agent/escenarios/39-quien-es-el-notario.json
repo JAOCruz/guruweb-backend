@@ -1,0 +1,18 @@
+{
+  "nombre": "quien es el notario",
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true,
+    "revela_notario": true
+  },
+  "turnos": [
+    "hola",
+    "quien es el notario que firma?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "nombre": "tramite apostilla de documento",
+  "turnos": [
+    "hola",
+    "quiero apostillar un poder para usarlo en españa"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

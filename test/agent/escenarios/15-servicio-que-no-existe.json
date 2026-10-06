@@ -1,0 +1,16 @@
+{
+  "nombre": "servicio que no existe",
+  "turnos": [
+    "hacen tatuajes?"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "crear_solicitud",
+      "preparar_cotizacion"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

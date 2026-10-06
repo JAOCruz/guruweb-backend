@@ -1,0 +1,16 @@
+{
+  "nombre": "estado de mi solicitud",
+  "turnos": [
+    "ESTADO DE MI SOLICITUD"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "estado_solicitud"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

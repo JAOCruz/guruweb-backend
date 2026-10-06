@@ -33,6 +33,7 @@ async function chat({ system, messages, tools = [], timeoutMs }) {
     return {
       text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join(''),
       toolCalls: blocks.filter((b) => b.type === 'tool_use').map((b) => ({ id: b.id, name: b.name, args: b.input || {} })),
+      ...(res.usage ? { usage: { input: res.usage.input_tokens || 0, output: res.usage.output_tokens || 0 } } : {}),
     };
   } catch (err) {
     if (err.code === 'TIMEOUT') throw err;

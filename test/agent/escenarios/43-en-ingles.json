@@ -1,0 +1,13 @@
+{
+  "nombre": "en ingles",
+  "turnos": [
+    "Hello, I need a power of attorney, how much is it?"
+  ],
+  "espera": {
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "nombre": "tramite apostilla de certificacion",
+  "turnos": [
+    "hola",
+    "necesito apostillar un acta de nacimiento"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

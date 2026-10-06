@@ -1,0 +1,17 @@
+{
+  "nombre": "saludo con buenos dias",
+  "turnos": [
+    "buenos dias"
+  ],
+  "espera": {
+    "no_herramientas": [
+      "crear_solicitud",
+      "pasar_a_humano"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

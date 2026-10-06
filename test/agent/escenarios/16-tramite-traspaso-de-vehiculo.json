@@ -1,0 +1,20 @@
+{
+  "nombre": "tramite traspaso de vehiculo",
+  "turnos": [
+    "hola",
+    "quiero hacer el traspaso de un carro que compre"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "ver_tramite"
+    ],
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

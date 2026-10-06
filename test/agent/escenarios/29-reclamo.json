@@ -1,0 +1,16 @@
+{
+  "nombre": "reclamo",
+  "turnos": [
+    "el documento que me hicieron la semana pasada tenia mi nombre mal escrito, quiero reclamar"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

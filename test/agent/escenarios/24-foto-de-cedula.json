@@ -1,0 +1,26 @@
+{
+  "nombre": "foto de cedula",
+  "turnos": [
+    "hola, le mando mi cedula",
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 1,
+          "media_type": "image",
+          "analysis": "Cédula de identidad dominicana. Nombre: JUAN PEREZ MARTINEZ. Cédula: 001-1234567-8. Nacionalidad: dominicana."
+        }
+      ]
+    }
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "guardar_datos_cliente"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

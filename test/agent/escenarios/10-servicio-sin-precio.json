@@ -1,0 +1,16 @@
+{
+  "nombre": "servicio sin precio",
+  "turnos": [
+    "necesito un estatus juridico de un inmueble, cuanto cuesta"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

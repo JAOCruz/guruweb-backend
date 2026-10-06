@@ -1,0 +1,17 @@
+{
+  "nombre": "repetir 3 veces",
+  "turnos": [
+    "hola???",
+    "hola???",
+    "hola???"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ]
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

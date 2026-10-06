@@ -1,0 +1,26 @@
+{
+  "nombre": "pago y comprobante",
+  "turnos": [
+    "ya hice la transferencia, le mando el comprobante",
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 2,
+          "media_type": "image",
+          "analysis": "Comprobante de transferencia bancaria."
+        }
+      ]
+    }
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "pasar_a_humano"
+    ],
+    "termina_con_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

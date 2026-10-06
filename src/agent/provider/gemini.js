@@ -53,7 +53,12 @@ async function chat({ system, messages, tools = [], timeoutMs }) {
     const calls = response.functionCalls() || [];
     let text = '';
     try { text = calls.length ? '' : response.text(); } catch { text = ''; }
-    return { text, toolCalls: calls.map((c, i) => ({ id: `${c.name}-${i}`, name: c.name, args: c.args || {} })) };
+    const u = response.usageMetadata;
+    return {
+      text,
+      toolCalls: calls.map((c, i) => ({ id: `${c.name}-${i}`, name: c.name, args: c.args || {} })),
+      ...(u ? { usage: { input: u.promptTokenCount || 0, output: u.candidatesTokenCount || 0 } } : {}),
+    };
   } catch (err) {
     if (err.code === 'TIMEOUT') throw err;
     if (isQuotaError(err)) { const e = new Error('Cuota agotada'); e.code = 'QUOTA'; throw e; }

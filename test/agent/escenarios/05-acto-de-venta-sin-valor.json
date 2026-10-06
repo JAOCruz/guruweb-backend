@@ -1,0 +1,21 @@
+{
+  "nombre": "acto de venta sin valor",
+  "turnos": [
+    "hola",
+    "quiero un acto de venta de un carro, cuanto es"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "pregunta_antes_de_precio": "valor",
+    "no_herramientas": [
+      "preparar_cotizacion"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}
