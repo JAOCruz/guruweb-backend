@@ -41,6 +41,7 @@ test.beforeEach(async () => {
     acto: await ins('Acto de Venta', { dig: 500, not: 300, tiers: [{ min: 0, max: 1000000, price: 450 }] }),
     copia: await ins('Copia certificada', { dig: 700 }),
     conf: await ins('Estatus Jurídico', { dig: 1000, pc: true }),
+    cero: await ins('Servicio en cero', { dig: 0 }),
   };
   clientId = (await pool.query(`INSERT INTO clients (phone, name) VALUES ($1, 'Ana Cliente') RETURNING id`, [PHONE])).rows[0].id;
   const client = (await pool.query('SELECT * FROM clients WHERE id=$1', [clientId])).rows[0];
@@ -124,4 +125,19 @@ test('notifyUrgentAfterHandoff no avisa abierto ni sin la palabra, y no hace nad
   assert.equal(await notifyUrgentAfterHandoff(PHONE, 'urgente', OPEN), false);
   assert.equal(await notifyUrgentAfterHandoff(PHONE, 'gracias', CLOSED), false);
   assert.equal((await notifs('handoff')).length, 1);
+});
+
+test('una partida en RD$0 se rechaza como sin precio', async () => {
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.copia }, { servicio_id: ids.cero }] }, ctx);
+  assert.equal(r.error, 'hay partidas sin precio confirmado');
+  assert.deepEqual(r.sin_precio, ['Servicio en cero']);
+  assert.equal((await pool.query('SELECT count(*)::int c FROM invoices')).rows[0].c, 0);
+});
+
+test('si pasar_a_humano ya avisó urgente, notifyUrgentAfterHandoff no repite', async () => {
+  await pasar_a_humano({ motivo: 'x' }, { ...ctx, now: CLOSED, lastText: 'urgente' });
+  const urgent = async () => (await notifs('handoff')).filter((n) => n.title.startsWith('🚨 URGENTE ')).length;
+  assert.equal(await urgent(), 1);
+  assert.equal(await notifyUrgentAfterHandoff(PHONE, 'urgente', CLOSED), false);
+  assert.equal(await urgent(), 1);
 });

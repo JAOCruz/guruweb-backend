@@ -26,7 +26,7 @@ async function preparar_cotizacion(args, ctx) {
       includeNotarization: p.con_notarizacion !== false,
     };
     const unit = calculatePrice(s, { ...opts, quantity: 1 });
-    if (unit.total === null) { sinPrecio.push(s.name); continue; }
+    if (unit.total === null || unit.total <= 0) { sinPrecio.push(s.name); continue; }
     let desc = s.name;
     if (unit.tramo) desc += ` (tramo ${unit.tramo})`;
     else if (opts.assetValue) desc += ` (valor ${opts.assetValue})`;
