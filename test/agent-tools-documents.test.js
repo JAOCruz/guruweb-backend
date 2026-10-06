@@ -62,18 +62,22 @@ test.beforeEach(async () => {
   ids = {
     vehiculo: await tpl('ACTO DE VENTA DE VEHÍCULO', 'vehiculo.docx'),
     inmueble: await tpl('ACTO DE VENTA DE INMUEBLE', 'inmueble.docx'),
-    poder: await tpl('PODER GENERAL', 'poder.docx'),        // etiquetado, sin aprobar
-    carta: await tpl('CARTA DE NO OBJECIÓN', 'carta.docx'), // sin etiquetar
+    solar: await tpl('ACTO DE VENTA DE SOLAR', 'solar.docx'), // etiquetado, sin aprobar
+    poder: await tpl('PODER GENERAL', 'poder.docx'),           // etiquetado, sin aprobar
+    carta: await tpl('CARTA DE NO OBJECIÓN', 'carta.docx'),    // sin etiquetar
   };
   await version(ids.vehiculo, { approve: true });
   await version(ids.inmueble, { approve: true });
+  await version(ids.solar, { approve: false });
   await version(ids.poder, { approve: false });
 
   const svc = async (name, templateId) => (await pool.query(
     `INSERT INTO service_catalog (name, digitacion_price, template_id) VALUES ($1, 500, $2) RETURNING id`, [name, templateId])).rows[0].id;
   ids.svcVehiculo = await svc('Acto de Venta de Vehículo', String(ids.vehiculo));
+  ids.svcSolar = await svc('Acto de Venta de Solar', String(ids.solar));
   ids.svcPoder = await svc('Poder General', String(ids.poder));
   ids.svcCarta = await svc('Carta de No Objeción', null);
+  ids.svcVenta = await svc('Venta de Vehículo', null); // sin modelo ligado: se busca por el nombre del servicio
 
   clientId = (await pool.query(`INSERT INTO clients (phone, name, assigned_to) VALUES ($1, 'Ana Cliente', $2) RETURNING id`, [PHONE, digId])).rows[0].id;
   await legalProfile.merge(clientId, { NOMBRE: 'ANA CLIENTE', 'DOCUMENTO IDENTIDAD': '001-0000000-1' }, adminId);
@@ -107,6 +111,8 @@ test('ver_modelo devuelve las etiquetas y lo que ya está en la ficha', async ()
   // por nombre (sin acentos, minúsculas) entre los modelos aprobados
   const porNombre = await ver_modelo({ nombre: 'acto de venta de vehiculo', rol_cliente: 'VENDEDOR' }, ctx);
   assert.equal(porNombre.modelo_id, ids.vehiculo);
+  // un servicio sin modelo ligado se busca por su nombre
+  assert.equal((await ver_modelo({ servicio_id: ids.svcVenta }, ctx)).modelo_id, ids.vehiculo);
   // un nombre que empata con varios aprobados pide que se elija
   const varios = await ver_modelo({ nombre: 'acto de venta' }, ctx);
   assert.equal(varios.error, 'varios modelos');
@@ -114,8 +120,12 @@ test('ver_modelo devuelve las etiquetas y lo que ya está en la ficha', async ()
 });
 
 test('ver_modelo de un servicio sin modelo aprobado → error', async () => {
-  // servicio ligado a un modelo etiquetado pero sin aprobar
+  // servicio ligado a un modelo etiquetado pero sin aprobar: no se cambia por otro parecido aunque se llame casi igual
+  assert.deepEqual(await ver_modelo({ servicio_id: ids.svcSolar }, ctx), { error: 'sin modelo aprobado' });
+  assert.deepEqual(await ver_modelo({ servicio_id: ids.svcSolar, nombre: 'acto de venta' }, ctx), { error: 'sin modelo aprobado' });
   assert.deepEqual(await ver_modelo({ servicio_id: ids.svcPoder }, ctx), { error: 'sin modelo aprobado' });
+  // por nombre, todas las palabras tienen que estar en el nombre del modelo
+  assert.deepEqual(await ver_modelo({ nombre: 'venta solar' }, ctx), { error: 'sin modelo aprobado' });
   // servicio sin modelo ligado y cuyo nombre no empata con ningún aprobado
   assert.deepEqual(await ver_modelo({ servicio_id: ids.svcCarta }, ctx), { error: 'sin modelo aprobado' });
   assert.deepEqual(await ver_modelo({ nombre: 'poder general' }, ctx), { error: 'sin modelo aprobado' });
@@ -129,11 +139,21 @@ test('preparar_documento con un valor faltante no crea nada y dice cuáles falta
   assert.equal((await docs()).length, 0);
   assert.equal((await notifs()).length, 0);
   assert.deepEqual(await legalProfile.get(clientId), { NOMBRE: 'ANA CLIENTE', 'DOCUMENTO IDENTIDAD': '001-0000000-1' });
-  // con varios roles hay que decir cuál es el cliente
+});
+
+test('con varios roles hay que decir cuál es el cliente', async () => {
   const sinRol = await preparar_documento({ modelo_id: ids.vehiculo, valores: { NOMBRE_VENDEDOR: 'A', NOMBRE_COMPRADOR: 'B' } }, ctx);
-  assert.equal(sinRol.error, 'falta rol_cliente');
-  assert.deepEqual(sinRol.roles, ['VENDEDOR', 'COMPRADOR']);
+  assert.deepEqual(sinRol, { error: 'falta rol_cliente', roles: ['VENDEDOR', 'COMPRADOR'] });
   assert.equal((await docs()).length, 0);
+});
+
+test('un rol_cliente que el modelo no tiene se rechaza en las dos herramientas', async () => {
+  const esperado = { error: 'rol_cliente inválido', roles: ['VENDEDOR', 'COMPRADOR'] };
+  assert.deepEqual(await ver_modelo({ servicio_id: ids.svcVehiculo, rol_cliente: 'NOTARIO' }, ctx), esperado);
+  assert.deepEqual(await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'NOTARIO', valores: { NOMBRE_VENDEDOR: 'A', NOMBRE_COMPRADOR: 'B' } }, ctx), esperado);
+  assert.equal((await docs()).length, 0);
+  // minúsculas y espacios se toleran
+  assert.deepEqual((await ver_modelo({ servicio_id: ids.svcVehiculo, rol_cliente: ' vendedor ' }, ctx)).ya_tenemos, { NOMBRE_VENDEDOR: 'ANA CLIENTE' });
 });
 
 test('preparar_documento llena el Word, crea el borrador del bot ligado a la cotización y guarda en la ficha', needsDocx, async () => {
@@ -206,6 +226,23 @@ test('con el switch encendido también avisa al digitador asignado', needsDocx, 
   assert.deepEqual((await notifs()).map((x) => x.user_id).sort(), [adminId, digId].sort());
   const [d] = await docs();
   assert.equal(d.invoice_id, null); // sin cotización en curso
+});
+
+test('si falla la ficha o el aviso después de crear el borrador, la herramienta igual responde bien', needsDocx, async () => {
+  await pool.query(`CREATE FUNCTION boom() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'boom'; END $$ LANGUAGE plpgsql`);
+  await pool.query(`CREATE TRIGGER boom_ficha BEFORE INSERT OR UPDATE ON legal_profiles FOR EACH ROW EXECUTE FUNCTION boom()`);
+  await pool.query(`CREATE TRIGGER boom_aviso BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION boom()`);
+  try {
+    // NOMBRE_VENDEDOR es del cliente: con él la ficha sí se intenta guardar (y el trigger la hace fallar)
+    const r = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_VENDEDOR: 'ANA CLIENTE GÓMEZ', NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
+    assert.equal(r.error, undefined);
+    assert.equal(r.estado, 'por_aprobar');
+    assert.equal((await docs()).length, 1);
+    assert.equal((await notifs()).length, 0);
+    assert.equal((await legalProfile.get(clientId)).NOMBRE, 'ANA CLIENTE'); // la ficha no cambió, pero el borrador sí quedó
+  } finally {
+    await pool.query('DROP FUNCTION boom() CASCADE');
+  }
 });
 
 test('un modelo con etiquetas pero sin versión aprobada no se puede usar', async () => {

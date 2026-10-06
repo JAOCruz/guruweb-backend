@@ -15,18 +15,21 @@ const SIN_MODELO = { error: 'sin modelo aprobado' };
 const STOP = new Set(['de', 'del', 'la', 'el', 'los', 'las', 'un', 'una', 'y', 'o', 'en', 'por', 'para', 'con', 'al', 'a', 'e', 'u']);
 const tokens = (s) => fold(s).split(/[^a-z0-9ñ]+/).filter((t) => t && !STOP.has(t));
 
-// El modelo aprobado ligado al servicio (service_catalog.template_id guarda el id del doc_template como texto)
-async function approvedByService(serviceId) {
+// El servicio y, si tiene uno ligado, su modelo (service_catalog.template_id guarda el id del doc_template como texto).
+// Un modelo ligado pero sin aprobar NO se reemplaza por otro parecido: el servicio queda sin modelo.
+async function serviceModel(serviceId) {
   const id = Number(serviceId);
   if (!Number.isInteger(id) || id <= 0) return null;
   const { rows } = await pool.query('SELECT name, template_id FROM service_catalog WHERE id = $1', [id]);
   const s = rows[0];
   if (!s) return null;
-  const t = /^\d+$/.test(String(s.template_id || '').trim()) ? await Tags.getTemplate(Number(s.template_id)) : null;
-  return { service: s, template: t && t.is_active && t.approved_tag_version_id ? t : null };
+  const linked = /^\d+$/.test(String(s.template_id || '').trim());
+  const t = linked ? await Tags.getTemplate(Number(s.template_id)) : null;
+  return { service: s, linked, template: t && t.is_active && t.approved_tag_version_id ? t : null };
 }
 
-// Por nombre, entre los modelos aprobados: el que más palabras de la consulta contiene (empates → opciones).
+// Por nombre, entre los modelos aprobados: todas las palabras de la consulta deben estar en el nombre del modelo.
+// Varios candidatos igual de buenos → opciones, para que el modelo pregunte.
 async function approvedByName(nombre) {
   const q = tokens(nombre);
   if (!q.length) return null;
@@ -35,14 +38,13 @@ async function approvedByName(nombre) {
      WHERE is_active = TRUE AND approved_tag_version_id IS NOT NULL ORDER BY name`);
   const exact = rows.filter((t) => fold(t.name) === fold(nombre));
   if (exact.length === 1) return { template: exact[0] };
-  let best = []; let bestScore = 0; let bestCover = 0;
+  let best = []; let bestCover = 0;
   for (const t of rows) {
     const mine = tokens(t.name);
-    const hits = q.filter((w) => mine.includes(w)).length;
-    if (!hits) continue;
-    const cover = mine.length ? hits / mine.length : 0; // qué tanto del nombre del modelo quedó cubierto
-    if (hits > bestScore || (hits === bestScore && cover > bestCover)) { best = [t]; bestScore = hits; bestCover = cover; }
-    else if (hits === bestScore && cover === bestCover) best.push(t);
+    if (!q.every((w) => mine.includes(w))) continue;
+    const cover = mine.length ? q.length / mine.length : 0; // qué tanto del nombre del modelo quedó cubierto
+    if (cover > bestCover) { best = [t]; bestCover = cover; }
+    else if (cover === bestCover) best.push(t);
   }
   if (!best.length) return null;
   if (best.length > 1) return { opciones: best.map((t) => t.name) };
@@ -51,10 +53,13 @@ async function approvedByName(nombre) {
 
 const rolesOf = (tags) => [...new Set(tags.map((t) => t.group).filter((g) => g && g !== 'DOCUMENTO'))];
 
-// El rol del cliente en el modelo: el que se pasó; si no, el único que hay; con varios y sin decir cuál → null.
+// El rol del cliente en el modelo: el que se pasó (tiene que ser uno de los del modelo); si no, el único que hay;
+// con varios y sin decir cuál → null. Un modelo sin roles no usa rol.
+const ROL_INVALIDO = 'rol_cliente inválido';
 function clientRole(roles, given) {
+  if (!roles.length) return null;
   const r = String(given || '').trim().toUpperCase();
-  if (r) return r;
+  if (r) return roles.includes(r) ? r : { error: ROL_INVALIDO, roles };
   return roles.length === 1 ? roles[0] : null;
 }
 
@@ -66,7 +71,8 @@ async function ver_modelo(args, ctx) {
   let template = null;
   let found = null;
   if (servicioId !== undefined && servicioId !== null && servicioId !== '') {
-    found = await approvedByService(servicioId);
+    found = await serviceModel(servicioId);
+    if (found && found.linked && !found.template) return SIN_MODELO; // ligado a un modelo sin aprobar: no se busca otro
     template = found && found.template;
   }
   if (!template) {
@@ -81,6 +87,7 @@ async function ver_modelo(args, ctx) {
   const tags = Array.isArray(version.tags) ? version.tags : [];
   const roles = rolesOf(tags);
   const role = clientRole(roles, args.rol_cliente);
+  if (role && role.error) return role;
   const profile = ctx.client?.id ? await LegalProfile.get(ctx.client.id) : {};
   // Con varios roles y sin saber cuál es el cliente no se adivina de quién es lo que hay en la ficha
   const yaTenemos = roles.length > 1 && !role ? {} : LegalProfile.prefill(tags, profile, role);
@@ -122,6 +129,7 @@ async function preparar_documento(args, ctx) {
   const tags = Array.isArray(version.tags) ? version.tags : [];
   const roles = rolesOf(tags);
   const role = clientRole(roles, args.rol_cliente);
+  if (role && role.error) return role;
   if (roles.length > 1 && !role) return { error: 'falta rol_cliente', roles };
 
   // Claves tal como las devolvió ver_modelo; se toleran mayúsculas/espacios distintos ("nombre_comprador")
@@ -145,15 +153,24 @@ async function preparar_documento(args, ctx) {
     clientId: client.id, templateId: template.id, userId: ctx.botUserId || null,
     notes: 'Preparado por el bot', invoiceId, preparedByBot: true,
   });
-  await LegalProfile.merge(client.id, LegalProfile.updatesFrom(tags, clean, role), ctx.botUserId || null);
-
-  const recipients = new Set(await activeAdminIds());
-  if (client.assigned_to && (await digitadoresAprueban())) recipients.add(client.assigned_to);
-  await notifyUsers([...recipients], {
-    type: 'document', title: `📄 Documento preparado por el bot: ${title}`,
-    message: `${clientName} — por aprobar en Documentos`, link: '/documentos',
-    metadata: { document_id: id, client_id: client.id, invoice_id: invoiceId },
-  });
+  // El borrador ya existe: si fallan la ficha o el aviso, se registra y la herramienta igual responde bien
+  // (un error haría que el modelo reintentara y creara otro borrador).
+  try {
+    await LegalProfile.merge(client.id, LegalProfile.updatesFrom(tags, clean, role), ctx.botUserId || null);
+  } catch (err) {
+    console.error('[Agent] preparar_documento: no se guardó la ficha:', err.code || err.name || 'error');
+  }
+  try {
+    const recipients = new Set(await activeAdminIds());
+    if (client.assigned_to && (await digitadoresAprueban())) recipients.add(client.assigned_to);
+    await notifyUsers([...recipients], {
+      type: 'document', title: `📄 Documento preparado por el bot: ${title}`,
+      message: `${clientName} — por aprobar en Documentos`, link: '/documentos',
+      metadata: { document_id: id, client_id: client.id, invoice_id: invoiceId },
+    });
+  } catch (err) {
+    console.error('[Agent] preparar_documento: no se avisó:', err.code || err.name || 'error');
+  }
   return { documento_id: id, titulo: title, estado: 'por_aprobar' };
 }
 
