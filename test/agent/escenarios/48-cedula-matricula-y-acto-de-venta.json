@@ -32,7 +32,8 @@
     "termina_sin_traspaso": true,
     "no_herramientas": [
       "preparar_documento"
-    ]
+    ],
+    "texto_coincide": "resumen|confirm|JUAN|COROLLA|A123456"
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,

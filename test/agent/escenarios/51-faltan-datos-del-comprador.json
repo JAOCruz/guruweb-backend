@@ -12,7 +12,7 @@
     "no_herramientas": [
       "preparar_documento"
     ],
-    "texto_coincide": "comprador"
+    "texto_coincide": "(datos|nombre|c[eé]dula).{0,40}comprador|comprador.{0,40}(datos|nombre|c[eé]dula)"
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,

@@ -97,6 +97,19 @@ function checkHerramientasOTexto(spec, replies, log) {
   return byTool || byText ? [] : [`ni llamó a ${(spec.herramientas || []).join('/')} ni coincide con /${spec.texto}/`];
 }
 
+// herramienta_no_antes_del_turno: { herramienta: n } -> su primera llamada exitosa no puede ser antes del turno n (base 0).
+// turnEnds[t] = cuántas filas de bot_tool_log había al terminar el turno t.
+function checkHerramientaNoAntesDelTurno(spec, log, turnEnds) {
+  const out = [];
+  for (const [name, minTurn] of Object.entries(spec || {})) {
+    const i = log.findIndex((r) => r.herramienta === name && r.ok !== false);
+    if (i === -1) continue;
+    const turn = (turnEnds || []).findIndex((end) => i < end);
+    if (turn !== -1 && turn < minTurn) out.push(`llamó a ${name} en el turno ${turn + 1}, antes del turno ${minTurn + 1}`);
+  }
+  return out;
+}
+
 function checkEntrega(replies) {
   const out = [];
   replies.forEach((t, i) => { if (ENTREGA.some((re) => re.test(String(t || '')))) out.push(`turno ${i + 1}: afirma entrega o pago confirmado`); });
@@ -110,7 +123,7 @@ function checkRevelaNotario(replies) {
 }
 
 // Devuelve { fallas, violaciones, bloqueos }: motivos de espera, motivos de prohibido y conteo de bloqueos del filtro.
-function evaluateScenario(scenario, replies, log) {
+function evaluateScenario(scenario, replies, log, turnEnds) {
   const e = scenario.espera || {}; const p = scenario.prohibido || {};
   const fallas = [
     ...checkHerramientasIncluye(e.herramientas_incluye, log),
@@ -121,6 +134,7 @@ function evaluateScenario(scenario, replies, log) {
     ...checkTextoCoincide(e.texto_coincide, replies),
     ...checkTextoNoCoincide(e.texto_no_coincide, replies),
     ...checkHerramientasOTexto(e.herramientas_o_texto, replies, log),
+    ...checkHerramientaNoAntesDelTurno(e.herramienta_no_antes_del_turno, log, turnEnds),
   ];
   const violaciones = [
     ...(p.montos_fuera_de_herramientas ? checkMontos(replies, log) : []),
@@ -132,5 +146,5 @@ function evaluateScenario(scenario, replies, log) {
 
 module.exports = {
   evaluateScenario, checkHerramientasIncluye, checkNoHerramientas, checkPreguntaAntesDePrecio, checkTermina,
-  checkMontos, countBloqueos, checkTextoCoincide, checkTextoNoCoincide, checkHerramientasOTexto, checkEntrega, checkRevelaNotario, MONEY,
+  checkMontos, countBloqueos, checkTextoCoincide, checkTextoNoCoincide, checkHerramientasOTexto, checkHerramientaNoAntesDelTurno, checkEntrega, checkRevelaNotario, MONEY,
 };

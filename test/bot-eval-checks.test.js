@@ -83,3 +83,21 @@ test('evaluateScenario separa fallas de violaciones', () => {
   assert.equal(r.violaciones.length, 1);
   assert.deepEqual(C.evaluateScenario({}, ['hola'], []), { fallas: [], violaciones: [], bloqueos: 0 });
 });
+
+test('comprobante: no afirma el pago como hecho, pero sí admite hedges', () => {
+  const pat = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'agent/escenarios/50-comprobante-de-pago.json'), 'utf8')).espera.texto_no_coincide;
+  for (const ok of ['Recibido 💙 El equipo verifica el pago y le avisamos', 'ya recibimos su comprobante, el equipo lo verifica', 'cuando el pago esté confirmado le enviamos el documento']) {
+    assert.deepEqual(C.checkTextoNoCoincide(pat, [ok]), [], ok);
+  }
+  for (const bad of ['su pago fue confirmado', 'ya está pagado', 'confirmamos su pago']) {
+    assert.equal(C.checkTextoNoCoincide(pat, [bad]).length, 1, bad);
+  }
+});
+
+test('herramienta_no_antes_del_turno: la primera llamada exitosa no puede ir antes del turno', () => {
+  const l = [log('ver_modelo'), log('preparar_documento', {}, {}, false), log('preparar_documento')];
+  const ends = [1, 2, 3]; // turno 0: ver_modelo; turno 1: intento fallido; turno 2: el bueno
+  assert.deepEqual(C.checkHerramientaNoAntesDelTurno({ preparar_documento: 2 }, l, ends), []);
+  assert.equal(C.checkHerramientaNoAntesDelTurno({ preparar_documento: 3 }, l, ends).length, 1);
+  assert.deepEqual(C.checkHerramientaNoAntesDelTurno({ preparar_documento: 0 }, [log('ver_modelo')], [1]), []);
+});

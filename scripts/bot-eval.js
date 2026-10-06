@@ -99,7 +99,8 @@ async function seedModeloAprobado() {
     `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, source) VALUES ($1, 1, $2, $3, 'ai') RETURNING id`,
     [tpl.id, MODELO_FIXTURE, JSON.stringify(MODELO_TAGS)]);
   await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [ver.id, tpl.id]);
-  await pool.query(`UPDATE service_catalog SET template_id = $1 WHERE name = 'Acto de Venta - Vehículo Liviano'`, [String(tpl.id)]);
+  const upd = await pool.query(`UPDATE service_catalog SET template_id = $1 WHERE name = 'Acto de Venta - Vehículo Liviano'`, [String(tpl.id)]);
+  if (upd.rowCount !== 1) throw new Error(`el catálogo debía tener exactamente un "Acto de Venta - Vehículo Liviano" (hay ${upd.rowCount})`);
 }
 
 // ---------- proveedores ----------
@@ -149,6 +150,7 @@ async function runScenario(sc, index, provider) {
   const phone = `1809555${String(index + 1).padStart(4, '0')}`;
   const fixed = sc.ahora ? new Date(sc.ahora) : null;
   const replies = [];
+  const turnEnds = [];
   const transcript = [];
   let error = null;
   const t0 = Date.now();
@@ -169,6 +171,7 @@ async function runScenario(sc, index, provider) {
         },
       });
       replies.push(reply || '');
+      turnEnds.push((await pool.query('SELECT COUNT(*)::int AS n FROM bot_tool_log WHERE phone = $1', [phone])).rows[0].n);
       if (reply) transcript.push({ quien: 'Bot', texto: reply });
     } catch (err) {
       error = err.code || err.name || 'error';
@@ -178,7 +181,7 @@ async function runScenario(sc, index, provider) {
   }
   const { rows: log } = await pool.query(
     'SELECT herramienta, args, resultado, ok FROM bot_tool_log WHERE phone = $1 ORDER BY id', [phone]);
-  const { fallas, violaciones, bloqueos } = evaluateScenario(sc, replies, log);
+  const { fallas, violaciones, bloqueos } = evaluateScenario(sc, replies, log, turnEnds);
   if (error) fallas.push(`el escenario falló con error técnico (${error})`);
   return { sc, replies, transcript, log, fallas, violaciones, bloqueos, ms: Date.now() - t0, turnos: sc.turnos.length };
 }

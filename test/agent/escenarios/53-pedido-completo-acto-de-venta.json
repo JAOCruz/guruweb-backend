@@ -15,6 +15,7 @@
     },
     "el comprador es Pedro Gomez Rodriguez, cedula 001-9999999-9",
     "el carro lo vendo en 800 mil",
+    "si, todo correcto asi",
     "si, esta bien, adelante con la cotizacion"
   ],
   "espera": {
@@ -23,7 +24,10 @@
       "preparar_cotizacion",
       "preparar_documento"
     ],
-    "termina_sin_traspaso": true
+    "termina_sin_traspaso": true,
+    "herramienta_no_antes_del_turno": {
+      "preparar_documento": 5
+    }
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,

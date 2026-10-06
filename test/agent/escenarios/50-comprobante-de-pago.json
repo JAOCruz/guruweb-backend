@@ -18,8 +18,9 @@
     "herramientas_incluye": [
       "avisar_pago"
     ],
-    "texto_no_coincide": "pago.{0,20}confirmad|confirmamos su pago|ya (?:se )?(?:acredit|recibi)",
-    "termina_sin_traspaso": true
+    "texto_no_coincide": "(?<!(?:cuando|hasta que|una vez que|si|a[uú]n no|todav[ií]a no) (?:el |su )?)(?:pago|transferencia).{0,25}(?:confirmad|acreditad|exitos|aprobad)|ya (?:est[aá]|qued[oó]) (?:pagad|confirmad)|ya (?:se )?acredit|lleg[oó] su pago|confirmamos su pago",
+    "termina_sin_traspaso": true,
+    "texto_coincide": "equipo|verific|revis"
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,
