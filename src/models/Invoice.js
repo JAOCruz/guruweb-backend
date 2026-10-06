@@ -109,7 +109,8 @@ const Invoice = {
   async markSent(id, pdfPath, pdfS3Key = null, storageType = 'local') {
     const { rows } = await pool.query(
       `UPDATE invoices
-       SET status='sent', pdf_path=$1, pdf_s3_key=$2, pdf_storage_type=$3, sent_at=NOW(), updated_at=NOW()
+       SET status = CASE WHEN status = 'paid' THEN status ELSE 'sent' END,
+           pdf_path=$1, pdf_s3_key=$2, pdf_storage_type=$3, sent_at=NOW(), updated_at=NOW()
        WHERE id=$4
        RETURNING *`,
       [pdfPath || null, pdfS3Key, storageType, id]

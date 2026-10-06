@@ -130,6 +130,78 @@ test('sendQuote envía el PDF con el total y las formas de pago, una sola vez au
   assert.equal(sent.length, 1);
 });
 
+test('sendQuote solo envía cotizaciones aprobadas; una pagada sale y sigue pagada', async () => {
+  for (const status of ['draft', 'pending_approval', 'rejected']) {
+    const inv = await makeInvoice({ status });
+    assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: false, code: 'NOT_APPROVED' }, status);
+    const row = await invoiceRow(inv.id);
+    assert.equal(row.status, status);
+    assert.equal(row.sent_by_bot_at, null);
+  }
+  assert.equal(sent.length, 0);
+  assert.equal((await notices()).length, 0);
+
+  const paid = await makeInvoice({ status: 'paid' });
+  assert.deepEqual(await delivery.sendQuote(paid.id, { actor }), { ok: true });
+  assert.equal(sent.length, 1);
+  const row = await invoiceRow(paid.id);
+  assert.equal(row.status, 'paid');
+  assert.ok(row.sent_at);
+  assert.ok(row.sent_by_bot_at);
+  assert.deepEqual(await delivery.sendQuote(paid.id, { actor }), { ok: false, code: 'ALREADY_SENT' });
+  assert.equal(sent.length, 1);
+});
+
+test('un fallo inesperado tras la marca no deja la fila atascada: SEND_FAILED, se revierte, avisa y se puede reenviar', async () => {
+  const Message = require('../src/models/Message');
+  const original = Message.getLastJid;
+  Message.getLastJid = async () => { throw new Error('connection terminated'); };
+  const inv = await makeInvoice();
+  const doc = await makeDoc({ title: 'Poder' });
+  try {
+    assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: false, code: 'SEND_FAILED' });
+    assert.deepEqual(await delivery.sendDocument(doc.id, { actor }), { ok: false, code: 'SEND_FAILED' });
+  } finally {
+    Message.getLastJid = original;
+  }
+  assert.equal(sent.length, 0);
+  const ir = await invoiceRow(inv.id);
+  assert.equal(ir.sent_by_bot_at, null);
+  assert.equal(ir.send_error, 'SEND_FAILED');
+  const dr = await docRow(doc.id);
+  assert.equal(dr.sent_at, null);
+  assert.equal(dr.send_error, 'SEND_FAILED');
+  const n = await notices();
+  assert.equal(n.length, 2);
+  assert.ok(n.every((x) => x.type === 'delivery' && x.user_id === adminId));
+
+  // Con la conexión de vuelta, el mismo botón envía
+  assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
+  assert.deepEqual(await delivery.sendDocument(doc.id, { actor }), { ok: true });
+  assert.equal(sent.length, 2);
+  assert.equal((await invoiceRow(inv.id)).send_error, null);
+});
+
+test('si falla el registro después de enviar, el envío cuenta y no se repite', async () => {
+  const Message = require('../src/models/Message');
+  const original = Message.create;
+  Message.create = async () => { throw new Error('messages table locked'); };
+  const inv = await makeInvoice();
+  try {
+    assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: true });
+  } finally {
+    Message.create = original;
+  }
+  assert.equal(sent.length, 1);
+  const row = await invoiceRow(inv.id);
+  assert.ok(row.sent_by_bot_at);
+  assert.equal(row.status, 'sent');
+  assert.equal(row.send_error, null);
+  assert.equal((await notices()).length, 0);
+  assert.deepEqual(await delivery.sendQuote(inv.id, { actor }), { ok: false, code: 'ALREADY_SENT' });
+  assert.equal(sent.length, 1);
+});
+
 test('sendQuote genera el PDF si falta y lo guarda en la cotización', async () => {
   const inv = await makeInvoice({ pdf: false });
   let generated = 0;

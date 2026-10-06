@@ -107,9 +107,22 @@ function waId(result) {
 
 // ── Cotizaciones ─────────────────────────────────────────────────────────────
 
+// Solo salen cotizaciones aprobadas (o ya enviadas/pagadas, p.ej. reenvío tras WINDOW_CLOSED).
+const SENDABLE_STATUSES = new Set(['approved', 'sent', 'paid']);
+
+// Tras un envío que salió bien, el registro nunca deshace la marca ni rompe la respuesta.
+async function afterSend(kind, id, step, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error('[delivery]', kind, id, 'registro', step, err.code || 'ERROR');
+  }
+}
+
 async function sendQuote(invoiceId, { actor } = {}) {
   const invoice = await Invoice.findById(invoiceId);
   if (!invoice) return { ok: false, code: 'NOT_FOUND' };
+  if (!SENDABLE_STATUSES.has(invoice.status)) return { ok: false, code: 'NOT_APPROVED' };
   if (!invoice.client_phone) return { ok: false, code: 'NO_PHONE' };
 
   const claim = await pool.query(
@@ -126,35 +139,40 @@ async function sendQuote(invoiceId, { actor } = {}) {
     return { ok: false, code };
   };
 
-  let pdfPath = invoice.pdf_path;
-  if (!pdfPath || !fs.existsSync(pdfPath)) {
-    try {
-      pdfPath = await generateQuotePdf(invoice);
-    } catch (err) {
-      console.error('[delivery] PDF de cotización', invoice.id, err.code || 'PDF_FAILED');
-      return fail('PDF_FAILED');
+  // Desde la marca hasta el envío: cualquier fallo revierte la marca; la fila nunca queda atascada.
+  let pdfPath, caption, phone, target, sent, code = null;
+  try {
+    pdfPath = invoice.pdf_path;
+    if (!pdfPath || !fs.existsSync(pdfPath)) {
+      pdfPath = await generateQuotePdf(invoice).catch(() => null);
     }
+    if (!pdfPath) {
+      code = 'PDF_FAILED';
+    } else {
+      const info = await getBusinessInfo().catch(() => ({}));
+      const formas = Array.isArray(info.formas_pago) && info.formas_pago.length ? info.formas_pago.join(' o ') : DEFAULT_PAYMENT_METHODS;
+      caption = `Le comparto su cotización ${invoice.doc_number} por ${rd(invoice.total)}. Formas de pago: ${formas}.`
+        + (info.direccion ? ` Estamos en ${info.direccion}.` : '') + ' Cualquier duda me escribe. 🦉';
+      phone = invoice.client_phone;
+      target = (await Message.getLastJid(phone)) || phone;
+      sent = await sendWithRetry(target, pdfPath, `${invoice.doc_number}.pdf`, caption);
+      code = sent.code || null;
+    }
+  } catch (err) {
+    console.error('[delivery] cotización', invoice.id, 'inesperado', err.code || 'ERROR');
+    code = 'SEND_FAILED';
   }
+  if (code) return fail(code);
 
-  const info = await getBusinessInfo().catch(() => ({}));
-  const formas = Array.isArray(info.formas_pago) && info.formas_pago.length ? info.formas_pago.join(' o ') : DEFAULT_PAYMENT_METHODS;
-  const caption = `Le comparto su cotización ${invoice.doc_number} por ${rd(invoice.total)}. Formas de pago: ${formas}.`
-    + (info.direccion ? ` Estamos en ${info.direccion}.` : '') + ' Cualquier duda me escribe. 🦉';
-
-  const phone = invoice.client_phone;
-  const target = (await Message.getLastJid(phone)) || phone;
-  const sent = await sendWithRetry(target, pdfPath, `${invoice.doc_number}.pdf`, caption);
-  if (sent.code) return fail(sent.code);
-
-  await recordOutbound({ phone, clientId: invoice.client_id, content: caption, waId: waId(sent.result), target });
-  const updated = await Invoice.markSent(
-    invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'
-  );
-  await logActivity(null, {
+  await afterSend('cotización', invoice.id, 'mensaje', () =>
+    recordOutbound({ phone, clientId: invoice.client_id, content: caption, waId: waId(sent.result), target }));
+  await afterSend('cotización', invoice.id, 'estado', () =>
+    Invoice.markSent(invoice.id, pdfPath, invoice.pdf_s3_key || null, invoice.pdf_s3_key ? 's3' : 'railway_volume'));
+  await afterSend('cotización', invoice.id, 'actividad', () => logActivity(null, {
     actor, category: 'facturas', action: 'invoice.send', entityType: 'invoice', entityId: invoice.id,
     summary: `Envió la cotización ${invoice.doc_number} a ${invoice.client_name || 'cliente sin nombre'} por WhatsApp (${rd(invoice.total)})`,
-    details: { doc_number: invoice.doc_number, type: invoice.type, client_name: invoice.client_name, total: (updated || invoice).total, via: 'delivery' },
-  });
+    details: { doc_number: invoice.doc_number, type: invoice.type, client_name: invoice.client_name, total: invoice.total, via: 'delivery' },
+  }));
   return { ok: true };
 }
 
@@ -199,30 +217,38 @@ async function sendDocument(documentId, { actor } = {}) {
     return { ok: false, code };
   };
 
-  const { rows: versions } = await pool.query('SELECT * FROM portfolio_versions WHERE id = $1 AND document_id = $2', [doc.approved_version_id, doc.id]);
-  const version = versions[0];
-  let pdfPath;
-  try {
-    if (!version) throw Object.assign(new Error('approved version missing'), { code: 'NO_VERSION' });
-    pdfPath = await documentPdf(version);
-  } catch (err) {
-    console.error('[delivery] PDF de documento', doc.id, err.code || 'PDF_FAILED');
-    return fail('PDF_FAILED');
-  }
-
+  // Desde la marca hasta el envío: cualquier fallo revierte la marca; la fila nunca queda atascada.
   const caption = `Aquí tiene su documento «${doc.title}». Gracias por confiar en Gurú. 🦉`;
   const phone = doc.client_phone;
-  const target = (await Message.getLastJid(phone)) || phone;
-  const sent = await sendWithRetry(target, pdfPath, `${safeFileName(doc.title)}.pdf`, caption);
-  if (sent.code) return fail(sent.code);
+  let version, target, sent, code = null;
+  try {
+    const { rows: versions } = await pool.query(
+      'SELECT * FROM portfolio_versions WHERE id = $1 AND document_id = $2', [doc.approved_version_id, doc.id]
+    );
+    version = versions[0];
+    const pdfPath = version ? await documentPdf(version).catch(() => null) : null;
+    if (!pdfPath) {
+      code = 'PDF_FAILED';
+    } else {
+      target = (await Message.getLastJid(phone)) || phone;
+      sent = await sendWithRetry(target, pdfPath, `${safeFileName(doc.title)}.pdf`, caption);
+      code = sent.code || null;
+    }
+  } catch (err) {
+    console.error('[delivery] documento', doc.id, 'inesperado', err.code || 'ERROR');
+    code = 'SEND_FAILED';
+  }
+  if (code) return fail(code);
 
-  await recordOutbound({ phone, clientId: doc.client_id, content: caption, waId: waId(sent.result), target });
-  await pool.query('UPDATE portfolio_documents SET updated_at = NOW() WHERE id = $1', [doc.id]);
-  await logActivity(null, {
+  await afterSend('documento', doc.id, 'mensaje', () =>
+    recordOutbound({ phone, clientId: doc.client_id, content: caption, waId: waId(sent.result), target }));
+  await afterSend('documento', doc.id, 'estado', () =>
+    pool.query('UPDATE portfolio_documents SET updated_at = NOW() WHERE id = $1', [doc.id]));
+  await afterSend('documento', doc.id, 'actividad', () => logActivity(null, {
     actor, category: 'documentos', action: 'documento.send', entityType: 'documento', entityId: doc.id,
     summary: `Envió «${doc.title}» a ${doc.client_name || 'cliente sin nombre'} por WhatsApp`,
     details: { client_name: doc.client_name, version_id: version.id, invoice_id: doc.invoice_id, via: 'delivery' },
-  });
+  }));
   return { ok: true };
 }
 
