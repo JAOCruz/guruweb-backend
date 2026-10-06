@@ -1,0 +1,218 @@
+process.env.RAILWAY_VOLUME_MOUNT_PATH = require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'guru-wa-'));
+const { pool, runSqlFile, resetDb } = require('./helpers/db');
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const legalProfile = require('../src/documentos/legalProfile');
+const { listBlocks } = require('../src/documentos/docxText');
+const { clearCache } = require('../src/agent/businessInfo');
+const { ver_modelo, preparar_documento } = require('../src/agent/tools/documents');
+
+// El llenado del Word pasa por docx_text.py (python-docx); sin él, esas pruebas se saltan como en documentos-etiquetas.
+const PY = process.env.PYTHON_BIN || 'python3';
+const hasDocx = spawnSync(PY, ['-c', 'import docx']).status === 0;
+const needsDocx = { skip: !hasDocx };
+
+// Modelo etiquetado y aprobado: {{NOMBRE_VENDEDOR}} y {{NOMBRE_COMPRADOR}} (cada uno aparece dos veces)
+const FIXTURE = path.join(__dirname, 'fixtures', 'venta-etiquetada.docx');
+const TAGS = [
+  { key: 'NOMBRE_VENDEDOR', label: 'Nombre del vendedor', group: 'VENDEDOR' },
+  { key: 'NOMBRE_COMPRADOR', label: 'Nombre del comprador', group: 'COMPRADOR' },
+];
+
+const PHONE = '18095550121';
+let ctx, botUserId, adminId, digId, clientId, ids;
+
+async function version(templateId, { approve }) {
+  const { rows } = await pool.query(
+    `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, source) VALUES ($1, 1, $2, $3, 'ai') RETURNING id`,
+    [templateId, FIXTURE, JSON.stringify(TAGS)]);
+  if (approve) await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [rows[0].id, templateId]);
+  return rows[0].id;
+}
+
+test.beforeEach(async () => {
+  await resetDb();
+  await runSqlFile('migrations/20260926_user_management.sql');
+  await pool.query(`DROP TABLE IF EXISTS notifications, bot_tool_log, bot_memory, business_info, tramites, invoices, service_catalog, service_categories,
+    template_tag_versions, legal_profiles, portfolio_versions, portfolio_documents, doc_templates, doc_categories, clients CASCADE`);
+  await pool.query(`CREATE TABLE service_categories (id SERIAL PRIMARY KEY, name TEXT)`);
+  await pool.query(`CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, description TEXT, category_id INT, digitacion_price NUMERIC, notarizacion_price NUMERIC, price_tiers JSONB DEFAULT '[]', unit_type TEXT, active BOOLEAN DEFAULT true)`);
+  await pool.query(`CREATE TABLE invoices (id SERIAL PRIMARY KEY, doc_number TEXT, status TEXT NOT NULL DEFAULT 'draft', client_id INT, total NUMERIC, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT, user_id INT, email VARCHAR(255), address TEXT, notes TEXT, source VARCHAR(20) DEFAULT 'whatsapp', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE notifications (id SERIAL PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, title VARCHAR(255) NOT NULL, message TEXT NOT NULL, link TEXT, read BOOLEAN DEFAULT false, read_at TIMESTAMPTZ, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW())`);
+  await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await runSqlFile('migrations/20260929_legal_profiles.sql');
+  await runSqlFile('migrations/20260929_portfolio.sql');
+  await runSqlFile('migrations/20261002_template_tags.sql');
+  await runSqlFile('migrations/20261005_bot_agent.sql');
+  await runSqlFile('migrations/20261006_bot_fase2.sql');
+  clearCache();
+  const mk = async (u, role, name) => (await pool.query(
+    `INSERT INTO users (username, email, password_hash, name, role) VALUES ($1,$2,'x',$3,$4) RETURNING id`, [u, `${u}@t.co`, name, role])).rows[0].id;
+  adminId = await mk('adm', 'admin', 'Admin Uno');
+  digId = await mk('dig', 'digitador', 'Digi Tador');
+  botUserId = (await pool.query(`SELECT id FROM users WHERE username='bot'`)).rows[0].id;
+
+  const tpl = async (name, file) => (await pool.query(
+    `INSERT INTO doc_templates (name, file_path, file_name) VALUES ($1, $2, $2) RETURNING id`, [name, file])).rows[0].id;
+  ids = {
+    vehiculo: await tpl('ACTO DE VENTA DE VEHÍCULO', 'vehiculo.docx'),
+    inmueble: await tpl('ACTO DE VENTA DE INMUEBLE', 'inmueble.docx'),
+    poder: await tpl('PODER GENERAL', 'poder.docx'),        // etiquetado, sin aprobar
+    carta: await tpl('CARTA DE NO OBJECIÓN', 'carta.docx'), // sin etiquetar
+  };
+  await version(ids.vehiculo, { approve: true });
+  await version(ids.inmueble, { approve: true });
+  await version(ids.poder, { approve: false });
+
+  const svc = async (name, templateId) => (await pool.query(
+    `INSERT INTO service_catalog (name, digitacion_price, template_id) VALUES ($1, 500, $2) RETURNING id`, [name, templateId])).rows[0].id;
+  ids.svcVehiculo = await svc('Acto de Venta de Vehículo', String(ids.vehiculo));
+  ids.svcPoder = await svc('Poder General', String(ids.poder));
+  ids.svcCarta = await svc('Carta de No Objeción', null);
+
+  clientId = (await pool.query(`INSERT INTO clients (phone, name, assigned_to) VALUES ($1, 'Ana Cliente', $2) RETURNING id`, [PHONE, digId])).rows[0].id;
+  await legalProfile.merge(clientId, { NOMBRE: 'ANA CLIENTE', 'DOCUMENTO IDENTIDAD': '001-0000000-1' }, adminId);
+  const client = (await pool.query('SELECT * FROM clients WHERE id=$1', [clientId])).rows[0];
+  ctx = { phone: PHONE, client, botUserId, now: new Date() };
+});
+test.after(async () => { await pool.end(); });
+
+const docs = async () => (await pool.query('SELECT * FROM portfolio_documents ORDER BY id')).rows;
+const notifs = async () => (await pool.query(`SELECT * FROM notifications WHERE type='document' ORDER BY id`)).rows;
+
+test('ver_modelo devuelve las etiquetas y lo que ya está en la ficha', async () => {
+  const r = await ver_modelo({ servicio_id: ids.svcVehiculo, rol_cliente: 'VENDEDOR' }, ctx);
+  assert.equal(r.error, undefined);
+  assert.equal(r.modelo_id, ids.vehiculo);
+  assert.equal(r.nombre, 'ACTO DE VENTA DE VEHÍCULO');
+  assert.deepEqual(r.etiquetas, [
+    { clave: 'NOMBRE_VENDEDOR', etiqueta: 'Nombre del vendedor', rol: 'VENDEDOR' },
+    { clave: 'NOMBRE_COMPRADOR', etiqueta: 'Nombre del comprador', rol: 'COMPRADOR' },
+  ]);
+  assert.deepEqual(r.ya_tenemos, { NOMBRE_VENDEDOR: 'ANA CLIENTE' });
+  assert.deepEqual(r.faltan, ['NOMBRE_COMPRADOR']);
+  assert.deepEqual(r.roles, ['VENDEDOR', 'COMPRADOR']);
+  assert.ok(!('precio' in r) && !('total' in r));
+
+  // sin rol_cliente y con varios roles no se adivina de quién es el nombre de la ficha
+  const sinRol = await ver_modelo({ servicio_id: ids.svcVehiculo }, ctx);
+  assert.deepEqual(sinRol.ya_tenemos, {});
+  assert.deepEqual(sinRol.faltan, ['NOMBRE_VENDEDOR', 'NOMBRE_COMPRADOR']);
+
+  // por nombre (sin acentos, minúsculas) entre los modelos aprobados
+  const porNombre = await ver_modelo({ nombre: 'acto de venta de vehiculo', rol_cliente: 'VENDEDOR' }, ctx);
+  assert.equal(porNombre.modelo_id, ids.vehiculo);
+  // un nombre que empata con varios aprobados pide que se elija
+  const varios = await ver_modelo({ nombre: 'acto de venta' }, ctx);
+  assert.equal(varios.error, 'varios modelos');
+  assert.deepEqual(varios.opciones.sort(), ['ACTO DE VENTA DE INMUEBLE', 'ACTO DE VENTA DE VEHÍCULO']);
+});
+
+test('ver_modelo de un servicio sin modelo aprobado → error', async () => {
+  // servicio ligado a un modelo etiquetado pero sin aprobar
+  assert.deepEqual(await ver_modelo({ servicio_id: ids.svcPoder }, ctx), { error: 'sin modelo aprobado' });
+  // servicio sin modelo ligado y cuyo nombre no empata con ningún aprobado
+  assert.deepEqual(await ver_modelo({ servicio_id: ids.svcCarta }, ctx), { error: 'sin modelo aprobado' });
+  assert.deepEqual(await ver_modelo({ nombre: 'poder general' }, ctx), { error: 'sin modelo aprobado' });
+  assert.deepEqual(await ver_modelo({ servicio_id: 99999 }, ctx), { error: 'sin modelo aprobado' });
+  assert.equal((await ver_modelo({}, ctx)).error, 'indique servicio_id o nombre');
+});
+
+test('preparar_documento con un valor faltante no crea nada y dice cuáles faltan', needsDocx, async () => {
+  const r = await preparar_documento({ modelo_id: ids.vehiculo, valores: { NOMBRE_COMPRADOR: '   ' }, rol_cliente: 'VENDEDOR' }, ctx);
+  assert.deepEqual(r, { error: 'faltan datos', faltan: ['NOMBRE_COMPRADOR'] });
+  assert.equal((await docs()).length, 0);
+  assert.equal((await notifs()).length, 0);
+  assert.deepEqual(await legalProfile.get(clientId), { NOMBRE: 'ANA CLIENTE', 'DOCUMENTO IDENTIDAD': '001-0000000-1' });
+  // con varios roles hay que decir cuál es el cliente
+  const sinRol = await preparar_documento({ modelo_id: ids.vehiculo, valores: { NOMBRE_VENDEDOR: 'A', NOMBRE_COMPRADOR: 'B' } }, ctx);
+  assert.equal(sinRol.error, 'falta rol_cliente');
+  assert.deepEqual(sinRol.roles, ['VENDEDOR', 'COMPRADOR']);
+  assert.equal((await docs()).length, 0);
+});
+
+test('preparar_documento llena el Word, crea el borrador del bot ligado a la cotización y guarda en la ficha', needsDocx, async () => {
+  const inv = async (status, daysAgo) => (await pool.query(
+    `INSERT INTO invoices (doc_number, status, client_id, total, created_at) VALUES ($1, $2, $3, 1, NOW() - ($4 || ' days')::interval) RETURNING id`,
+    [`COT-${status}-${daysAgo}`, status, clientId, daysAgo])).rows[0].id;
+  await inv('pending_approval', 5);
+  const vieja = await inv('approved', 3);
+  const reciente = await inv('pending_approval', 1);
+  await inv('paid', 0);                 // pagada: no es la cotización en curso
+  const ajena = (await pool.query(`INSERT INTO invoices (doc_number, status, client_id, total) VALUES ('COT-X', 'approved', 999, 1) RETURNING id`)).rows[0].id;
+
+  const r = await preparar_documento({
+    modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR',
+    valores: { NOMBRE_VENDEDOR: 'ANA CLIENTE GÓMEZ', nombre_comprador: ' LUIS DÍAZ ' },
+  }, ctx);
+  assert.equal(r.error, undefined);
+  assert.equal(r.estado, 'por_aprobar');
+  assert.equal(r.titulo, 'ACTO DE VENTA DE VEHÍCULO — Ana Cliente');
+  assert.ok(Number.isInteger(r.documento_id));
+
+  const [d] = await docs();
+  assert.equal(d.id, r.documento_id);
+  assert.equal(d.client_id, clientId);
+  assert.equal(d.template_id, ids.vehiculo);
+  assert.equal(d.created_by, botUserId);
+  assert.equal(d.prepared_by_bot, true);
+  assert.equal(d.invoice_id, reciente);
+  assert.equal(d.approved_version_id, null);
+  assert.equal(d.title, r.titulo);
+
+  const { rows: [v] } = await pool.query('SELECT * FROM portfolio_versions WHERE document_id = $1', [d.id]);
+  assert.equal(v.source, 'generated');
+  assert.equal(v.notes, 'Preparado por el bot');
+  assert.equal(v.created_by, botUserId);
+  assert.equal(v.mime_type, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  assert.ok(fs.existsSync(v.file_path));
+  assert.ok(v.size_bytes > 0);
+  assert.deepEqual((await listBlocks(v.file_path)).map((b) => b.text), [
+    'ACTO DE VENTA DE VEHICULO',
+    'Yo, ANA CLIENTE GÓMEZ, vendo a LUIS DÍAZ el vehículo.',
+    'Firman: ANA CLIENTE GÓMEZ y LUIS DÍAZ.',
+  ]);
+
+  // la ficha guarda lo del cliente (rol VENDEDOR), no lo de la otra parte
+  const ficha = await legalProfile.get(clientId);
+  assert.equal(ficha.NOMBRE, 'ANA CLIENTE GÓMEZ');
+  assert.equal(ficha['DOCUMENTO IDENTIDAD'], '001-0000000-1');
+  assert.ok(!Object.values(ficha).includes('LUIS DÍAZ'));
+
+  // avisa a los admins (switch apagado: el digitador asignado no)
+  const n = await notifs();
+  assert.deepEqual(n.map((x) => x.user_id), [adminId]);
+  assert.equal(n[0].title, '📄 Documento preparado por el bot: ACTO DE VENTA DE VEHÍCULO — Ana Cliente');
+  assert.equal(n[0].link, '/documentos');
+  assert.equal(n[0].metadata.document_id, d.id);
+
+  // invoice_id explícito: se usa si es del cliente; si es ajeno, la más reciente del cliente
+  const r2 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'PEDRO' }, invoice_id: vieja }, ctx);
+  assert.equal((await docs()).find((x) => x.id === r2.documento_id).invoice_id, vieja);
+  const r3 = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'PEDRO' }, invoice_id: ajena }, ctx);
+  assert.equal((await docs()).find((x) => x.id === r3.documento_id).invoice_id, reciente);
+});
+
+test('con el switch encendido también avisa al digitador asignado', needsDocx, async () => {
+  await pool.query(`UPDATE business_info SET valor = 'true'::jsonb WHERE clave = 'digitadores_aprueban_documentos'`);
+  clearCache();
+  const r = await preparar_documento({ modelo_id: ids.vehiculo, rol_cliente: 'VENDEDOR', valores: { NOMBRE_COMPRADOR: 'LUIS DÍAZ' } }, ctx);
+  assert.equal(r.estado, 'por_aprobar');
+  assert.deepEqual((await notifs()).map((x) => x.user_id).sort(), [adminId, digId].sort());
+  const [d] = await docs();
+  assert.equal(d.invoice_id, null); // sin cotización en curso
+});
+
+test('un modelo con etiquetas pero sin versión aprobada no se puede usar', async () => {
+  const r = await preparar_documento({ modelo_id: ids.poder, rol_cliente: 'VENDEDOR', valores: { NOMBRE_VENDEDOR: 'A', NOMBRE_COMPRADOR: 'B' } }, ctx);
+  assert.deepEqual(r, { error: 'sin modelo aprobado' });
+  assert.deepEqual(await preparar_documento({ modelo_id: ids.carta, valores: {} }, ctx), { error: 'sin modelo aprobado' });
+  assert.deepEqual(await preparar_documento({ modelo_id: 99999, valores: {} }, ctx), { error: 'sin modelo aprobado' });
+  assert.equal((await docs()).length, 0);
+  assert.equal((await notifs()).length, 0);
+});

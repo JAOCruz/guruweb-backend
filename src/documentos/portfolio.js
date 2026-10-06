@@ -96,13 +96,15 @@ async function getDocument(user, id) {
   return doc;
 }
 
-async function createDocument({ clientId, title, templateId = null, userId, file }) {
+// invoiceId / preparedByBot: the bot's drafts (fase 2); the panel leaves them at their defaults.
+async function createDocument({ clientId, title, templateId = null, userId, file, invoiceId = null, preparedByBot = false }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `INSERT INTO portfolio_documents (client_id, title, template_id, created_by) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [clientId, title, templateId, userId]
+      `INSERT INTO portfolio_documents (client_id, title, template_id, created_by, invoice_id, prepared_by_bot)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [clientId, title, templateId, userId, invoiceId, preparedByBot === true]
     );
     await insertVersion(client, rows[0].id, 1, userId, file);
     await client.query('COMMIT');

@@ -45,7 +45,7 @@ test('pregunta de precio: busca, calcula y responde con el monto de la herramien
   assert.match(out, /RD\$950/);
   assert.equal(p.calls.length, 3);
   assert.equal(p.calls[0].timeoutMs, 25000);
-  assert.equal(p.calls[0].tools.length, 9);
+  assert.equal(p.calls[0].tools.length, 11);
   assert.deepEqual(p.calls[0].messages, [{ role: 'user', text: 'cuanto es un acto de venta de un carro de 500 mil' }]);
   // el tercer llamado lleva la llamada y el resultado de cada herramienta
   const m = p.calls[2].messages;

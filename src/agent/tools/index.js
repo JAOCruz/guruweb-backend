@@ -6,6 +6,7 @@ const { guardar_datos_cliente, leer_documento } = require('./client');
 const { crear_solicitud, estado_solicitud } = require('./requests');
 const { preparar_cotizacion } = require('./quote');
 const { pasar_a_humano } = require('./handoff');
+const { ver_modelo, preparar_documento } = require('./documents');
 const { withTimeout } = require('../provider');
 
 // Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
@@ -150,6 +151,41 @@ const TOOLS = [
     parameters: { type: 'object', properties: {}, required: [] },
   },
   {
+    name: 'ver_modelo',
+    description: 'Busca el modelo de Word aprobado que corresponde a un servicio y devuelve sus etiquetas (clave, etiqueta, rol), ' +
+      'lo que ya está en la ficha del cliente (ya_tenemos) y lo que falta (faltan). Úsela cuando el cliente pide un documento, ' +
+      'para saber qué datos pedir: pida solo lo que falte, de a poco. Si devuelve varios roles (vendedor, comprador…), pregunte ' +
+      'cuál es el cliente y vuelva a llamar con rol_cliente. Si devuelve "sin modelo aprobado", no prometa el documento: cree la ' +
+      'solicitud y una persona lo hace a mano. No devuelve precios.',
+    parameters: {
+      type: 'object',
+      properties: {
+        servicio_id: { type: 'integer', description: 'Id del servicio, tomado de buscar_servicio.' },
+        nombre: { type: 'string', description: 'Nombre del documento si no tiene el id del servicio (p. ej. "acto de venta de vehículo").' },
+        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento, tal como viene en roles (p. ej. VENDEDOR).' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'preparar_documento',
+    description: 'Llena el modelo aprobado con los datos y lo deja en Documentos como borrador del bot, por aprobar por una persona; ' +
+      'nunca se envía solo. Úsela solo después de que el cliente confirmó el resumen de los datos y el carrito, y de haber hecho ' +
+      'preparar_cotizacion. Pase en valores todas las etiquetas que faltaban según ver_modelo (las de la ficha se completan solas); ' +
+      'si devuelve "faltan datos", pida esas etiquetas al cliente y vuelva a llamar: nunca se preparan documentos con espacios en ' +
+      'blanco. Después, dígale al cliente que el equipo lo revisa y se lo envía una vez aprobado y pagado, sin prometer un tiempo.',
+    parameters: {
+      type: 'object',
+      properties: {
+        modelo_id: { type: 'integer', description: 'Id del modelo, tomado de ver_modelo.' },
+        valores: { type: 'object', description: 'Pares clave de etiqueta → valor, con las claves que devolvió ver_modelo (p. ej. NOMBRE_COMPRADOR).' },
+        rol_cliente: { type: 'string', description: 'Rol del cliente en el documento (p. ej. VENDEDOR), obligatorio si el modelo tiene varios roles.' },
+        invoice_id: { type: 'integer', description: 'Id de la cotización a la que se liga el documento, si la tiene; si no, se usa la más reciente del cliente.' },
+      },
+      required: ['modelo_id', 'valores'],
+    },
+  },
+  {
     name: 'pasar_a_humano',
     description: 'Pasa el chat a una persona del equipo: lo pone en modo manual, avisa al asignado o al admin y devuelve el mensaje de ' +
       'espera, que debe enviarse tal cual. Úsela con reclamaciones, pagos y comprobantes, reembolsos, asesoría legal, casos en tribunal, ' +
@@ -167,7 +203,7 @@ const TOOLS = [
 
 const HANDLERS = {
   buscar_servicio, calcular_precio, ver_tramite, guardar_datos_cliente, leer_documento,
-  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano,
+  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento,
 };
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 

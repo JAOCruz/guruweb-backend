@@ -5,13 +5,13 @@ const path = require('path');
 const crypto = require('crypto');
 const { authenticate, requireRole } = require('../middleware/auth');
 const pool = require('../db/pool');
-const storage = require('../utils/storage');
 const { logActivity, safeLog } = require('../services/activityLog');
 const { resolveModelPath } = require('../documentos/templatesCatalog');
 const { listBlocks, applySpans, applyOps, fillTags, listTags } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
 const Tags = require('../documentos/templateTags');
 const Portfolio = require('../documentos/portfolio');
+const { fillAndStore } = require('../documentos/fillDocument');
 const LegalProfile = require('../documentos/legalProfile');
 const multer = require('multer');
 const { buildTagging, selectionSpan, normalizeKey, meta, EditError, TAG, tagsInText, cleanTagged, diffSpan } = require('../documentos/tagging');
@@ -25,7 +25,6 @@ router.param('id', (req, res, next, id) => (/^\d+$/.test(id) ? next() : res.stat
 const admin = requireRole('admin');
 const isAdmin = (req) => req.user.role === 'admin';
 
-const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const BLANK = '________';
 const sendError = (res, status, code, error, extra = {}) => res.status(status).json({ error, code, ...extra });
 const tmpDocx = () => path.join(os.tmpdir(), `tags-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.docx`);
@@ -509,16 +508,10 @@ router.post('/models/:id/fill', async (req, res) => {
     const clean = Object.fromEntries(Object.entries(values).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
     const keys = [...new Set(await listTags(version.file_path))];
     const filled = Object.fromEntries(keys.map((k) => [k, clean[k] || BLANK]));
-    const out = tmpDocx();
-    await fillTags(version.file_path, out, filled);
-
     const title = String(req.body.title || model.name).trim().slice(0, 200) || model.name;
-    const name = `${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`;
-    const stored = storage.saveLocalFile(out, 'portfolio', `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${name}`);
-    fs.rm(out, { force: true }, () => {});
-    const id = await Portfolio.createDocument({
-      clientId: client.id, title, templateId: model.id, userId: req.user.id,
-      file: { path: stored, name, mime: DOCX, size: fs.statSync(stored).size, source: 'generated', notes: `Llenado por etiquetas (v${version.version_number})` },
+    const { id } = await fillAndStore({
+      version, values: filled, title, clientId: client.id, templateId: model.id, userId: req.user.id,
+      notes: `Llenado por etiquetas (v${version.version_number})`,
     });
     await LegalProfile.merge(client.id, LegalProfile.updatesFrom(version.tags, clean, role), req.user.id);
     const empty = keys.filter((k) => !clean[k]).length;

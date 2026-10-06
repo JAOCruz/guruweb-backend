@@ -79,9 +79,9 @@ test('la guía trae las reglas clave: usted, calcular_precio antes de cotizar, 3
 
 // ---------- registro de herramientas ----------
 
-test('hay exactamente 9 herramientas con los nombres del spec', () => {
+test('hay exactamente 11 herramientas con los nombres del spec', () => {
   assert.deepEqual(TOOLS.map((t) => t.name).sort(), ['buscar_servicio', 'calcular_precio', 'crear_solicitud', 'estado_solicitud',
-    'guardar_datos_cliente', 'leer_documento', 'pasar_a_humano', 'preparar_cotizacion', 'ver_tramite']);
+    'guardar_datos_cliente', 'leer_documento', 'pasar_a_humano', 'preparar_cotizacion', 'preparar_documento', 'ver_modelo', 'ver_tramite']);
 });
 
 test('cada herramienta tiene descripción en español y parámetros JSON Schema en minúsculas', () => {
