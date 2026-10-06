@@ -14,6 +14,9 @@
     "test": "node --test --test-concurrency=1 test/*.test.js",
     "seed:bot": "node -r dotenv/config src/db/seedBotKnowledge.js"
   },
+  "scriptNotes": {
+    "seed:bot": "Carga inicial de UNA SOLA VEZ (seeds/bot). Correrlo de nuevo vuelve a escribir los textos y a marcar los conflictos por encima de las ediciones del dashboard. Use --dry-run primero."
+  },
   "keywords": [
     "api",
     "express",

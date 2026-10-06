@@ -4,8 +4,8 @@
     "alias": ["traspaso", "traspaso de carro", "traspaso de vehiculo", "traspaso de vehículo de motor", "cambio de dueño", "transferencia de vehiculo", "pasar la matricula a mi nombre", "traspaso de matricula", "traspaso de moto"],
     "pasos": [
       { "orden": 1, "descripcion": "Acto de venta del vehículo debidamente notariado (si lo elaboramos nosotros, el precio depende del valor del vehículo). Debe estar revisado y firmado por las partes antes de legalizar.", "servicio": "Acto de Venta - Vehículo Liviano", "preguntas": ["¿El acto de venta lo elaboramos nosotros o lo trae usted ya hecho?", "¿En cuánto se vendió el vehículo?"] },
-      { "orden": 2, "descripcion": "Mensajería para legalizar el acto de venta en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de RD$700 en Banreservas, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
-      { "orden": 3, "descripcion": "Certificación de verificación vehicular: hay que llevar el vehículo el día y la hora que se coordinen. El impuesto de emisión es de RD$100 (lo paga el cliente). Sin el vehículo disponible el proceso se anula.", "servicio": null, "preguntas": ["¿Dónde se encuentra el vehículo actualmente?", "¿Qué día y hora le conviene llevar el vehículo a verificación?"] },
+      { "orden": 2, "descripcion": "Mensajería para legalizar el acto de venta en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de legalización en Banreservas, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
+      { "orden": 3, "descripcion": "Certificación de verificación vehicular: hay que llevar el vehículo el día y la hora que se coordinen. El impuesto de emisión lo paga el cliente. Sin el vehículo disponible el proceso se anula.", "servicio": null, "preguntas": ["¿Dónde se encuentra el vehículo actualmente?", "¿Qué día y hora le conviene llevar el vehículo a verificación?"] },
       { "orden": 4, "descripcion": "Solicitud del traspaso en la plataforma de la DGII con asistencia online y cita.", "servicio": "Solicitud de Traspaso DGII (asistencia online y cita)", "preguntas": ["¿El vehículo tiene alguna tacha, deuda u oposición en el sistema de matrículas?", "¿El vehículo tiene el marbete al día?", "¿El vehículo ha sido objeto de choque, robo o alguna actividad ilícita?"] },
       { "orden": 5, "descripcion": "Mensajería para el depósito formal de los documentos en la oficina de la DGII, con asistencia telefónica. En la DGII se pagan el impuesto de transferencia (2% del valor fidedigno del vehículo) y las tasas de impresión de la matrícula y del marbete; esos montos los fija la DGII y los paga el cliente.", "servicio": "Mensajería - Depósito de Traspaso en DGII", "preguntas": [] }
     ],
@@ -18,17 +18,17 @@
       "¿El vehículo ha sido objeto de choque, robo o alguna actividad ilícita?",
       "¿Para cuándo necesita el traspaso?"
     ],
-    "reglas": "El total del trámite es la suma de sus servicios; los impuestos y tasas del Estado se pagan aparte y no son parte de nuestro precio: impuesto de legalización en Procuraduría (RD$700, Banreservas), emisión de la certificación de verificación vehicular (RD$100), impuesto de transferencia de la DGII (2% del valor fidedigno del vehículo) y tasas de impresión de matrícula y marbete (las fija la DGII). Si el vehículo no está disponible para la verificación, el proceso se anula. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería. Si el acto de venta es de motocicleta u otro tipo de vehículo, se cotiza con el acto de venta que corresponda."
+    "reglas": "El total del trámite es la suma de sus servicios; los impuestos y tasas del Estado se pagan aparte y no son parte de nuestro precio: impuesto de legalización en Procuraduría (Banreservas), emisión de la certificación de verificación vehicular, impuesto de transferencia de la DGII (2% del valor fidedigno del vehículo) y tasas de impresión de matrícula y marbete (las fija la DGII). Si el vehículo no está disponible para la verificación, el proceso se anula. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería. Si el acto de venta es de motocicleta u otro tipo de vehículo, se cotiza con el acto de venta que corresponda."
   },
   {
     "nombre": "Salida de menor",
     "alias": ["salida de menor", "permiso de salida de menor", "permiso de viaje de menor", "viaje de menor", "permiso del niño para viajar", "certificacion de migracion viaje de menor", "autorizacion de viaje de menor", "poder de viaje de menor completo"],
     "pasos": [
       { "orden": 1, "descripcion": "Elaboración del poder especial de viaje de menor, debidamente notariado. Debe estar revisado y firmado por las partes antes de legalizar.", "servicio": "Poder - Viaje de Menor", "preguntas": ["¿Quién acompañará al menor? ¿Viaja solo o con alguna empresa deportiva?", "¿El poder lo elaboramos nosotros o lo trae usted ya hecho?"] },
-      { "orden": 2, "descripcion": "Mensajería para legalizar el poder en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de RD$700 en Banreservas, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
+      { "orden": 2, "descripcion": "Mensajería para legalizar el poder en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de legalización en Banreservas, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
       { "orden": 3, "descripcion": "Solicitud de la certificación de Migración en la plataforma: desglose y depósito de los documentos, asistencia y seguimiento en caso de emergencias.", "servicio": "Solicitud Certificación Viaje de Menor (Migración)", "preguntas": ["¿Cuál es la situación actual de la tutela del menor? ¿Hay alguna sentencia que haya que buscar y legalizar?", "¿Hay que subir un EZTA, una residencia o el estatus migratorio del menor?"] },
       { "orden": 4, "descripcion": "Impresión y escaneo de los documentos vitales: fotos 2x2 del menor, acta de nacimiento, pasaporte del menor, cédulas de los padres y del acompañante. Se cotiza según la cantidad.", "servicio": null, "preguntas": ["¿Tiene los documentos en físico o en digital?"] },
-      { "orden": 5, "descripcion": "Mensajería para el depósito de los documentos en Migración, con asistencia en caso de objeciones. Incluye la compra del impuesto por ley de menor en Banreservas (RD$2,000), que paga el cliente.", "servicio": "Mensajería - Depósito de Documentos en Migración", "preguntas": [] }
+      { "orden": 5, "descripcion": "Mensajería para el depósito de los documentos en Migración, con asistencia en caso de objeciones. Incluye la compra del impuesto por ley de menor en Banreservas, que paga el cliente.", "servicio": "Mensajería - Depósito de Documentos en Migración", "preguntas": [] }
     ],
     "preguntas_obligatorias": [
       "¿Qué día y a qué hora viaja el menor?",
@@ -36,7 +36,7 @@
       "¿El poder lo elaboramos nosotros o lo trae usted ya hecho?",
       "¿Cuál es la situación actual de la tutela del menor? ¿Hay alguna sentencia, EZTA, residencia o estatus migratorio que haya que subir?"
     ],
-    "reglas": "No se acepta ni se puede comprometer el proceso si la fecha del viaje es inmediata o faltan menos de 24 horas: hay plazos que agotar. Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría (RD$700, Banreservas) e impuesto por ley de menor (RD$2,000, Banreservas). Documentos que se envían a Migración: poder de viaje de menor legalizado, fotos 2x2 del menor, pasaporte y acta de nacimiento del menor, cédulas de quien autoriza y cédula y pasaporte del acompañante. La rapidez de la respuesta depende de Migración y de la calidad del expediente; las certificaciones solo se agendan en horario laboral y con 48 horas de antelación. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
+    "reglas": "No se acepta ni se puede comprometer el proceso si la fecha del viaje es inmediata o faltan menos de 24 horas: hay plazos que agotar. Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría (Banreservas) e impuesto por ley de menor (Banreservas). Documentos que se envían a Migración: poder de viaje de menor legalizado, fotos 2x2 del menor, pasaporte y acta de nacimiento del menor, cédulas de quien autoriza y cédula y pasaporte del acompañante. La rapidez de la respuesta depende de Migración y de la calidad del expediente. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
   },
   {
     "nombre": "Ayuntamiento",
@@ -60,7 +60,7 @@
     "pasos": [
       { "orden": 1, "descripcion": "Documento registrado en el ayuntamiento que se va a compulsar (si todavía no está registrado, primero va el trámite Ayuntamiento).", "servicio": null, "preguntas": ["¿El documento ya está registrado en el ayuntamiento?"] },
       { "orden": 2, "descripcion": "Redacción y notarización de la compulsa notarial del documento registrado. Si el documento o el abogado notario los pone el cliente, solo se cotiza la redacción y se espera su aprobación antes de legalizar.", "servicio": "Compulsa Notarial", "preguntas": ["¿El abogado notario es suyo o usa el nuestro?"] },
-      { "orden": 3, "descripcion": "Mensajería para depositar la compulsa en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de RD$700, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] }
+      { "orden": 3, "descripcion": "Mensajería para depositar la compulsa en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de legalización, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] }
     ],
     "preguntas_obligatorias": [
       "¿Qué documento necesita compulsar y ya está registrado en el ayuntamiento?",
@@ -68,15 +68,15 @@
       "¿El abogado notario es suyo o usa el nuestro?",
       "¿Para cuándo lo necesita?"
     ],
-    "reglas": "El impuesto de legalización en Procuraduría (RD$700) se paga aparte y no es parte de nuestro precio. Si el documento o el notario los pone el cliente, se cotiza solo la redacción y se espera su aprobación antes de proceder con la legalización. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería."
+    "reglas": "El impuesto de legalización en Procuraduría se paga aparte y no es parte de nuestro precio. Si el documento o el notario los pone el cliente, se cotiza solo la redacción y se espera su aprobación antes de proceder con la legalización. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería."
   },
   {
     "nombre": "Apostilla de documento",
     "alias": ["apostilla", "apostillar", "apostille", "apostillar un documento", "apostilla de documento legal", "apostillar un poder", "apostillar un contrato", "apostilla de documento notarial", "apostilla completa"],
     "pasos": [
       { "orden": 1, "descripcion": "Elaboración del documento notarial (opcional: solo si el documento lo hacemos nosotros; se cotiza según el tipo de documento).", "servicio": null, "preguntas": ["¿El documento lo elaboramos nosotros o ya lo tiene?"] },
-      { "orden": 2, "descripcion": "Mensajería para legalizar el documento en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de RD$700, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
-      { "orden": 3, "descripcion": "Solicitud online de la apostilla en el Ministerio de Relaciones Exteriores (MIREX / Cancillería). El impuesto del MIREX es de RD$620 por documento y lo paga el cliente.", "servicio": "Apostilla en Cancillería", "preguntas": ["¿Cuántos documentos son?", "¿Para qué país van los documentos?"] }
+      { "orden": 2, "descripcion": "Mensajería para legalizar el documento en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de legalización, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] },
+      { "orden": 3, "descripcion": "Solicitud online de la apostilla en el Ministerio de Relaciones Exteriores (MIREX / Cancillería). El impuesto del MIREX se paga por documento y lo paga el cliente.", "servicio": "Apostilla en Cancillería", "preguntas": ["¿Cuántos documentos son?", "¿Para qué país van los documentos?"] }
     ],
     "preguntas_obligatorias": [
       "¿Qué documento necesita apostillar y cuántos son?",
@@ -84,7 +84,7 @@
       "¿El documento lo elaboramos nosotros o ya lo tiene?",
       "¿Para cuándo lo necesita?"
     ],
-    "reglas": "Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría (RD$700) e impuesto del MIREX (RD$620 por documento). Un documento notarial primero se legaliza en la Procuraduría y después se apostilla en el MIREX. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
+    "reglas": "Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría e impuesto del MIREX (por documento). Un documento notarial primero se legaliza en la Procuraduría y después se apostilla en el MIREX. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
   },
   {
     "nombre": "Apostilla de certificación",
@@ -92,7 +92,7 @@
     "pasos": [
       { "orden": 1, "descripcion": "Adquisición de la documentación para solicitar la certificación (si la certificación todavía no la tiene; se cotiza según la certificación).", "servicio": null, "preguntas": ["¿Ya tiene la certificación en físico o hay que solicitarla?"] },
       { "orden": 2, "descripcion": "Mensajería para obtener o retirar la certificación en la institución que corresponda.", "servicio": "Mensajería - Solicitud de Certificación", "preguntas": [] },
-      { "orden": 3, "descripcion": "Solicitud online de la apostilla en el Ministerio de Relaciones Exteriores (MIREX / Cancillería). El impuesto del MIREX es de RD$620 por documento y lo paga el cliente.", "servicio": "Apostilla en Cancillería", "preguntas": ["¿Cuántos documentos son?", "¿Para qué país van los documentos?"] }
+      { "orden": 3, "descripcion": "Solicitud online de la apostilla en el Ministerio de Relaciones Exteriores (MIREX / Cancillería). El impuesto del MIREX se paga por documento y lo paga el cliente.", "servicio": "Apostilla en Cancillería", "preguntas": ["¿Cuántos documentos son?", "¿Para qué país van los documentos?"] }
     ],
     "preguntas_obligatorias": [
       "¿Qué certificación necesita apostillar y cuántas son?",
@@ -101,7 +101,7 @@
       "¿La certificación está legalizada por la institución que la emitió y es reciente?",
       "¿Para cuándo lo necesita?"
     ],
-    "reglas": "El impuesto del MIREX (RD$620 por documento) se paga aparte y no es parte de nuestro precio. Las certificaciones oficiales (actas, certificados) van directo al MIREX; no pasan por la Procuraduría. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
+    "reglas": "El impuesto del MIREX (por documento) se paga aparte y no es parte de nuestro precio. Las certificaciones oficiales (actas, certificados) van directo al MIREX; no pasan por la Procuraduría. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
   },
   {
     "nombre": "Legalización de traducción",
@@ -109,7 +109,7 @@
     "pasos": [
       { "orden": 1, "descripcion": "Elaboración de la traducción con intérprete judicial (se cotiza por página según el documento y el idioma).", "servicio": null, "preguntas": ["¿Qué documento es y a qué idioma se traduce?", "¿Cuántas páginas tiene?"] },
       { "orden": 2, "descripcion": "Adquisición de los originales e impresión de la traducción firmada y sellada.", "servicio": null, "preguntas": ["¿Cuántos originales necesita?"] },
-      { "orden": 3, "descripcion": "Mensajería para legalizar la traducción en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de RD$700, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] }
+      { "orden": 3, "descripcion": "Mensajería para legalizar la traducción en la Procuraduría (Ministerio Público). Incluye la compra del impuesto de legalización, que paga el cliente.", "servicio": "Mensajería - Legalización en Procuraduría", "preguntas": [] }
     ],
     "preguntas_obligatorias": [
       "¿Qué documento es y a qué idioma se traduce?",
@@ -117,6 +117,6 @@
       "¿Para qué proceso o país va la traducción?",
       "¿Para cuándo la necesita?"
     ],
-    "reglas": "El impuesto de legalización en Procuraduría (RD$700) se paga aparte y no es parte de nuestro precio. La traducción se cobra por página, según el formato y la cantidad de caracteres, y solo se traduce la versión final y oficial que entrega el cliente. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería."
+    "reglas": "El impuesto de legalización en Procuraduría se paga aparte y no es parte de nuestro precio. La traducción se cobra por página, según el formato y la cantidad de caracteres, y solo se traduce la versión final y oficial que entrega el cliente. Mensajería y trámites requieren un mínimo de 24 horas para agendarse y confirmarse. Si el trámite se cae, solo se reembolsa el 30% de lo pagado; el resto cubre gastos legales y mensajería."
   }
 ]

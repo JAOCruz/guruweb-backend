@@ -12,7 +12,7 @@
     ],
     "descripcion": "Llevamos su documento a la Procuraduría (Ministerio Público) para legalizarlo y se lo devolvemos.",
     "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
-    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto de legalización es de RD$700 (Banreservas) y lo paga el cliente.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto de legalización (Banreservas) lo paga el cliente.",
     "notarizacion": "no_aplica"
   },
   {
@@ -42,7 +42,7 @@
     ],
     "descripcion": "Depositamos su expediente en la Dirección General de Migración y lo asistimos en caso de objeciones.",
     "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
-    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto por ley de menor (RD$2,000, Banreservas) lo paga el cliente.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto por ley de menor (Banreservas) lo paga el cliente.",
     "notarizacion": "no_aplica"
   },
   {
@@ -117,7 +117,7 @@
     ],
     "descripcion": "Inscribimos el expediente del permiso de viaje de menor en la plataforma de Migración y le damos seguimiento.",
     "incluye": "Desglose y depósito de los documentos en la plataforma, asistencia y seguimiento en caso de emergencias.",
-    "reglas": "Precio según la lista de precios de marzo 2026 (RD$1,000 por unidad). No se acepta si el viaje es en menos de 24 horas. La rapidez de la respuesta depende de Migración y de la calidad del expediente. El impuesto por ley de menor (RD$2,000) lo paga el cliente.",
+    "reglas": "Precio según la lista de precios de marzo 2026. No se acepta si el viaje es en menos de 24 horas. La rapidez de la respuesta depende de Migración y de la calidad del expediente. El impuesto por ley de menor lo paga el cliente.",
     "notarizacion": "no_aplica"
   },
   {
@@ -132,7 +132,7 @@
       "impuesto banreservas"
     ],
     "descripcion": "Compramos por usted el impuesto que exige la institución para su certificación o trámite.",
-    "reglas": "Tasa de servicio de RD$100 por cada impuesto comprado (Customer Service Workflow, marzo 2026). El valor del impuesto en sí lo paga el cliente y no es parte de nuestro precio.",
+    "reglas": "Tasa de servicio por cada impuesto comprado (Customer Service Workflow, marzo 2026). El valor del impuesto en sí lo paga el cliente y no es parte de nuestro precio.",
     "notarizacion": "no_aplica"
   },
   {
@@ -336,7 +336,7 @@
     ],
     "descripcion": "Solicitud o comunicación formal sencilla dirigida a una institución o persona.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -352,7 +352,7 @@
     ],
     "descripcion": "Instancia o escrito avanzado: escritos de defensa o ampliatorios y procedimientos.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -368,7 +368,7 @@
     ],
     "descripcion": "Instancia o carta personal redactada a su medida.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -383,7 +383,7 @@
     ],
     "descripcion": "Instancia para solicitar o socializar una ayuda social.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -399,7 +399,7 @@
     ],
     "descripcion": "Instancia para una publicación en el periódico (edictos, avisos).",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -414,7 +414,7 @@
     ],
     "descripcion": "Oficio formal para reclamar una devolución.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -430,7 +430,7 @@
     ],
     "descripcion": "Instancia para reclamar por un servicio.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -446,7 +446,7 @@
     ],
     "descripcion": "Instancia para asuntos de agrimensura (mensura, deslinde, planos).",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -461,7 +461,7 @@
     ],
     "descripcion": "Escrito ampliatorio de defensa para un proceso.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -476,7 +476,7 @@
     ],
     "descripcion": "Recurso administrativo ante una institución pública.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -491,7 +491,7 @@
     ],
     "descripcion": "Comunicación dirigida a una junta de vecinos.",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
@@ -507,7 +507,7 @@
     ],
     "descripcion": "Comunicación interna de una empresa (memorándum, circular).",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "reglas": "Precio por confirmar: el bot actual y el sistema no coinciden en el precio de las instancias; Leandro confirma. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {

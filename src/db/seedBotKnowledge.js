@@ -1,7 +1,10 @@
-// Carga inicial del conocimiento del bot: reglas y alias de los servicios,
-// servicios nuevos sin precio en el catálogo, conflictos de precio (por_confirmar)
-// y los trámites. Todo en una transacción; se puede correr varias veces sin
-// duplicar nada. Con --dry-run imprime el resumen y hace ROLLBACK.
+// CARGA INICIAL DE UNA SOLA VEZ del conocimiento del bot: reglas y alias de los
+// servicios, servicios nuevos sin precio en el catálogo, conflictos de precio
+// (por_confirmar) y los trámites. Todo en una transacción; correrlo de nuevo no
+// duplica nada, PERO vuelve a escribir los textos de los seeds y vuelve a marcar
+// los conflictos por encima de lo que se haya editado después en el dashboard.
+// Úselo solo para la carga inicial (o a propósito, para resembrar los textos).
+// Con --dry-run imprime el resumen y hace ROLLBACK.
 //
 //   node -r dotenv/config src/db/seedBotKnowledge.js [--dry-run] [--dir seeds/bot]
 const fs = require('fs');

@@ -171,4 +171,23 @@ test('los JSON reales de seeds/bot son válidos: 7 trámites con los nombres del
   }
   const salida = tramites.find((t) => t.nombre === 'Salida de menor');
   assert.match(salida.reglas, /24 h/);
+  assert.doesNotMatch(salida.reglas, /48 h/, 'salida de menor: un solo umbral (24 h)');
+});
+
+test('ningún texto de los seeds reales trae montos: los precios viven solo en las columnas de precio', () => {
+  const MONTO = /RD\$\s?\d|\d[\d,.]*\s*pesos/i;
+  const walk = (v, where) => {
+    if (typeof v === 'string') assert.doesNotMatch(v, MONTO, `${where}: "${v.slice(0, 80)}"`);
+    else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${where}[${i}]`));
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, `${where}.${k}`);
+  };
+  for (const f of ['servicios-enriquecidos.json', 'servicios-nuevos.json', 'conflictos.json', 'tramites.json']) walk(readJson(REAL, f), f);
+});
+
+test('la frase de los 2 originales no va en servicios sin notarización, instancias ni notificaciones', () => {
+  const all = [...readJson(REAL, 'servicios-enriquecidos.json'), ...readJson(REAL, 'servicios-nuevos.json')];
+  for (const s of all) {
+    if (s.notarizacion !== 'no_aplica' && !/^(Instancia|Notificaci)/.test(s.nombre)) continue;
+    assert.doesNotMatch([s.reglas, s.incluye, s.descripcion].join(' '), /2 originales|dos \(2\) originales/i, s.nombre);
+  }
 });

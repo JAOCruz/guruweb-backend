@@ -345,7 +345,7 @@
       "compraventa",
       "contrato de compraventa"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del bien; precio final de venta; fecha del negocio; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17). Qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del bien; precio final de venta; fecha del negocio; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17). Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Recibo de Descargo y Recibo de Pago (Sencillo)",
@@ -543,7 +543,7 @@
   {
     "nombre": "Acto de Venta - Motocicleta",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una motocicleta o pasola.",
     "alias": [
@@ -554,12 +554,12 @@
       "venta de pasola",
       "venta de motocicleta"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta - Vehículo Liviano",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un carro, jeepeta o camioneta.",
     "alias": [
@@ -573,12 +573,12 @@
       "venta de yipeta",
       "venta de camioneta"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta - Vehículo Pesado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un camión, autobús u otro vehículo pesado.",
     "alias": [
@@ -588,12 +588,12 @@
       "venta de vehiculo pesado",
       "venta de patana"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta - Bien Inmueble",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una casa, apartamento u otro inmueble.",
     "alias": [
@@ -604,12 +604,12 @@
       "compraventa de inmueble",
       "venta de vivienda"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta - Terreno",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un terreno o solar.",
     "alias": [
@@ -618,12 +618,12 @@
       "acto de venta de terreno",
       "venta de finca"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta - Punto Comercial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un negocio o punto comercial.",
     "alias": [
@@ -636,7 +636,7 @@
   {
     "nombre": "Acto de Venta - Nave Marítima",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una embarcación.",
     "alias": [
@@ -649,7 +649,7 @@
   {
     "nombre": "Acto de Venta - Ganado/Animal",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de ganado o un animal.",
     "alias": [
@@ -662,7 +662,7 @@
   {
     "nombre": "Acto de Venta - Máquina Industrial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una máquina o equipo industrial.",
     "alias": [
@@ -674,7 +674,7 @@
   {
     "nombre": "Acto de Venta Condicional - Vehículo",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Venta de vehículo a plazos, con condiciones hasta completar el pago.",
     "alias": [
@@ -684,12 +684,12 @@
       "venta con reserva de dominio",
       "financiamiento de carro"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos del vehículo (matrícula original, acta policial o acto de venta anterior); precio final de venta; fecha en que se cerró el negocio; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); si habrá un apoderado (cédula o pasaporte); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Venta Condicional - Inmueble",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el bien pasa de RD$500 mil aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Venta de inmueble a plazos, con condiciones hasta completar el pago.",
     "alias": [
@@ -697,7 +697,7 @@
       "venta a plazos de casa",
       "venta condicional de apartamento"
     ],
-    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de RD$500 mil aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
+    "requisitos": "Datos del vendedor y del comprador (cédula o pasaporte); datos íntegros del inmueble (certificado de título, declaración jurada, carta constancia o planos catastrales); fecha en que se cerró el negocio; precio final de venta; datos del pago (si pasa de medio millón de pesos aplica la Ley 155-17); qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Testamento",
@@ -1428,7 +1428,7 @@
   {
     "nombre": "Revisión y Formato",
     "incluye": "Verificación completa del documento en busca de inconsistencias o errores y una impresión del documento modificado.",
-    "reglas": "Solo se cambian detalles puntuales sin alterar la esencia del documento; no es una redacción nueva. El documento lo suministra el cliente. Con más de 3 modificaciones se recomienda una redacción. El precio va de RD$50 a RD$150 según el documento; el digitador confirma.",
+    "reglas": "Solo se cambian detalles puntuales sin alterar la esencia del documento; no es una redacción nueva. El documento lo suministra el cliente. Con más de 3 modificaciones se recomienda una redacción. El precio va en un rango según el documento; el digitador confirma el monto.",
     "notarizacion": "no_aplica",
     "precio_rango": {
       "min": 50,
@@ -1447,7 +1447,7 @@
   {
     "nombre": "Instancia - Solicitud de Documentos",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "solicitud de documentos",
@@ -1457,7 +1457,7 @@
   {
     "nombre": "Instancia - Solicitud de Certificaciones",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "solicitud de certificaciones",
@@ -1467,7 +1467,7 @@
   {
     "nombre": "Instancia - Levantamiento",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "levantamiento",
@@ -1477,7 +1477,7 @@
   {
     "nombre": "Instancia - Depósito de Documentos",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "deposito de documentos"
@@ -1486,13 +1486,13 @@
   {
     "nombre": "Instancia - Arrendamiento Inmueble",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Desglose de Expediente",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "desglose de expediente"
@@ -1501,13 +1501,13 @@
   {
     "nombre": "Instancia - Desglose de Pago",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Corrección",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "solicitud de correccion",
@@ -1517,7 +1517,7 @@
   {
     "nombre": "Instancia - Autorización",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "solicitud de autorizacion",
@@ -1527,7 +1527,7 @@
   {
     "nombre": "Instancia - Fijación de Audiencia",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "fijacion de audiencia",
@@ -1537,7 +1537,7 @@
   {
     "nombre": "Instancia - Pronunciamiento",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "pronunciamiento",
@@ -1547,13 +1547,13 @@
   {
     "nombre": "Instancia - Asignación de Sala",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Inscripción Nombre Comercial",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "nombre comercial",
@@ -1564,7 +1564,7 @@
   {
     "nombre": "Instancia - Transferencia",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "solicitud de transferencia"
@@ -1573,25 +1573,25 @@
   {
     "nombre": "Instancia - Prórroga de Expediente",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Construcción",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Recogida de Escombros",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Oposición",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "oposicion",
@@ -1601,7 +1601,7 @@
   {
     "nombre": "Instancia - Avalúo de Inmueble",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "avaluo",
@@ -1611,19 +1611,19 @@
   {
     "nombre": "Instancia - Depósito de Inventario",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Subsanación de Expediente",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
   },
   {
     "nombre": "Instancia - Recurso de Amparo",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "amparo",
@@ -1634,7 +1634,7 @@
   {
     "nombre": "Instancia - Recurso de Reconsideración",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "reconsideracion",
@@ -1644,7 +1644,7 @@
   {
     "nombre": "Instancia - Recurso de Apelación",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "apelacion",
@@ -1654,7 +1654,7 @@
   {
     "nombre": "Instancia - Comunicación/Invitación",
     "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
-    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "Se cotiza por página. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva.",
     "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales.",
     "alias": [
       "comunicacion",
@@ -1744,7 +1744,7 @@
   {
     "nombre": "Apostilla en Cancillería",
     "incluye": "Seguimiento diario del estado de la solicitud, copia de los documentos subidos en nuestra base de datos, recordatorios y ayuda de servicio al cliente.",
-    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. Pregunte cuántos documentos son y para qué país van. Un documento notarial primero se legaliza en la Procuraduría; los oficiales van directo al MIREX. El impuesto del MIREX (RD$620 por documento) lo paga el cliente.",
+    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. Pregunte cuántos documentos son y para qué país van. Un documento notarial primero se legaliza en la Procuraduría; los oficiales van directo al MIREX. El impuesto del MIREX se paga por documento y lo paga el cliente.",
     "notarizacion": "no_aplica",
     "descripcion": "Solicitud de apostilla en la Cancillería (MIREX) para usar un documento en el extranjero.",
     "alias": [
@@ -1851,7 +1851,7 @@
   {
     "nombre": "Formularios Dirección General de Migración",
     "incluye": "Seguimiento diario del estado de la solicitud, copia de los documentos subidos en nuestra base de datos, recordatorios y ayuda de servicio al cliente.",
-    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. El precio va de RD$600 a RD$800 según el formulario; el digitador confirma.",
+    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. El precio va en un rango según el formulario; el digitador confirma el monto.",
     "notarizacion": "no_aplica",
     "descripcion": "Solicitudes y formularios ante la Dirección General de Migración (residencia, certificaciones).",
     "alias": [
@@ -1895,7 +1895,7 @@
   {
     "nombre": "Notificación Sencilla",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La tarifa del alguacil que notifica no está incluida.",
+    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. La tarifa del alguacil que notifica no está incluida.",
     "notarizacion": "no_aplica",
     "descripcion": "Notificación o acto sencillo (requerimientos, domicilios, intimaciones).",
     "alias": [
@@ -1909,7 +1909,7 @@
   {
     "nombre": "Notificación Avanzada",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La tarifa del alguacil que notifica no está incluida.",
+    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. La tarifa del alguacil que notifica no está incluida.",
     "notarizacion": "no_aplica",
     "descripcion": "Notificación o acto avanzado (demandas y procedimientos).",
     "alias": [
@@ -1922,7 +1922,7 @@
   {
     "nombre": "Notificación Personalizada",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La tarifa del alguacil que notifica no está incluida.",
+    "reglas": "Se cotiza por hoja. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. La tarifa del alguacil que notifica no está incluida.",
     "notarizacion": "no_aplica",
     "descripcion": "Notificación redactada a la medida.",
     "alias": [
