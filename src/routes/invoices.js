@@ -27,6 +27,7 @@ const Case = require('../models/Case');
 const Client = require('../models/Client');
 const Message = require('../models/Message');
 const outgoing = require('../whatsapp/outgoing');
+const delivery = require('../agent/delivery');
 const { logActivity, rd, safeLog } = require('../services/activityLog');
 
 const docLabel = (inv) => `${inv.type === 'FACTURA' ? 'la factura' : 'la cotización'} ${inv.doc_number}`;
@@ -440,6 +441,35 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
   }
 });
 
+// ── POST /api/invoices/:id/approve-and-send ── admin only
+// Approves (if still draft / pending) and sends the quote PDF by WhatsApp. The send is exactly-once
+// (see agent/delivery), so a double click or a quote already sent answers 200 { sent:false, code }.
+router.post('/:id/approve-and-send', requireRole('admin'), async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'rejected') return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
+
+    let approvedNow = null;
+    if (['draft', 'pending_approval'].includes(invoice.status)) {
+      approvedNow = await Invoice.approve(invoice.id, req.user.id); // null if a parallel click won
+    }
+    const result = await delivery.sendQuote(invoice.id, { actor: req.user });
+    if (approvedNow) {
+      await safeLog(() => result.ok
+        ? logInvoice(req, 'invoice.approve_send', approvedNow, `Aprobó y envió por WhatsApp ${docLabel(approvedNow)} por ${rd(approvedNow.total)}`)
+        : logInvoice(req, 'invoice.approve', approvedNow, `Aprobó ${docLabel(approvedNow)} por ${rd(approvedNow.total)}`));
+    }
+    const fresh = await Invoice.findById(invoice.id);
+    const body = { invoice: fresh, sent: !!result.ok };
+    if (!result.ok) body.code = result.code;
+    res.json(body);
+  } catch (err) {
+    console.error('Approve and send invoice error:', err);
+    res.status(500).json({ error: 'Failed to approve and send invoice' });
+  }
+});
+
 // ── POST /api/invoices/:id/reject ── admin only
 router.post('/:id/reject', requireRole('admin'), async (req, res) => {
   try {
@@ -746,7 +776,14 @@ router.post('/:id/confirm-payment', requireRole('admin'), async (req, res) => {
     }
 
     await safeLog(() => logInvoice(req, 'invoice.payment', updated, `Confirmó el pago de ${docLabel(updated)} por ${rd(updated.total)}${payment_reference ? ` (ref. ${payment_reference})` : ''}`, { payment_method: payment_method || null, payment_reference: payment_reference || null }));
-    res.json({ invoice: updated, message: 'Payment confirmed. Case updated if linked.' });
+    // Documents waiting for payment go out now; a failure never undoes the confirmed payment.
+    let documentsSent = 0;
+    try {
+      documentsSent = await delivery.deliverPaidDocuments(updated.id, { actor: req.user });
+    } catch (err) {
+      console.error('Deliver paid documents error:', err.code || 'UNKNOWN', 'invoice', updated.id);
+    }
+    res.json({ invoice: updated, documents_sent: documentsSent, message: 'Payment confirmed. Case updated if linked.' });
   } catch (err) {
     console.error('Confirm payment error:', err);
     res.status(500).json({ error: 'Failed to confirm payment' });
