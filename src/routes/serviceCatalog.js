@@ -1,5 +1,6 @@
 const express = require('express');
 const Service = require('../models/serviceCatalog');
+const { calculatePrice } = require('../models/servicePricing');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -66,32 +67,7 @@ router.post('/calculate', async (req, res) => {
     }
 
     const qty = Number(quantity) || 1;
-    const digitacionTotal = (Number(service.digitacion_price) || 0) * qty;
-    let notarizacionTotal = 0;
-
-    if (includeNotarization && service.notarizacion_price) {
-      // Check for price tiers (value-based pricing)
-      const tiers = service.price_tiers || [];
-      if (tiers.length > 0 && assetValue) {
-        const val = Number(assetValue) || 0;
-        // Find matching tier (max: null means open-ended)
-        const matched = tiers.find(t =>
-          t.min !== undefined && val >= t.min &&
-          (t.max === null || t.max === undefined || val <= t.max)
-        );
-        if (matched) {
-          notarizacionTotal = Number(matched.price) * qty;
-        }
-        // Fallback to base notarizacion_price if no tier matched
-        if (notarizacionTotal === 0) {
-          notarizacionTotal = Number(service.notarizacion_price) * qty;
-        }
-      } else {
-        notarizacionTotal = Number(service.notarizacion_price) * qty;
-      }
-    }
-
-    const total = digitacionTotal + notarizacionTotal;
+    const calc = calculatePrice(service, { assetValue, quantity: qty, includeNotarization });
 
     res.json({
       service: {
@@ -103,11 +79,10 @@ router.post('/calculate', async (req, res) => {
       },
       quantity: qty,
       assetValue: assetValue || null,
-      breakdown: {
-        digitacion: digitacionTotal,
-        notarizacion: notarizacionTotal,
-      },
-      total,
+      breakdown: calc.breakdown,
+      total: calc.total,
+      porConfirmar: calc.porConfirmar,
+      rango: calc.rango,
     });
   } catch (err) {
     console.error('Calculate price error:', err);
