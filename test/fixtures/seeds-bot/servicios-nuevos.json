@@ -1,0 +1,6 @@
+[
+  { "nombre": "Servicio Nuevo", "categoria": "Mensajería", "digitacion_price": 123, "unit_type": "por servicio", "alias": ["nuevo"], "reglas": "Mínimo 24 h." },
+  { "nombre": "Servicio Sin Precio", "categoria": "Mensajería", "por_confirmar": true, "reglas": "Precio por confirmar." },
+  { "nombre": "Acto de Venta - Vehículo Liviano", "categoria": "Redactar o digitar un documento", "digitacion_price": 1 },
+  { "nombre": "Servicio Con Categoría Mala", "categoria": "No Existe" }
+]

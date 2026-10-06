@@ -1,0 +1,13 @@
+[
+  {
+    "nombre": "Traspaso de vehículo",
+    "alias": ["traspaso", "traspaso de carro"],
+    "pasos": [
+      { "orden": 1, "descripcion": "Acto de venta notariado", "servicio": "Acto de Venta - Vehículo Liviano", "preguntas": ["¿Lo elaboramos nosotros?"] },
+      { "orden": 2, "descripcion": "Mensajería", "servicio": "Servicio Nuevo", "preguntas": [] },
+      { "orden": 3, "descripcion": "Pago del impuesto", "servicio": null, "preguntas": [] }
+    ],
+    "preguntas_obligatorias": ["¿Cuál es el valor del vehículo?"],
+    "reglas": "Mínimo 24 h."
+  }
+]

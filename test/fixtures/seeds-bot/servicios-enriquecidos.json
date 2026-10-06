@@ -1,0 +1,11 @@
+[
+  {
+    "nombre": "Acto de Venta - Vehículo Liviano",
+    "descripcion": "Contrato de venta de un carro.",
+    "incluye": "Redacción y una impresión.",
+    "alias": ["venta del carro", "venta de carro"],
+    "notarizacion": "opcional",
+    "precio_rango": { "min": 500, "max": 900 }
+  },
+  { "nombre": "Servicio Que No Existe", "descripcion": "x" }
+]

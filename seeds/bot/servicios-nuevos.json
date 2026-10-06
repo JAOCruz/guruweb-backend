@@ -1,0 +1,1282 @@
+[
+  {
+    "nombre": "Mensajería - Legalización en Procuraduría",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "legalizar en procuraduria",
+      "legalizacion procuraduria",
+      "legalizacion ministerio publico",
+      "legalizar documento"
+    ],
+    "descripcion": "Llevamos su documento a la Procuraduría (Ministerio Público) para legalizarlo y se lo devolvemos.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto de legalización es de RD$700 (Banreservas) y lo paga el cliente.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Mensajería - Depósito de Traspaso en DGII",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "deposito en dgii",
+      "mensajero a la dgii",
+      "depositar traspaso en dgii"
+    ],
+    "descripcion": "Depositamos físicamente el expediente del traspaso en la oficina de la DGII y le damos asistencia telefónica.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. En la DGII se pagan el impuesto de transferencia (2% del valor fidedigno del vehículo) y las tasas de impresión de matrícula y marbete.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Mensajería - Depósito de Documentos en Migración",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "deposito en migracion",
+      "mensajero a migracion",
+      "depositar documentos en migracion"
+    ],
+    "descripcion": "Depositamos su expediente en la Dirección General de Migración y lo asistimos en caso de objeciones.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. El impuesto por ley de menor (RD$2,000, Banreservas) lo paga el cliente.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Mensajería - Registro en Ayuntamiento",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "mensajero al ayuntamiento",
+      "registrar en el ayuntamiento"
+    ],
+    "descripcion": "Registramos su documento en el ayuntamiento del distrito municipal que corresponda.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio. Los impuestos que exige el ayuntamiento los paga el cliente.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Mensajería - Recolección de Firmas",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "recoleccion de firmas",
+      "recoger firmas",
+      "mensajero para firmas"
+    ],
+    "descripcion": "Un mensajero pasa a recoger las firmas de las partes en el lugar que usted indique.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Mensajería - Solicitud de Certificación",
+    "categoria": "Mensajería",
+    "unit_type": "por servicio",
+    "por_confirmar": true,
+    "alias": [
+      "retirar certificacion",
+      "buscar certificacion",
+      "mensajero para certificacion"
+    ],
+    "descripcion": "Solicitamos o retiramos en la institución la certificación que usted necesita.",
+    "incluye": "Un mensajero responsable y con experiencia en documentos legales; agilidad y conocimiento del proceso; garantía por pérdida de documentos en manos de nuestros mensajeros.",
+    "reglas": "Precio por confirmar con el digitador (la documentación no fija una tarifa de mensajería por paso). Requiere un mínimo de 24 horas para agendarse y confirmarse. El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Solicitud de Traspaso DGII (asistencia online y cita)",
+    "categoria": "Solicitud de Certificaciones",
+    "digitacion_price": 1000,
+    "unit_type": "por unidad",
+    "alias": [
+      "solicitud de traspaso dgii",
+      "cita dgii traspaso",
+      "traspaso online dgii"
+    ],
+    "descripcion": "Solicitamos el traspaso de su vehículo en la plataforma de la DGII, con asistencia en línea y la cita.",
+    "incluye": "Registro de la solicitud en la plataforma, cita en la DGII y seguimiento.",
+    "reglas": "Precio según el Índice de Trámites (mayo 2026). Hay que confirmar antes si el vehículo tiene tacha, deuda u oposición, si tiene el marbete al día y si ha sido objeto de choque, robo o actividad ilícita. Las certificaciones se agendan con 48 horas de antelación y en horario laboral.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Solicitud Certificación Viaje de Menor (Migración)",
+    "categoria": "Solicitud de Certificaciones",
+    "digitacion_price": 1000,
+    "unit_type": "por unidad",
+    "alias": [
+      "certificacion de migracion",
+      "inscripcion viaje de menor",
+      "certificacion viaje de menor",
+      "migracion viaje de menor"
+    ],
+    "descripcion": "Inscribimos el expediente del permiso de viaje de menor en la plataforma de Migración y le damos seguimiento.",
+    "incluye": "Desglose y depósito de los documentos en la plataforma, asistencia y seguimiento en caso de emergencias.",
+    "reglas": "Precio según la lista de precios de marzo 2026 (RD$1,000 por unidad). No se acepta si el viaje es en menos de 24 horas. La rapidez de la respuesta depende de Migración y de la calidad del expediente. El impuesto por ley de menor (RD$2,000) lo paga el cliente.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Compra de Impuestos (tasa de servicio)",
+    "categoria": "Compra de Impuestos",
+    "digitacion_price": 100,
+    "unit_type": "por impuesto",
+    "alias": [
+      "compra de impuesto",
+      "comprar el impuesto",
+      "tasa por compra de impuesto",
+      "impuesto banreservas"
+    ],
+    "descripcion": "Compramos por usted el impuesto que exige la institución para su certificación o trámite.",
+    "reglas": "Tasa de servicio de RD$100 por cada impuesto comprado (Customer Service Workflow, marzo 2026). El valor del impuesto en sí lo paga el cliente y no es parte de nuestro precio.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Corrección Sencilla",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 50,
+    "unit_type": "por corrección",
+    "alias": [
+      "maquina de escribir",
+      "corregir una letra",
+      "corregir un nombre a maquina"
+    ],
+    "descripcion": "Corregir un solo dato con precisión: una letra, un nombre, un número de matrícula o de expediente.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Varias Correcciones en un Documento",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 100,
+    "unit_type": "por documento",
+    "alias": [
+      "varias correcciones a maquina"
+    ],
+    "descripcion": "Corregir varias observaciones en un mismo documento.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Llenado de Formulario o Acto de Venta Sencillo",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 250,
+    "unit_type": "por documento",
+    "alias": [
+      "llenar formulario a maquina",
+      "llenar acto de venta a maquina"
+    ],
+    "descripcion": "Llenar a máquina un formulario o acto de venta sencillo, de una o dos páginas.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Llenado de Formulario o Acto de Venta Extenso",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 500,
+    "unit_type": "por documento",
+    "alias": [
+      "llenar formulario extenso a maquina"
+    ],
+    "descripcion": "Llenar a máquina un formulario o acto de venta extenso, de varias páginas o letra pequeña.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Llenado de Formulario Gubernamental (Aduanas, DGII)",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 300,
+    "unit_type": "por documento",
+    "alias": [
+      "formulario de aduanas",
+      "formulario dgii a maquina",
+      "llenar formulario gubernamental"
+    ],
+    "descripcion": "Llenar a máquina un formulario de Aduanas, la DGII u otra institución.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Adenda, Fe de Errata, Parche o Nota al Margen (Sencillo)",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 100,
+    "unit_type": "por documento",
+    "alias": [
+      "fe de errata",
+      "parche",
+      "nota al margen",
+      "adenda sencilla"
+    ],
+    "descripcion": "Adenda, fe de errata, parche o nota al margen sencilla a máquina de escribir.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Máquina de Escribir - Adenda, Fe de Errata, Parche o Nota al Margen (Extenso)",
+    "categoria": "Máquina de escribir",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "alias": [
+      "adenda extensa",
+      "fe de errata extensa"
+    ],
+    "descripcion": "Adenda, fe de errata, parche o nota al margen extensa o larga a máquina de escribir.",
+    "incluye": "Corrección o llenado a máquina de escribir sobre el documento físico que trae el cliente.",
+    "reglas": "El documento lo suministra el cliente. Si hay más de 3 correcciones, se recomienda una redacción nueva.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Una Página (Documento Nativo)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 600,
+    "unit_type": "por hoja",
+    "alias": [
+      "traduccion de una pagina",
+      "traducir un documento de una pagina",
+      "traduccion documento dominicano"
+    ],
+    "descripcion": "Traducción de un documento dominicano de una sola página a otro idioma, con intérprete judicial.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Varias Páginas, Solo Texto (Documento Nativo)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 500,
+    "unit_type": "por página",
+    "alias": [
+      "traduccion de varias paginas",
+      "traducir contrato"
+    ],
+    "descripcion": "Traducción de un documento dominicano de varias páginas, solo texto, con intérprete judicial.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Documento Sofisticado (Nativo)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 900,
+    "unit_type": "por hoja",
+    "alias": [
+      "traducir record de notas",
+      "traduccion con cuadros",
+      "traducir expediente academico"
+    ],
+    "descripcion": "Traducción de un documento dominicano con cuadros, promedios o récords de notas.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Una Página (Documento Extranjero)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 800,
+    "unit_type": "por hoja",
+    "alias": [
+      "traduccion documento extranjero",
+      "traducir documento de estados unidos",
+      "traducir documento en ingles"
+    ],
+    "descripcion": "Traducción al español de un documento extranjero de una sola página, con intérprete judicial.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Varias Páginas, Solo Texto (Documento Extranjero)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 700,
+    "unit_type": "por página",
+    "alias": [
+      "traducir contrato extranjero"
+    ],
+    "descripcion": "Traducción al español de un documento extranjero de varias páginas, solo texto.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Traducción - Documento Sofisticado (Extranjero)",
+    "categoria": "Redactar y Certificar una Traducción",
+    "digitacion_price": 1500,
+    "unit_type": "por página",
+    "alias": [
+      "traducir transcript",
+      "traducir record de notas extranjero"
+    ],
+    "descripcion": "Traducción al español de un documento extranjero con cuadros, promedios o récords de notas.",
+    "incluye": "Intérprete judicial registrado que firma y sella la traducción; seguimiento de los agentes y doble revisión de la administración.",
+    "reglas": "Se cobra por página, según el formato y la cantidad de caracteres. Solo se traduce la versión final y oficial que entrega el cliente. Envíe el documento en foto o PDF para cotizar.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Instancia Sencilla",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por hoja",
+    "por_confirmar": true,
+    "alias": [
+      "instancia",
+      "instancia sencilla",
+      "solicitud formal",
+      "carta de solicitud",
+      "carta formal"
+    ],
+    "descripcion": "Solicitud o comunicación formal sencilla dirigida a una institución o persona.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia Avanzada",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 300,
+    "unit_type": "por hoja",
+    "por_confirmar": true,
+    "alias": [
+      "instancia avanzada",
+      "escrito de defensa",
+      "escrito ampliatorio"
+    ],
+    "descripcion": "Instancia o escrito avanzado: escritos de defensa o ampliatorios y procedimientos.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia Personalizada",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 300,
+    "unit_type": "por hoja",
+    "por_confirmar": true,
+    "alias": [
+      "instancia personalizada",
+      "carta personal",
+      "carta personalizada"
+    ],
+    "descripcion": "Instancia o carta personal redactada a su medida.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Ayuda Social",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 200,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "solicitud de ayuda social",
+      "carta de ayuda social"
+    ],
+    "descripcion": "Instancia para solicitar o socializar una ayuda social.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Publicación de Periódico",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "publicacion de periodico",
+      "aviso en el periodico",
+      "edicto"
+    ],
+    "descripcion": "Instancia para una publicación en el periódico (edictos, avisos).",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Reclamo Formal de Devolución",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "reclamo de devolucion",
+      "carta de reclamo de devolucion"
+    ],
+    "descripcion": "Oficio formal para reclamar una devolución.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Reclamo de Servicio",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "reclamo de servicio",
+      "carta de reclamo",
+      "queja formal"
+    ],
+    "descripcion": "Instancia para reclamar por un servicio.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Asuntos de Agrimensura",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "agrimensura",
+      "solicitud de mensura",
+      "deslinde"
+    ],
+    "descripcion": "Instancia para asuntos de agrimensura (mensura, deslinde, planos).",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Escrito Ampliatorio de Defensa",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 300,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "escrito ampliatorio de defensa",
+      "ampliatorio de defensa"
+    ],
+    "descripcion": "Escrito ampliatorio de defensa para un proceso.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Recurso Administrativo",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 300,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "recurso administrativo",
+      "recurso jerarquico"
+    ],
+    "descripcion": "Recurso administrativo ante una institución pública.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Comunicación a Junta de Vecinos",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 100,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "comunicacion junta de vecinos",
+      "carta a la junta de vecinos"
+    ],
+    "descripcion": "Comunicación dirigida a una junta de vecinos.",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Instancia - Comunicación Interna de Empresa",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 150,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "comunicacion interna",
+      "memorandum",
+      "circular interna"
+    ],
+    "descripcion": "Comunicación interna de una empresa (memorándum, circular).",
+    "incluye": "Redacción de la instancia, una copia en nuestra base de datos y una impresión del original.",
+    "reglas": "Precio por confirmar: RD$100 la unidad en el bot actual vs RD$150 a RD$500 según tipo en el sistema y la documentación. Se cotiza por página. Requisitos: a quién va dirigida, documento de identidad del solicitante, si representa a una persona o compañía, fecha y cualquier comentario adicional.",
+    "requisitos": "¿A quién va dirigida? Documento de identidad del solicitante; si representa a alguna persona o compañía; fecha de la instancia; comentarios adicionales."
+  },
+  {
+    "nombre": "Contrato de Trabajo Temporal",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1500,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "contrato de trabajo temporal",
+      "contrato laboral temporal",
+      "contrato por tiempo definido"
+    ],
+    "descripcion": "Contrato de trabajo por tiempo definido o por obra.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Datos del empleador (cédula o RNC) y del empleado (cédula o pasaporte); puesto, salario, jornada, fecha de inicio y duración.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Contrato de Trabajo Indefinido",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1500,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "contrato de trabajo indefinido",
+      "contrato laboral",
+      "contrato de trabajo",
+      "contrato de empleo"
+    ],
+    "descripcion": "Contrato de trabajo por tiempo indefinido.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Datos del empleador (cédula o RNC) y del empleado (cédula o pasaporte); puesto, salario, jornada y fecha de inicio.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Contrato de Subcontratación",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1500,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "subcontratacion",
+      "contrato de subcontratacion",
+      "subcontrato"
+    ],
+    "descripcion": "Contrato para subcontratar a una persona o empresa.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Datos de las partes (cédula o RNC); objeto del trabajo, monto, plazo y forma de pago.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Contrato de Prestación de Servicios",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1500,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "contrato de servicios",
+      "contratacion de servicios",
+      "contrato de prestacion de servicios",
+      "contrato freelance"
+    ],
+    "descripcion": "Contrato de contratación o prestación de servicios.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Datos de las partes (cédula o RNC); servicio a prestar, monto, plazo y forma de pago.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Declaración Jurada - Personas Jurídicas",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1000,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "declaracion jurada de empresa",
+      "declaracion jurada persona juridica"
+    ],
+    "descripcion": "Declaración jurada hecha por una empresa o persona jurídica.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Datos de la empresa (RNC, registro mercantil) y de su representante; qué se declara; dos testigos.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Declaración Jurada - Personas Físicas",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "notarizacion_price": 1000,
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "declaracion jurada",
+      "declaracion jurada persona fisica",
+      "declaracion jurada general"
+    ],
+    "descripcion": "Declaración jurada general hecha por una persona.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar: el tarifario legal (feb 2026) da estos montos, pero su columna de notario no concuerda con la escala S/E/A de marzo 2026; Leandro confirma. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad del declarante; qué se declara y para qué institución; dos testigos.",
+    "notarizacion": "opcional"
+  },
+  {
+    "nombre": "Poder - Traspaso de Vehículo",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "poder para traspaso de vehiculo",
+      "poder para traspaso de carro",
+      "poder para la dgii"
+    ],
+    "descripcion": "Poder para que otra persona haga el traspaso de un vehículo por usted.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de quien autoriza y del apoderado; descripción completa del vehículo o documento aduanal; institución a la que va dirigido.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Poder - Traspaso de Inmueble",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "poder para traspaso de inmueble",
+      "poder para traspaso de casa",
+      "poder para registro de titulos"
+    ],
+    "descripcion": "Poder para que otra persona haga el traspaso de un inmueble por usted.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de quien autoriza y del apoderado; descripción del inmueble o certificado de título (constancia, certificación); institución a la que va dirigido.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Poder - Primera Placa o Matrícula",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "poder primera placa",
+      "poder para matricula",
+      "poder para aduanas",
+      "poder para sacar la placa"
+    ],
+    "descripcion": "Poder para expedir la primera placa o matrícula de un vehículo.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de quien autoriza y del apoderado; descripción completa del vehículo o documento aduanal; institución a la que va dirigido.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Poder - Representar Sucesión o Herencia",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "poder para herencia",
+      "poder de sucesion",
+      "poder para representar herederos"
+    ],
+    "descripcion": "Poder para representar a los herederos en una sucesión.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de los herederos que autorizan y del representante; antecedentes de la herencia; descripción de la partición (si aplica); institución a la que va dirigido.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Carta de Garantía Migratoria",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "carta de garantia migratoria",
+      "carta de garantia",
+      "carta de invitacion para extranjero",
+      "carta para migracion"
+    ],
+    "descripcion": "Carta en la que usted garantiza la estadía de un extranjero en el país.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de quien invita y del extranjero; domicilio donde se hospedará; tiempo de estadía; quién se hace cargo económicamente; motivo de la visita.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Acuerdo de Matrimonio bajo Separación de Bienes",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "por_confirmar": true,
+    "alias": [
+      "capitulaciones matrimoniales",
+      "separacion de bienes",
+      "acuerdo de separacion de bienes",
+      "matrimonio bajo separacion de bienes"
+    ],
+    "descripcion": "Capitulaciones matrimoniales bajo el régimen de separación de bienes.",
+    "incluye": "Redacción con los datos que usted suministra, una copia en nuestra base de datos y una impresión del primer original.",
+    "reglas": "Precio por confirmar con el digitador: este modelo no tiene precio en la documentación. Máximo 2 originales firmados por el notario; los demás van como duplicados.",
+    "requisitos": "Documento de identidad de cada uno de la pareja; bienes que declaran bajo el régimen; tipo de matrimonio (datos del acta); compañías o sociedades a su nombre; dos testigos instrumentales.",
+    "notarizacion": "obligatoria"
+  },
+  {
+    "nombre": "Modelo de Documento (solo el modelo)",
+    "categoria": "Redactar o digitar un documento",
+    "digitacion_price": 250,
+    "unit_type": "por documento",
+    "alias": [
+      "modelo",
+      "solo el modelo",
+      "modelo de contrato",
+      "plantilla",
+      "formato de contrato",
+      "machote"
+    ],
+    "descripcion": "Le enviamos por correo o WhatsApp el modelo del documento para que usted lo complete, sin digitarlo con nosotros.",
+    "reglas": "Precio del Customer Service Workflow (marzo 2026). El modelo se envía después de confirmado el pago.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Tarjetas de Presentación",
+    "categoria": "Impresión",
+    "digitacion_price": 5,
+    "unit_type": "por unidad",
+    "alias": [
+      "tarjetas de presentacion",
+      "business cards"
+    ],
+    "descripcion": "Impresión de tarjetas de presentación.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Diseño de Tarjetas de Presentación",
+    "categoria": "Impresión",
+    "digitacion_price": 200,
+    "unit_type": "por diseño",
+    "alias": [
+      "diseño de tarjeta",
+      "diseñar tarjeta de presentacion"
+    ],
+    "descripcion": "Diseño de su tarjeta de presentación.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Diseño de Timbrado",
+    "categoria": "Impresión",
+    "digitacion_price": 200,
+    "unit_type": "por diseño",
+    "alias": [
+      "timbrado",
+      "membrete",
+      "papel timbrado",
+      "hoja timbrada"
+    ],
+    "descripcion": "Diseño de papel timbrado (membrete) para su oficina o empresa.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Diseño de Sello Gomígrafo",
+    "categoria": "Impresión",
+    "digitacion_price": 300,
+    "unit_type": "por diseño",
+    "alias": [
+      "sello gomigrafo",
+      "diseño de sello",
+      "sello de goma"
+    ],
+    "descripcion": "Diseño de su sello gomígrafo.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Diseño de Flyer",
+    "categoria": "Impresión",
+    "digitacion_price": 1000,
+    "unit_type": "por diseño",
+    "alias": [
+      "flyer",
+      "volante",
+      "diseño de flyer",
+      "arte para redes"
+    ],
+    "descripcion": "Diseño de un flyer o volante.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Grabar CD",
+    "categoria": "Impresión",
+    "digitacion_price": 100,
+    "unit_type": "por unidad",
+    "alias": [
+      "quemar cd",
+      "grabar un cd",
+      "grabar disco"
+    ],
+    "descripcion": "Grabar o quemar archivos en un CD.",
+    "reglas": "Precio del tarifario de servicios generales (feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Elaboración de Análisis, Síntesis o Asignación Escolar",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por trabajo",
+    "precio_rango": {
+      "min": 500,
+      "max": 1500
+    },
+    "alias": [
+      "asignacion escolar",
+      "tarea",
+      "analisis",
+      "sintesis",
+      "trabajo escolar",
+      "ensayo"
+    ],
+    "descripcion": "Elaboración de un análisis, síntesis o asignación escolar.",
+    "reglas": "Se cotiza por presupuesto dentro del rango; el digitador confirma el monto según el trabajo (tarifario de servicios generales, feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Antiplagio",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por trabajo",
+    "precio_rango": {
+      "min": 800,
+      "max": 1000
+    },
+    "alias": [
+      "antiplagio",
+      "revision de plagio",
+      "bajar el plagio"
+    ],
+    "descripcion": "Revisión y corrección antiplagio de un trabajo.",
+    "reglas": "Se cotiza por presupuesto dentro del rango; el digitador confirma el monto según el trabajo (tarifario de servicios generales, feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Elaboración de Monográfico Personalizado",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por trabajo",
+    "precio_rango": {
+      "min": 15000,
+      "max": 30000
+    },
+    "alias": [
+      "monografico",
+      "monografia",
+      "tesis",
+      "trabajo de grado"
+    ],
+    "descripcion": "Elaboración de un monográfico o tesis personalizada.",
+    "reglas": "Se cotiza por presupuesto dentro del rango; el digitador confirma el monto según el trabajo (tarifario de servicios generales, feb 2026).",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Bond 8.5x14\" Blanco",
+    "categoria": "Papelería",
+    "digitacion_price": 5,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel bond legal",
+      "hoja 8.5x14"
+    ],
+    "descripcion": "Hoja de papel bond blanco tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Bond 11x17\" Blanco",
+    "categoria": "Papelería",
+    "digitacion_price": 15,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel bond 11x17",
+      "hoja 11x17"
+    ],
+    "descripcion": "Hoja de papel bond blanco tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Cartulina Blanco 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 25,
+    "unit_type": "por unidad",
+    "alias": [
+      "cartulina legal"
+    ],
+    "descripcion": "Cartulina blanca tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Cartulina Blanco 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 100,
+    "unit_type": "por unidad",
+    "alias": [
+      "cartulina 11x17"
+    ],
+    "descripcion": "Cartulina blanca tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Adhesivo Satinado 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 40,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel adhesivo legal"
+    ],
+    "descripcion": "Papel adhesivo satinado brillante tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Adhesivo Satinado 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 150,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel adhesivo 11x17"
+    ],
+    "descripcion": "Papel adhesivo satinado brillante tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Satinado Slim 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 20,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel satinado legal"
+    ],
+    "descripcion": "Papel satinado brillante grosor slim tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Satinado Slim 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 70,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel satinado 11x17"
+    ],
+    "descripcion": "Papel satinado brillante grosor slim tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Vegetal 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 40,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel vegetal legal"
+    ],
+    "descripcion": "Papel vegetal tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Papel Vegetal 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 100,
+    "unit_type": "por unidad",
+    "alias": [
+      "papel vegetal 11x17"
+    ],
+    "descripcion": "Papel vegetal tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Folder Manila 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 25,
+    "unit_type": "por unidad",
+    "alias": [
+      "folder legal",
+      "folder manila legal"
+    ],
+    "descripcion": "Folder manila tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Sobre Manila 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 30,
+    "unit_type": "por unidad",
+    "alias": [
+      "sobre manila legal",
+      "sobre legal"
+    ],
+    "descripcion": "Sobre manila tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Sobre Manila 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 50,
+    "unit_type": "por unidad",
+    "alias": [
+      "sobre manila 11x17",
+      "sobre grande"
+    ],
+    "descripcion": "Sobre manila tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Folder Multicolor Especial 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 60,
+    "unit_type": "por unidad",
+    "alias": [
+      "folder de color legal"
+    ],
+    "descripcion": "Folder multicolor especial tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Plástica 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 150,
+    "unit_type": "por unidad",
+    "alias": [
+      "carpeta plastica legal"
+    ],
+    "descripcion": "Carpeta plástica tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Plástica 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 250,
+    "unit_type": "por unidad",
+    "alias": [
+      "carpeta plastica 11x17"
+    ],
+    "descripcion": "Carpeta plástica tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Plástica Archivo 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "carpeta de archivo legal"
+    ],
+    "descripcion": "Carpeta plástica tipo archivo tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Hojas Perforadas 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "carpeta de hojas perforadas legal"
+    ],
+    "descripcion": "Carpeta plástica para hojas perforadas tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Hojas Perforadas 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 400,
+    "unit_type": "por unidad",
+    "alias": [
+      "carpeta de hojas perforadas 11x17"
+    ],
+    "descripcion": "Carpeta plástica para hojas perforadas tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Tabla Pisa Papel 8.5x14\"",
+    "categoria": "Papelería",
+    "digitacion_price": 150,
+    "unit_type": "por unidad",
+    "alias": [
+      "tabla legal",
+      "clipboard legal"
+    ],
+    "descripcion": "Tabla pisapapel de plywood tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Tabla Pisa Papel 11x17\"",
+    "categoria": "Papelería",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "tabla 11x17",
+      "clipboard grande"
+    ],
+    "descripcion": "Tabla pisapapel de plywood tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Impresión Lámina Foto 8½x14\"",
+    "categoria": "Impresión",
+    "digitacion_price": 100,
+    "unit_type": "por unidad",
+    "alias": [
+      "lamina foto legal",
+      "impresion de foto legal"
+    ],
+    "descripcion": "Impresión de lámina o fotografía en tamaño legal.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Impresión Lámina Foto 11x17\"",
+    "categoria": "Impresión",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "lamina foto 11x17",
+      "impresion de foto grande",
+      "poster"
+    ],
+    "descripcion": "Impresión de lámina o fotografía en tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Brochures Papel Satinado 11x17\"",
+    "categoria": "Impresión",
+    "digitacion_price": 200,
+    "unit_type": "por unidad",
+    "alias": [
+      "brochure grande",
+      "brochure 11x17"
+    ],
+    "descripcion": "Brochure en papel satinado tamaño 11x17.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Corbata",
+    "categoria": "Papelería",
+    "digitacion_price": 200,
+    "unit_type": "por unidad",
+    "alias": [
+      "corbata",
+      "corbatas"
+    ],
+    "descripcion": "Corbata para abogados presentables.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Maletín",
+    "categoria": "Papelería",
+    "digitacion_price": 545,
+    "unit_type": "por unidad",
+    "alias": [
+      "maletin",
+      "maletines",
+      "maletin de cuero"
+    ],
+    "descripcion": "Maletín con revestimiento de cuero reforzado para llevar sus documentos.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Sombrilla",
+    "categoria": "Papelería",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "sombrilla",
+      "paraguas"
+    ],
+    "descripcion": "Sombrilla para protegerse y proteger sus documentos del clima.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Post-its",
+    "categoria": "Papelería",
+    "digitacion_price": 300,
+    "unit_type": "por unidad",
+    "alias": [
+      "post it",
+      "notas adhesivas",
+      "papelitos adhesivos"
+    ],
+    "descripcion": "Block de notas adhesivas.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Caja de Grapas",
+    "categoria": "Papelería",
+    "digitacion_price": 70,
+    "unit_type": "por unidad",
+    "alias": [
+      "grapas",
+      "caja de grapas"
+    ],
+    "descripcion": "Caja de grapas.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Clips (caja)",
+    "categoria": "Papelería",
+    "unit_type": "por caja",
+    "precio_rango": {
+      "min": 50,
+      "max": 250
+    },
+    "alias": [
+      "clips",
+      "caja de clips",
+      "clips de colores"
+    ],
+    "descripcion": "Caja de clips grises, de colores y variantes.",
+    "reglas": "El precio depende del tamaño o del modelo; el digitador confirma.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Clips Billeteros",
+    "categoria": "Papelería",
+    "unit_type": "por unidad",
+    "precio_rango": {
+      "min": 5,
+      "max": 45
+    },
+    "alias": [
+      "clip billetero",
+      "clips billeteros",
+      "binder clips"
+    ],
+    "descripcion": "Clips billeteros para expedientes grandes, en varios tamaños.",
+    "reglas": "El precio depende del tamaño o del modelo; el digitador confirma.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Carpeta Anillar",
+    "categoria": "Papelería",
+    "unit_type": "por unidad",
+    "precio_rango": {
+      "min": 200,
+      "max": 350
+    },
+    "alias": [
+      "carpeta anillar",
+      "carpeta de anillos",
+      "binder"
+    ],
+    "descripcion": "Carpeta anillar para conservar y presentar archivos.",
+    "reglas": "El precio depende del tamaño o del modelo; el digitador confirma.",
+    "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Portafolio",
+    "categoria": "Papelería",
+    "unit_type": "por unidad",
+    "precio_rango": {
+      "min": 150,
+      "max": 250
+    },
+    "alias": [
+      "portafolio",
+      "portafolios",
+      "carpeta impermeable"
+    ],
+    "descripcion": "Portafolio que protege sus documentos de la humedad y el clima.",
+    "reglas": "El precio depende del tamaño o del modelo; el digitador confirma.",
+    "notarizacion": "no_aplica"
+  }
+]

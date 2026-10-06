@@ -1,0 +1,134 @@
+[
+  {
+    "nombre": "Certificación Estatus Jurídico Inmueble",
+    "motivo": "RD$1,000 en el sistema vs RD$500 por inmueble en la lista de precios de marzo 2026."
+  },
+  {
+    "nombre": "Instancia - Solicitud de Documentos",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Solicitud de Certificaciones",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Levantamiento",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Depósito de Documentos",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Arrendamiento Inmueble",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Desglose de Expediente",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Desglose de Pago",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Corrección",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Autorización",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Fijación de Audiencia",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Pronunciamiento",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Asignación de Sala",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Inscripción Nombre Comercial",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Transferencia",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Prórroga de Expediente",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Construcción",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Recogida de Escombros",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$150 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Oposición",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$200 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Avalúo de Inmueble",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$200 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Depósito de Inventario",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$300 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Subsanación de Expediente",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$300 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Recurso de Amparo",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$500 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Recurso de Reconsideración",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$500 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Recurso de Apelación",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$500 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Instancia - Comunicación/Invitación",
+    "motivo": "RD$100 la unidad en el bot actual vs RD$500 en el sistema y la documentación (instancias de RD$150 a RD$500 según tipo). Leandro debe confirmar."
+  },
+  {
+    "nombre": "Estatutos Sociales",
+    "motivo": "digitación RD$250 en el sistema vs RD$500 en la lista de precios de marzo 2026."
+  },
+  {
+    "nombre": "Nómina de Pagos/Presencia",
+    "motivo": "digitación RD$300 en el sistema vs RD$500 en la lista de precios de marzo 2026."
+  },
+  {
+    "nombre": "Foto 2x2",
+    "motivo": "RD$300 en el sistema vs RD$250 por hasta 5 fotos en el Customer Service Workflow."
+  },
+  {
+    "nombre": "Escáner de Documento",
+    "motivo": "RD$5 por hoja en el sistema vs escalonado en el Customer Service Workflow (RD$50 una página, RD$100 más de una, RD$25 c/u desde 5, RD$10 c/u desde 20)."
+  },
+  {
+    "nombre": "Fotocopia 11x17\"",
+    "motivo": "RD$20 en el sistema vs RD$30 en la lista de precios de marzo 2026."
+  },
+  {
+    "grupo": "Acto de Venta",
+    "tramos_desde": 3000001
+  },
+  {
+    "grupo": "Contrato de Venta Bienes",
+    "tramos_desde": 3000001
+  }
+]
