@@ -7,6 +7,12 @@ const { routeMessage, AI_DEFERRED } = require('../conversation/router');
 const { getQuotaBackoffRemaining } = require('../llm/generate');
 const { load: loadSettings, save: saveSettings } = require('./botSettings');
 const config = require('../config');
+const pool = require('../db/pool');
+// El agente (src/agent): responde los chats que engineFor marca como 'agent'. Su AI_DEFERRED es el
+// mismo valor que el del router, así que un solo chequeo sirve para los dos motores.
+const { respond: agentRespond } = require('../agent/agent');
+const { engineFor } = require('../agent/engine');
+const { notifyUrgentAfterHandoff } = require('../agent/tools/handoff');
 
 // ── Per-phone message buffer (debounce for multi-image bursts) ──
 // When a user sends multiple images at once, WhatsApp fires them as separate
@@ -35,21 +41,38 @@ function bufferMessage(phone, payload, sock) {
 // When the AI is temporarily rate-limited by Google, we do NOT answer with the
 // robotic error fallback. We hold the message (with its context) and retry once
 // the AI is available again, so the client still gets a proper answer.
-const pendingAIRetries = new Map(); // phone → { text, savedMedia, remoteJid, sock, client, attempts, timer }
+const pendingAIRetries = new Map(); // phone → { text, savedMedia, media, remoteJid, sock, client, attempts, timer }
 const MAX_AI_RETRY_ATTEMPTS = 6; // ~3 min total before giving up gracefully
+let aiRetryDelayOverrideMs = null; // solo pruebas: acorta la espera del reintento
 
-function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client) {
+function _setAIRetryDelayMs(ms) {
+  aiRetryDelayOverrideMs = typeof ms === 'number' && ms >= 0 ? ms : null;
+}
+
+// Envía la respuesta del agente y la guarda; devuelve el id del mensaje guardado para ligar las
+// herramientas del turno (respond lo hace dentro del candado del teléfono).
+function agentDeliver(sock, remoteJid, phone, client) {
+  return async (text) => {
+    await sock.sendMessage(remoteJid, { text });
+    const row = await Message.create({ phone, clientId: client?.id || null, direction: 'outbound', content: text });
+    return row?.id || null;
+  };
+}
+
+// `media`: los medios del lote (solo el agente los usa; el motor viejo recibe `savedMedia`).
+function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media = null) {
   const backoffMs = getQuotaBackoffRemaining() || 30000;
-  const delayMs = backoffMs + 5000; // small safety margin past the backoff
+  const delayMs = aiRetryDelayOverrideMs ?? backoffMs + 5000; // small safety margin past the backoff
 
   const existing = pendingAIRetries.get(phone);
   if (existing) {
     // Merge consecutive messages from the same person into one pending turn
     existing.text = `${existing.text} ${text}`.trim();
     if (savedMedia) existing.savedMedia = savedMedia;
+    if (media && media.length) existing.media = [...(existing.media || []), ...media];
     clearTimeout(existing.timer);
   }
-  const entry = existing || { text, savedMedia, remoteJid, sock, client, attempts: 0 };
+  const entry = existing || { text, savedMedia, media, remoteJid, sock, client, attempts: 0 };
 
   entry.timer = setTimeout(async () => {
     pendingAIRetries.delete(phone);
@@ -61,11 +84,15 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client) {
     }
     try {
       const syntheticMsg = { key: { remoteJid: entry.remoteJid } };
-      const response = await routeMessage(phone, entry.text, syntheticMsg, entry.savedMedia);
+      const agent = engineFor(phone) === 'agent';
+      const response = agent
+        ? await agentRespond(phone, entry.text, { media: entry.media || [], deliver: agentDeliver(entry.sock, entry.remoteJid, phone, entry.client) })
+        : await routeMessage(phone, entry.text, syntheticMsg, entry.savedMedia);
       if (response && response !== AI_DEFERRED) {
-        await sendResponse(entry.sock, entry.remoteJid, response, syntheticMsg, phone, entry.client);
+        // El agente ya entregó (deliver); el motor viejo se envía aquí.
+        if (!agent) await sendResponse(entry.sock, entry.remoteJid, response, syntheticMsg, phone, entry.client);
       } else if (response === AI_DEFERRED && entry.attempts < MAX_AI_RETRY_ATTEMPTS) {
-        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client);
+        scheduleAIRetry(phone, entry.text, entry.savedMedia, entry.remoteJid, entry.sock, entry.client, entry.media);
       } else if (response === AI_DEFERRED) {
         // Exhausted retries — graceful message instead of the robotic fallback
         await sendResponse(entry.sock, entry.remoteJid,
@@ -199,6 +226,16 @@ function getEnabledPhones() {
 
 // --- Manual mode (agent takeover) ---
 
+// Cuando un chat vuelve al bot se olvida el traspaso del agente (wa_bot_state `handoff:<phone>`), para que
+// un "urgente" posterior no avise como si el chat siguiera pasado a una persona. Sin teléfono: todos.
+// En segundo plano: las funciones de estado son síncronas y un fallo aquí no debe frenar nada.
+function clearHandoffState(phone = null) {
+  const q = phone
+    ? pool.query('DELETE FROM wa_bot_state WHERE key = $1', [`handoff:${phone}`])
+    : pool.query(`DELETE FROM wa_bot_state WHERE key LIKE 'handoff:%'`);
+  q.catch((err) => console.error(`[WA] Could not clear handoff state${phone ? ` for ${phone}` : ''}:`, err.message));
+}
+
 function setManualMode(phone, manual) {
   const clean = normalizePhone(phone);
   if (!manual && ALWAYS_MANUAL_PHONES.has(clean)) {
@@ -209,6 +246,7 @@ function setManualMode(phone, manual) {
     manualPhones.add(clean);
   } else {
     manualPhones.delete(clean);
+    clearHandoffState(clean);
   }
   console.log(`[WA] Phone ${clean}: ${manual ? 'MANUAL (agent)' : 'BOT mode'}`);
   persist().catch(() => {});
@@ -225,6 +263,7 @@ function getManualPhones() {
 function clearManualPhones() {
   const count = manualPhones.size;
   manualPhones.clear();
+  clearHandoffState();
   console.log(`[WA] Cleared ${count} manual phones — bot will respond to all chats`);
   persist().catch(() => {});
 }
@@ -269,7 +308,8 @@ function shouldBotRespond(phone) {
 }
 
 /**
- * Send a response to a WhatsApp JID and log it to the DB
+ * Send a response to a WhatsApp JID and log it to the DB.
+ * @returns {Promise<object|null>} the saved outbound message row (null if sending or saving failed)
  */
 async function sendResponse(sock, remoteJid, response, msg, phone, client) {
   try {
@@ -278,7 +318,7 @@ async function sendResponse(sock, remoteJid, response, msg, phone, client) {
     // on personal WhatsApp accounts (button never shows). Plain text with
     // numbered emoji options works universally on all WA versions/devices.
     await sock.sendMessage(remoteJid, { text: logContent });
-    await Message.create({
+    return await Message.create({
       phone,
       clientId: client?.id || null,
       direction: 'outbound',
@@ -286,6 +326,7 @@ async function sendResponse(sock, remoteJid, response, msg, phone, client) {
     });
   } catch (err) {
     console.error('[WA] Error sending response:', err.message);
+    return null;
   }
 }
 
@@ -352,11 +393,30 @@ async function processBatch(phone, batch, sock) {
     }
   }
 
+  // Chat pasado a una persona por el agente: un "urgente" fuera de horario avisa al admin (una sola vez).
+  // El bot no responde (está en manual); el aviso nunca frena el lote.
+  if (combinedText && isManualMode(phone)) {
+    try {
+      await notifyUrgentAfterHandoff(phone, combinedText);
+    } catch (err) {
+      console.error(`[WA] Urgent-after-handoff notice failed for ${phone}:`, err.message);
+    }
+  }
+
   // Media has been downloaded, analyzed and persisted above. From here on it's
   // only about REPLYING. In manual mode / bot paused / stale messages we stop
   // here — the info is already collected for the employee, but the bot stays silent.
   const willRespond = batch[0].willRespond;
   if (!willRespond) return;
+
+  // Chats del agente: él decide cuándo pasar a una persona (sin la detección de reclamaciones por HTTP).
+  // respond envía y guarda la respuesta vía deliver y liga las herramientas del turno al mensaje guardado.
+  if (engineFor(phone) === 'agent') {
+    const client = await Client.findByPhone(phone);
+    const response = await agentRespond(phone, combinedText, { media: allMedia, deliver: agentDeliver(sock, remoteJid, phone, client) });
+    if (response === AI_DEFERRED) scheduleAIRetry(phone, combinedText, null, remoteJid, sock, client, allMedia);
+    return;
+  }
 
   // Build combined savedMedia: first item as base, allMedia array attached for batch extraction
   let savedMedia = allMedia.length > 0 ? allMedia[0] : null;
@@ -647,6 +707,8 @@ function handleHistoryMessage(msg) {
 
 module.exports = {
   bufferMessage,
+  processBatch, // exportado para las pruebas (bufferMessage espera 3 s)
+  _setAIRetryDelayMs, // solo pruebas
   handleIncomingMessage,
   handleHistoryMessage,
   setBotActive, isBotActive,

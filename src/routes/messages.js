@@ -103,6 +103,26 @@ router.post('/phone/:phone/mark-read', async (req, res) => {
   }
 });
 
+// Herramientas que el agente usó para cada respuesta del bot (bot_tool_log.message_id), en una sola
+// consulta. Solo los mensajes outbound llevan `tools` (vacío si no usó ninguna o si la respuesta no fue
+// del agente); los inbound no cambian: el panel ya los pinta y no tienen herramientas.
+async function attachTools(messages) {
+  const outbound = messages.filter((m) => m.direction === 'outbound');
+  if (!outbound.length) return messages;
+  const pool = require('../db/pool');
+  const { rows } = await pool.query(
+    `SELECT message_id, herramienta, ok FROM bot_tool_log WHERE message_id = ANY($1::int[]) ORDER BY id`,
+    [outbound.map((m) => m.id)]
+  );
+  const byMessage = new Map();
+  for (const r of rows) {
+    if (!byMessage.has(r.message_id)) byMessage.set(r.message_id, []);
+    byMessage.get(r.message_id).push({ herramienta: r.herramienta, ok: r.ok });
+  }
+  for (const m of outbound) m.tools = byMessage.get(m.id) || [];
+  return messages;
+}
+
 // Get messages by phone number
 router.get('/phone/:phone', async (req, res) => {
   try {
@@ -111,6 +131,7 @@ router.get('/phone/:phone', async (req, res) => {
       limit: parseInt(limit, 10) || 100,
       offset: parseInt(offset, 10) || 0,
     });
+    await attachTools(messages);
     res.json({ messages });
   } catch (err) {
     console.error('List messages by phone error:', err);
