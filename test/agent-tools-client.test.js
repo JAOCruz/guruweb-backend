@@ -55,6 +55,14 @@ test('NOMBRE reemplaza un nombre de cliente que era solo el teléfono', async ()
   assert.equal(rows[0].name, 'María Pérez');
 });
 
+test('NOMBRE no pisa un nombre escrito a mano aunque la ficha no tenga NOMBRE', async () => {
+  await pool.query(`UPDATE clients SET name='María Gómez' WHERE id=$1`, [clientId]);
+  ctx.client.name = 'María Gómez';
+  await guardar_datos_cliente({ campos: { NOMBRE: 'Mari' } }, ctx);
+  assert.equal((await pool.query('SELECT name FROM clients WHERE id=$1', [clientId])).rows[0].name, 'María Gómez');
+  assert.equal((await legalProfile.get(clientId)).NOMBRE, 'Mari');
+});
+
 test('NOMBRE no pisa un nombre real si la ficha ya tenía NOMBRE', async () => {
   await pool.query(`UPDATE clients SET name='Juan Real' WHERE id=$1`, [clientId]);
   await legalProfile.merge(clientId, { NOMBRE: 'Juan Real' }, adminId);
@@ -71,8 +79,11 @@ async function media(phone, waId, content) {
 }
 
 test('leer_documento no lee medios de otro teléfono', async () => {
+  let calls = 0;
+  _setAnalyzer(async () => { calls++; return 'texto'; });
   const id = await media('18095559999', 'w1', 'x');
   assert.deepEqual(await leer_documento({ media_id: id }, ctx), { error: 'archivo no encontrado' });
+  assert.equal(calls, 0);
 });
 
 test('leer_documento usa el análisis ya guardado sin llamar a la IA', async () => {
@@ -87,6 +98,14 @@ test('leer_documento analiza si no hay análisis guardado', async () => {
   const id = await media(PHONE, 'w3', '[Imagen]');
   const r = await leer_documento({ media_id: id }, ctx);
   assert.equal(r.datos_extraidos, 'texto /x.jpg image/jpeg image');
+});
+
+test('leer_documento devuelve error si el análisis falla o da null', async () => {
+  const id = await media(PHONE, 'w4', '[Imagen]');
+  _setAnalyzer(async () => { throw new Error('boom'); });
+  assert.deepEqual(await leer_documento({ media_id: id }, ctx), { error: 'no se pudo leer el documento' });
+  _setAnalyzer(async () => null);
+  assert.deepEqual(await leer_documento({ media_id: id }, ctx), { error: 'no se pudo leer el documento' });
 });
 
 test('crear_solicitud crea el caso, lo deja al asignado y le avisa', async () => {

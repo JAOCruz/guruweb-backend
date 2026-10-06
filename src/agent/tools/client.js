@@ -40,7 +40,7 @@ async function guardar_datos_cliente(args, ctx) {
   await legalProfile.merge(clientId, data, ctx.botUserId || null);
 
   const nombre = cambios.find((c) => c.clave === 'NOMBRE');
-  if (nombre && (looksLikePhone(ctx.client.name) || !byNorm.has('NOMBRE'))) {
+  if (nombre && looksLikePhone(ctx.client.name)) {
     await Client.update(clientId, { name: nombre.ahora });
     ctx.client.name = nombre.ahora;
   }
@@ -61,7 +61,10 @@ async function leer_documento(args, ctx) {
     if (found && found[1].trim()) return { tipo: media.media_type, datos_extraidos: found[1].trim() };
   }
   const analyze = analyzer || require('../../llm/mediaAnalysis').analyzeDocument;
-  const text = await analyze(media.file_path, media.mime_type, media.media_type);
+  let text = null;
+  try { text = await analyze(media.file_path, media.mime_type, media.media_type); } catch (err) {
+    console.error('[Agent] leer_documento falló:', err.message);
+  }
   if (!text) return { error: 'no se pudo leer el documento' };
   return { tipo: media.media_type, datos_extraidos: text };
 }
