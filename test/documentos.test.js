@@ -54,6 +54,11 @@ test.before(async () => {
   await pool.query(`INSERT INTO clients (name, phone) VALUES ('Juan Pérez', '18095550001'), ('María Gómez', '18095550002')`);
   await runSqlFile('migrations/20260929_portfolio.sql');
   await runSqlFile('migrations/20260929_portfolio.sql'); // idempotent
+  // Bot fase 2 columns (invoice_id, prepared_by_bot, send_mode…) and the digitadores switch
+  await pool.query('CREATE TABLE IF NOT EXISTS invoices (id SERIAL PRIMARY KEY, status TEXT)');
+  await pool.query('DROP TABLE IF EXISTS business_info');
+  await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
+  await runSqlFile('migrations/20261006_bot_fase2.sql');
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
     tok[u.username] = generateToken(u);
     ids[u.username] = u.id;

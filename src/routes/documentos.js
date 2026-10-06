@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const storage = require('../utils/storage');
 const Client = require('../models/Client');
 const { logActivity, safeLog } = require('../services/activityLog');
@@ -17,6 +17,7 @@ const { listBlocks, hasTags, applyOps, fillTags } = require('../documentos/docxT
 const aiDocs = require('../documentos/aiDocs');
 const LegalProfile = require('../documentos/legalProfile');
 const Tags = require('../documentos/templateTags');
+const delivery = require('../agent/delivery');
 
 // Documentos (Fase 1): "Buscar por nombre" in our selection of models + "Historial del digitador".
 // Separate from MotherBrain: it only reads the models; tags are edited there.
@@ -212,16 +213,72 @@ router.post('/documents/:id/versions', withUpload(async (req, res) => {
   }
 }));
 
-router.post('/documents/:id/approve', requireRole('admin'), async (req, res) => {
+// ── Aprobar y enviar (bot fase 2) ──
+// The admin always; a digitador only with the Configuración switch on and for clients assigned to them.
+const SEND_MODES = new Set(['al_pagar', 'ya', 'manual']);
+const FORBIDDEN_APPROVE = 'Solo el admin (o el digitador asignado, si está permitido) puede aprobar y enviar este documento';
+
+// Loads the document under the caller's visibility and checks the approve/send permission.
+// Returns { doc } or { error: [status, code, message] }.
+async function approvableDoc(req) {
   const doc = await Portfolio.getDocument(req.user, req.params.id).catch(() => null);
-  if (!doc) return sendError(res, 404, 'NOT_FOUND', 'Documento no encontrado');
-  const n = await Portfolio.approve(doc.id, Number((req.body || {}).version_id), req.user.id);
-  if (!n) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este documento');
-  await safeLog(() => logActivity(req, {
-    category: 'documentos', action: 'documento.approve', entityType: 'documento', entityId: doc.id,
-    summary: `Aprobó la versión v${n} de «${doc.title}» (${doc.client_name || 'cliente'})`,
-  }));
-  res.json({ document: await Portfolio.getDocument(req.user, doc.id) });
+  if (!doc) return { error: [404, 'NOT_FOUND', 'Documento no encontrado'] };
+  if (!doc.can_approve) return { error: [403, 'FORBIDDEN', FORBIDDEN_APPROVE] };
+  return { doc };
+}
+
+async function invoiceIsPaid(invoiceId) {
+  if (!invoiceId) return false;
+  const { rows } = await pool.query('SELECT status FROM invoices WHERE id = $1', [invoiceId]);
+  return rows[0]?.status === 'paid';
+}
+
+// The document goes back fresh (sent_at, send_error, send_mode) with sent / code like the quote routes.
+async function sendResponse(req, res, docId, result) {
+  const body = { document: await Portfolio.getDocument(req.user, docId), sent: !!result.ok };
+  if (!result.ok) body.code = result.code;
+  res.json(body);
+}
+
+// body { version_id, send_mode?: 'al_pagar' | 'ya' | 'manual' }. Default: al_pagar with a quote, manual without.
+// Sends right away when 'ya', or when 'al_pagar' and the quote is already paid; otherwise the
+// document waits (for the payment, or for "Enviar al cliente").
+router.post('/documents/:id/approve', async (req, res) => {
+  const { doc, error } = await approvableDoc(req);
+  if (error) return sendError(res, ...error);
+  const body = req.body || {};
+  const sendMode = body.send_mode == null || body.send_mode === '' ? (doc.invoice_id ? 'al_pagar' : 'manual') : String(body.send_mode);
+  if (!SEND_MODES.has(sendMode)) return sendError(res, 400, 'INVALID_SEND_MODE', 'Elige cómo se envía: al pagar, ya o manual');
+  try {
+    const n = await Portfolio.approve(doc.id, Number(body.version_id), req.user.id, sendMode);
+    if (!n) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este documento');
+    const sendNow = sendMode === 'ya' || (sendMode === 'al_pagar' && await invoiceIsPaid(doc.invoice_id));
+    const result = sendNow ? await delivery.sendDocument(doc.id, { actor: req.user }) : { ok: false };
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'documento.approve', entityType: 'documento', entityId: doc.id,
+      summary: `Aprobó la versión v${n} de «${doc.title}» (${doc.client_name || 'cliente'})${result.ok ? ' y lo envió por WhatsApp' : ''}`,
+      details: { version_id: Number(body.version_id), send_mode: sendMode, sent: !!result.ok, code: result.code || null },
+    }));
+    return sendResponse(req, res, doc.id, result);
+  } catch (err) {
+    console.error('[documentos] approve error:', err.code || err.message);
+    return sendError(res, 500, 'APPROVE_FAILED', 'No se pudo aprobar el documento');
+  }
+});
+
+// "Enviar al cliente": sends the approved version now (also to retry after WINDOW_CLOSED).
+// One-time: an already sent document answers 200 { sent: false, code: 'ALREADY_SENT' }.
+router.post('/documents/:id/send', async (req, res) => {
+  const { doc, error } = await approvableDoc(req);
+  if (error) return sendError(res, ...error);
+  if (!doc.approved_version_id) return sendError(res, 400, 'NOT_APPROVED', 'Aprueba una versión antes de enviarla');
+  try {
+    const result = await delivery.sendDocument(doc.id, { actor: req.user });
+    return sendResponse(req, res, doc.id, result);
+  } catch (err) {
+    console.error('[documentos] send error:', err.code || err.message);
+    return sendError(res, 500, 'SEND_FAILED', 'No se pudo enviar el documento');
+  }
 });
 
 router.get('/versions/:id/file', async (req, res) => {

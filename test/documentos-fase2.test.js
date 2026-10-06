@@ -51,6 +51,10 @@ test.before(async () => {
   await pool.query(`INSERT INTO doc_template_variables (template_id, variable_id, sort_order) VALUES (1,1,1),(1,2,2),(1,3,3),(1,4,4)`);
   await pool.query(`INSERT INTO clients (name, phone) VALUES ('Juan Pérez', '18095550001')`);
   await runSqlFile('migrations/20260929_portfolio.sql');
+  await pool.query('CREATE TABLE IF NOT EXISTS invoices (id SERIAL PRIMARY KEY, status TEXT)');
+  await pool.query('DROP TABLE IF EXISTS business_info');
+  await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
+  await runSqlFile('migrations/20261006_bot_fase2.sql'); // bot fase 2 columns on portfolio_documents
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await runSqlFile('migrations/20260929_legal_profiles.sql'); // idempotent
   await pool.query(`INSERT INTO legal_profiles (client_id, data) VALUES (1, '{"NOMBRE": "JUAN PÉREZ", "DOCUMENTO IDENTIDAD": "402-1111111-2"}')`);

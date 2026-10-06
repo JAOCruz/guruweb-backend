@@ -68,6 +68,10 @@ test.before(async () => {
   await pool.query(`INSERT INTO doc_template_variables (template_id, variable_id) VALUES (1, 1)`);
   await pool.query(`INSERT INTO clients (name, phone) VALUES ('Juan Pérez', '18095550001')`);
   await runSqlFile('migrations/20260929_portfolio.sql');
+  await pool.query('CREATE TABLE IF NOT EXISTS invoices (id SERIAL PRIMARY KEY, status TEXT)');
+  await pool.query('DROP TABLE IF EXISTS business_info');
+  await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
+  await runSqlFile('migrations/20261006_bot_fase2.sql'); // bot fase 2 columns on portfolio_documents
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await runSqlFile('migrations/20261002_template_tags.sql');
   await runSqlFile('migrations/20261002_template_tags.sql'); // idempotent

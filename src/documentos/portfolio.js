@@ -1,6 +1,9 @@
 const pool = require('../db/pool');
+const { canApproveDocuments, digitadoresAprueban } = require('./permissions');
 
 // Historial del digitador. Employees only reach documents they created; the admin reaches all.
+// With the "digitadores aprueban" switch on, an employee also reaches the bot's drafts
+// (prepared_by_bot) of the clients assigned to them. Every query must join clients as `c`.
 const isAdmin = (user) => user.role === 'admin';
 const SORTS = {
   recent: 'd.updated_at DESC',
@@ -8,16 +11,19 @@ const SORTS = {
   name: 'LOWER(d.title) ASC',
 };
 
-function scope(user, params) {
+async function scope(user, params) {
   if (isAdmin(user)) return 'TRUE';
   params.push(user.id);
-  return `d.created_by = $${params.length}`;
+  const me = `$${params.length}`;
+  if (await digitadoresAprueban()) return `(d.created_by = ${me} OR (d.prepared_by_bot AND c.assigned_to = ${me}))`;
+  return `d.created_by = ${me}`;
 }
 
 const DOC_SELECT = `
   SELECT d.id, d.title, d.client_id, c.name AS client_name, c.phone AS client_phone, d.template_id,
          d.created_by, COALESCE(NULLIF(u.name, ''), u.username) AS created_by_name,
          d.created_at, d.updated_at, d.approved_version_id,
+         d.prepared_by_bot, d.invoice_id, d.send_mode, d.sent_at, d.send_error,
          (SELECT MAX(version_number) FROM portfolio_versions v WHERE v.document_id = d.id) AS latest_version,
          (SELECT version_number FROM portfolio_versions v WHERE v.id = d.approved_version_id) AS approved_version,
          (SELECT COUNT(*)::int FROM portfolio_versions v WHERE v.document_id = d.id) AS versions_count
@@ -27,7 +33,7 @@ const DOC_SELECT = `
 
 async function listClients(user, q) {
   const params = [];
-  let where = scope(user, params);
+  let where = await scope(user, params);
   if (q && q.trim()) {
     params.push(`%${q.trim()}%`);
     where += ` AND (c.name ILIKE $${params.length} OR c.phone ILIKE $${params.length})`;
@@ -59,7 +65,7 @@ async function searchAllClients(q) {
 
 async function listDocuments(user, { clientId, sort, createdBy } = {}) {
   const params = [];
-  let where = scope(user, params);
+  let where = await scope(user, params);
   if (clientId) {
     params.push(Number(clientId));
     where += ` AND d.client_id = $${params.length}`;
@@ -74,10 +80,11 @@ async function listDocuments(user, { clientId, sort, createdBy } = {}) {
 
 async function getDocument(user, id) {
   const params = [Number(id)];
-  const where = `d.id = $1 AND ${scope(user, params)}`;
+  const where = `d.id = $1 AND ${await scope(user, params)}`;
   const { rows } = await pool.query(`${DOC_SELECT} WHERE ${where}`, params);
   const doc = rows[0];
   if (!doc) return null;
+  doc.can_approve = await canApproveDocuments(user, doc);
   const { rows: versions } = await pool.query(
     `SELECT v.id, v.version_number, v.file_name, v.mime_type, v.size_bytes, v.source, v.notes, v.created_at,
             v.created_by, COALESCE(NULLIF(u.name, ''), u.username) AS created_by_name, v.approved_at
@@ -138,14 +145,19 @@ function insertVersion(client, documentId, number, userId, file) {
   );
 }
 
-async function approve(documentId, versionId, adminId) {
+// Marks the version approved and, when given, records how the document goes out
+// ('al_pagar' | 'ya' | 'manual'). Returns the version number, or null if the version is not this document's.
+async function approve(documentId, versionId, userId, sendMode = null) {
   const { rows } = await pool.query(
     'SELECT version_number FROM portfolio_versions WHERE id = $1 AND document_id = $2',
     [versionId, documentId]
   );
   if (!rows.length) return null;
-  await pool.query('UPDATE portfolio_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [adminId, versionId]);
-  await pool.query('UPDATE portfolio_documents SET approved_version_id = $1, updated_at = NOW() WHERE id = $2', [versionId, documentId]);
+  await pool.query('UPDATE portfolio_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [userId, versionId]);
+  await pool.query(
+    'UPDATE portfolio_documents SET approved_version_id = $1, send_mode = COALESCE($3, send_mode), updated_at = NOW() WHERE id = $2',
+    [versionId, documentId, sendMode]
+  );
   return rows[0].version_number;
 }
 
@@ -154,7 +166,8 @@ async function getVersion(user, versionId) {
   const { rows } = await pool.query(
     `SELECT v.*, d.title, d.created_by AS document_owner FROM portfolio_versions v
      JOIN portfolio_documents d ON d.id = v.document_id
-     WHERE v.id = $1 AND ${scope(user, params)}`,
+     JOIN clients c ON c.id = d.client_id
+     WHERE v.id = $1 AND ${await scope(user, params)}`,
     params
   );
   return rows[0] || null;
