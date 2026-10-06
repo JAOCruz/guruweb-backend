@@ -89,71 +89,95 @@ test('avisar_pago está registrada: 12 herramientas, sin argumentos obligatorios
 // ---------- espera del lote ----------
 
 const payload = (phone, text, media = null) => ({ msg: { key: { remoteJid: `${phone}@s.whatsapp.net` } }, text, savedMedia: media, willRespond: true });
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sock = {};
 
+// Relojes simulados de node:test (setTimeout y Date): los lotes se miden con las constantes reales (8 s, 30 s, 3 s)
+// sin esperar de verdad. El procesador del lote se reemplaza para ver los lotes sin correr el motor.
 test.describe('espera del lote', () => {
-  let batches;
+  const T0 = 1_700_000_000_000;
+  let batches, env;
+  const clock = (t) => { t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: T0 }); return t.mock.timers; };
+  const at = (b) => b.at - T0;
+
   test.beforeEach(() => {
+    env = { BOT_ENGINE: process.env.BOT_ENGINE, BOT_AGENT_PHONES: process.env.BOT_AGENT_PHONES };
     process.env.BOT_ENGINE = 'legacy';
     process.env.BOT_AGENT_PHONES = AGENT;
     batches = [];
     handler._setBatchProcessor(async (phone, batch) => { batches.push({ phone, batch, at: Date.now() }); });
-    handler._setBufferTiming({ agentMs: 60, agentMaxMs: 200, legacyMs: 40 });
   });
   test.afterEach(() => {
     handler._setBatchProcessor(null);
-    handler._setBufferTiming(null);
-    delete process.env.BOT_AGENT_PHONES;
+    for (const k of ['BOT_ENGINE', 'BOT_AGENT_PHONES']) {
+      if (env[k] === undefined) delete process.env[k]; else process.env[k] = env[k];
+    }
   });
 
   test('las constantes son 8 s, 30 s y 3 s', () => {
     assert.deepEqual(handler.BUFFER_TIMING, { AGENT_BUFFER_MS: 8000, AGENT_BUFFER_MAX_MS: 30000, MESSAGE_BUFFER_MS: 3000 });
   });
 
-  test('chat con agente: tres fotos en 20 s y un texto → un solo lote con las tres', async () => {
-    const t0 = Date.now();
+  test('chat con agente: tres fotos en 20 s y un texto → un solo lote con las tres', (t) => {
+    const timers = clock(t);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 1, media_type: 'image' }), sock);
-    await sleep(30);
+    timers.tick(7000);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 2, media_type: 'image' }), sock);
-    await sleep(30);
+    timers.tick(7000);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 3, media_type: 'image' }), sock);
-    await sleep(30);
-    assert.equal(batches.length, 0, 'cada mensaje reinicia la espera');
+    timers.tick(6000); // 20 s después de la primera foto
+    assert.equal(batches.length, 0, 'cada medio reinicia la espera: a los 7 s no se había cerrado');
     handler.bufferMessage(AGENT, payload(AGENT, 'quiero un acto de venta'), sock);
-    await sleep(30);
-    assert.equal(batches.length, 0);
-    await sleep(60);
+    timers.tick(7999);
+    assert.equal(batches.length, 0, 'el texto también reinicia la espera');
+    timers.tick(1);
     assert.equal(batches.length, 1);
+    assert.equal(batches[0].phone, AGENT);
     assert.deepEqual(batches[0].batch.map((b) => b.savedMedia?.id || b.text), [1, 2, 3, 'quiero un acto de venta']);
-    assert.ok(batches[0].at - t0 >= 90 + 60, 'se procesa después de la espera desde el último mensaje');
+    assert.equal(at(batches[0]), 28000, 'se procesa 8 s después del último mensaje');
+    timers.tick(60000);
+    assert.equal(batches.length, 1, 'un solo lote');
   });
 
-  test('el lote nunca espera más de 30 s desde el primer mensaje', async () => {
-    const t0 = Date.now();
-    let i = 0;
-    const iv = setInterval(() => handler.bufferMessage(AGENT, payload(AGENT, `m${++i}`), sock), 25);
-    await sleep(330);
-    clearInterval(iv);
-    await sleep(100);
-    assert.ok(batches.length >= 2, `el tope cerró el primer lote aunque siguieran llegando mensajes (${batches.length} lotes)`);
-    const first = batches[0];
-    assert.ok(first.at - t0 >= 200 && first.at - t0 < 300, `primer lote a los ${first.at - t0} ms`);
-    assert.ok(first.batch.length >= 6 && first.batch.length <= 9, `el primer lote lleva lo que llegó en el tope (${first.batch.length})`);
-    const all = batches.flatMap((b) => b.batch.map((m) => m.text));
-    assert.deepEqual(all, Array.from({ length: i }, (_, k) => `m${k + 1}`), 'ningún mensaje se pierde ni se repite');
+  test('el lote nunca espera más de 30 s desde el primer mensaje', (t) => {
+    const timers = clock(t);
+    // Un mensaje cada 5 s: sin tope, el lote se seguiría corriendo para siempre.
+    for (let i = 1; i <= 6; i++) {
+      handler.bufferMessage(AGENT, payload(AGENT, `m${i}`), sock);
+      if (i < 6) timers.tick(5000);
+    }
+    // El sexto llegó a los 25 s: sin tope se procesaría a los 33 s; con el tope, a los 30 s.
+    timers.tick(4999);
+    assert.equal(batches.length, 0);
+    timers.tick(1);
+    assert.equal(batches.length, 1);
+    assert.equal(at(batches[0]), 30000, 'el tope cierra el lote a los 30 s del primer mensaje');
+    assert.deepEqual(batches[0].batch.map((b) => b.text), ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
+    // Lo que llega después abre otro lote, con su propia espera de 8 s y su propio tope.
+    handler.bufferMessage(AGENT, payload(AGENT, 'm7'), sock);
+    timers.tick(5000);
+    handler.bufferMessage(AGENT, payload(AGENT, 'm8'), sock);
+    timers.tick(7999);
+    assert.equal(batches.length, 1);
+    timers.tick(1);
+    assert.equal(batches.length, 2);
+    assert.deepEqual(batches[1].batch.map((b) => b.text), ['m7', 'm8']);
+    assert.equal(at(batches[1]), 30000 + 5000 + 8000);
+    timers.tick(60000);
+    assert.equal(batches.length, 2, 'ningún mensaje se pierde ni se repite');
   });
 
-  test('chat legacy sigue con 3 s (aquí 40 ms): no se reinicia a 8 s ni espera el tope', async () => {
-    const t0 = Date.now();
+  test('chat legacy sigue con 3 s: no se reinicia a 8 s ni espera el tope', (t) => {
+    const timers = clock(t);
     handler.bufferMessage(LEGACY, payload(LEGACY, 'hola'), sock);
-    await sleep(20);
+    timers.tick(2000);
     handler.bufferMessage(LEGACY, payload(LEGACY, 'buenas'), sock);
-    await sleep(70);
+    timers.tick(2999);
+    assert.equal(batches.length, 0, 'cada mensaje reinicia los 3 s');
+    timers.tick(1);
     assert.equal(batches.length, 1);
     assert.equal(batches[0].phone, LEGACY);
     assert.deepEqual(batches[0].batch.map((b) => b.text), ['hola', 'buenas']);
-    assert.ok(batches[0].at - t0 < 100, `legacy se procesó a los ${batches[0].at - t0} ms`);
+    assert.equal(at(batches[0]), 5000, '3 s después del último mensaje, no 8');
   });
 });
 

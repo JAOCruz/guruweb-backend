@@ -27,18 +27,13 @@ const AGENT_BUFFER_MS = 8000;
 const AGENT_BUFFER_MAX_MS = 30000;
 const phoneBuffers = new Map(); // phone → { messages: [], timer, sock, firstAt }
 
-let bufferTimingOverride = null;   // solo pruebas: { agentMs, agentMaxMs, legacyMs }
 let batchProcessorOverride = null; // solo pruebas: reemplaza processBatch para ver los lotes sin correr el motor
-function _setBufferTiming(t) { bufferTimingOverride = t && typeof t === 'object' ? t : null; }
 function _setBatchProcessor(fn) { batchProcessorOverride = typeof fn === 'function' ? fn : null; }
 
 // Cuánto espera el lote de este teléfono después del mensaje que acaba de llegar.
 function bufferDelayMs(phone, buf) {
-  const t = bufferTimingOverride || {};
-  if (engineFor(phone) !== 'agent') return t.legacyMs ?? MESSAGE_BUFFER_MS;
-  const wait = t.agentMs ?? AGENT_BUFFER_MS;
-  const max = t.agentMaxMs ?? AGENT_BUFFER_MAX_MS;
-  return Math.max(0, Math.min(wait, buf.firstAt + max - Date.now()));
+  if (engineFor(phone) !== 'agent') return MESSAGE_BUFFER_MS;
+  return Math.max(0, Math.min(AGENT_BUFFER_MS, buf.firstAt + AGENT_BUFFER_MAX_MS - Date.now()));
 }
 
 function bufferMessage(phone, payload, sock) {
@@ -782,7 +777,6 @@ module.exports = {
   BUFFER_TIMING: { MESSAGE_BUFFER_MS, AGENT_BUFFER_MS, AGENT_BUFFER_MAX_MS },
   _setAIRetryDelayMs, // solo pruebas
   _setMediaAnalysis, // solo pruebas
-  _setBufferTiming, // solo pruebas
   _setBatchProcessor, // solo pruebas
   clearHandoffState,
   handleIncomingMessage,

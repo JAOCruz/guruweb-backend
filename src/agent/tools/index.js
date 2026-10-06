@@ -171,8 +171,8 @@ const TOOLS = [
   {
     name: 'preparar_documento',
     description: 'Llena el modelo aprobado con los datos y lo deja en Documentos como borrador del bot, por aprobar por una persona; ' +
-      'nunca se envía solo. Úsela solo después de que el cliente confirmó el resumen de los datos y el carrito, y de haber hecho ' +
-      'preparar_cotizacion. Pase en valores todas las etiquetas que faltaban según ver_modelo (las de la ficha se completan solas); ' +
+      'nunca se envía solo. Úsela solo después de que el cliente confirmó el resumen de los datos y el carrito (y de haber hecho ' +
+      'preparar_cotizacion si hay precio). Pase en valores todas las etiquetas que faltaban según ver_modelo (las de la ficha se completan solas); ' +
       'si devuelve "faltan datos", pida esas etiquetas al cliente y vuelva a llamar: nunca se preparan documentos con espacios en ' +
       'blanco. Después, dígale al cliente que el equipo lo revisa y se lo envía una vez aprobado y pagado, sin prometer un tiempo.',
     parameters: {
