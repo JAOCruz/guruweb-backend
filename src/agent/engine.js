@@ -1,7 +1,7 @@
-// Qué motor responde un chat: el agente (Task 8) o el motor viejo (src/conversation/router.js).
-// BOT_ENGINE=agent manda todos los chats al agente; BOT_AGENT_PHONES (lista separada por comas) manda
-// esos teléfonos al agente aunque BOT_ENGINE sea legacy. Las variables se leen en cada llamada, no al
-// cargar el módulo, para que un cambio en Railway (o en una prueba) aplique sin reiniciar.
+// Qué motor responde un chat: el agente (por defecto) o el motor viejo (src/conversation/router.js).
+// BOT_ENGINE=legacy es el interruptor de emergencia para volver al bot viejo; con legacy,
+// BOT_AGENT_PHONES (lista separada por comas) deja esos teléfonos en el agente. Las variables se leen
+// en cada llamada, no al cargar el módulo, para que un cambio en Railway aplique sin reiniciar.
 
 // Mismo criterio que el handler: sin sufijos de WhatsApp (@s.whatsapp.net, @lid) y solo dígitos.
 function normalizePhone(phone) {
@@ -14,7 +14,7 @@ function agentPhones() {
 
 /** @returns {'agent'|'legacy'} */
 function engineFor(phone) {
-  if (process.env.BOT_ENGINE === 'agent') return 'agent';
+  if (process.env.BOT_ENGINE !== 'legacy') return 'agent';
   return agentPhones().has(normalizePhone(phone)) ? 'agent' : 'legacy';
 }
 

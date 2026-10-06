@@ -93,13 +93,15 @@ test('engineFor: un teléfono en BOT_AGENT_PHONES usa el agente aunque BOT_ENGIN
   assert.equal(engineFor('18095550301'), 'legacy');
 });
 
-test('engineFor: por defecto es legacy; con BOT_ENGINE=agent todos usan el agente', () => {
+test('engineFor: por defecto todos usan el agente; BOT_ENGINE=legacy es el interruptor para volver al bot viejo', () => {
   delete process.env.BOT_ENGINE;
   delete process.env.BOT_AGENT_PHONES;
-  assert.equal(engineFor('18095550177'), 'legacy');
+  assert.equal(engineFor('18095550177'), 'agent');
+  assert.equal(engineFor('18095550999@s.whatsapp.net'), 'agent');
+  process.env.BOT_ENGINE = 'legacy';
+  assert.equal(engineFor('18095550999'), 'legacy');
   process.env.BOT_ENGINE = 'agent';
   assert.equal(engineFor('18095550999'), 'agent');
-  assert.equal(engineFor('18095550999@s.whatsapp.net'), 'agent');
 });
 
 // ---------- processBatch ----------
