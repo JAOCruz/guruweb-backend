@@ -1,6 +1,6 @@
 const pool = require('../../db/pool');
 const Case = require('../../models/Case');
-const Notification = require('../../models/Notification');
+const { assigneeOrAdmins, notifyUsers } = require('./notify');
 const { generateCaseNumber } = require('../../conversation/flows/intake');
 
 async function crear_solicitud(args, ctx) {
@@ -22,27 +22,12 @@ async function crear_solicitud(args, ctx) {
     source: 'whatsapp',
   });
 
-  let asignado = null;
-  let recipients = [];
-  if (client.assigned_to) {
-    const u = await pool.query('SELECT id, name FROM users WHERE id = $1', [client.assigned_to]);
-    if (u.rows[0]) { asignado = u.rows[0].name || null; recipients = [u.rows[0].id]; }
-  }
-  if (!recipients.length) {
-    const a = await pool.query(`SELECT id FROM users WHERE role = 'admin' AND is_active IS NOT FALSE`);
-    recipients = a.rows.map((r) => r.id);
-  }
-  for (const userId of recipients) {
-    try {
-      await Notification.create({
-        userId, type: 'case', title: 'Nueva solicitud por WhatsApp',
-        message: `${servicio} — ${clientName} (${caso.case_number})`,
-        link: '/cases', metadata: { case_id: caso.id, case_number: caso.case_number },
-      });
-    } catch (err) {
-      console.error('[Agent] notificación falló:', err.message);
-    }
-  }
+  const { asignado, recipients } = await assigneeOrAdmins(client.assigned_to);
+  await notifyUsers(recipients, {
+    type: 'case', title: 'Nueva solicitud por WhatsApp',
+    message: `${servicio} — ${clientName} (${caso.case_number})`,
+    link: '/cases', metadata: { case_id: caso.id, case_number: caso.case_number },
+  });
   return { caso: caso.case_number, estado: caso.status || 'new', asignado_a: asignado };
 }
 
