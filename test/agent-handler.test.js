@@ -179,6 +179,19 @@ test('chat en manual después de un traspaso: "urgente" fuera de horario avisa a
   assert.deepEqual(sent, []);
 });
 
+test('un "urgente" viejo (ráfaga tras reconectar) no avisa', async () => {
+  await closeBusiness();
+  const client = (await pool.query('SELECT * FROM clients WHERE phone=$1', [AGENT])).rows[0];
+  const botUserId = (await pool.query(`SELECT id FROM users WHERE username='bot'`)).rows[0].id;
+  await pasar_a_humano({ motivo: 'x' }, { phone: AGENT, client, botUserId, now: new Date(), lastText: 'hola' });
+  const before = (await notifs('handoff')).length;
+  const stale = batch(AGENT, 'urgente', false).map((b) => ({ ...b, isStale: true }));
+  await handler.processBatch(AGENT, stale, sock);
+  assert.equal((await notifs('handoff')).length, before);
+  await handler.processBatch(AGENT, [...stale, ...batch(AGENT, 'urgente', false)], sock); // uno fresco en el lote: sí
+  assert.equal((await notifs('handoff')).length, before + 1);
+});
+
 test('un chat en manual sin traspaso del bot no avisa, y un fallo del aviso no rompe el lote', async () => {
   await closeBusiness();
   handler.setManualMode(LEGACY, true);
@@ -200,6 +213,44 @@ test('sin cuota el agente difiere el lote y el reintento responde con el agente'
   assert.deepEqual(sent, [{ to: jid(AGENT), text: 'Ya con cuota' }]);
   assert.equal((await outbound(AGENT))[0].content, 'Ya con cuota');
   assert.equal(calls, 2);
+});
+
+test('un lote encolado mientras el turno anterior pasó el chat a una persona no corre el modelo ni manda nada', async () => {
+  const p = createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'pasar_a_humano', args: { motivo: 'reclamación' } }] },
+    { text: 'Entiendo, le paso con una persona.' },
+    { text: 'Esto no debía salir' }]);
+  setFakeProvider(p);
+  // Los dos lotes se calcularon con willRespond=true (el chat aún era del bot); el segundo espera su turno.
+  const a = handler.processBatch(AGENT, batch(AGENT, 'tengo una queja'), sock);
+  const b = handler.processBatch(AGENT, batch(AGENT, 'y otra cosa'), sock);
+  await Promise.all([a, b]);
+  assert.equal(handler.isManualMode(AGENT), true);
+  assert.equal(sent.length, 1); // el mensaje de espera del traspaso sí se manda
+  assert.match(sent[0].text, /Entiendo, le paso con una persona\./);
+  assert.match(sent[0].text, /Un miembro de nuestro equipo/);
+  assert.equal(p.calls.length, 2);
+  assert.equal((await outbound(AGENT)).length, 1);
+});
+
+test('si un empleado toma el chat mientras el agente responde, la respuesta no se manda', async () => {
+  setFakeProvider(createFakeProvider([() => { handler.setManualMode(AGENT, true); return { text: 'Tarde' }; }]));
+  await handler.processBatch(AGENT, batch(AGENT, 'hola'), sock);
+  assert.deepEqual(sent, []);
+  assert.deepEqual(await outbound(AGENT), []);
+});
+
+test('la respuesta guardada lleva el cliente aunque se haya registrado durante el turno', async () => {
+  const NEW = '18095550399';
+  process.env.BOT_AGENT_PHONES = `${AGENT},${NEW}`;
+  setFakeProvider(createFakeProvider([async () => {
+    await pool.query(`INSERT INTO clients (phone, name) VALUES ($1, 'Nuevo Cliente')`, [NEW]);
+    return { text: 'Registrado' };
+  }]));
+  await handler.processBatch(NEW, batch(NEW, 'quiero registrarme'), sock);
+  const out = (await pool.query(`SELECT client_id FROM messages WHERE phone=$1 AND direction='outbound'`, [NEW])).rows;
+  const clientId = (await pool.query('SELECT id FROM clients WHERE phone=$1', [NEW])).rows[0].id;
+  assert.deepEqual(out, [{ client_id: clientId }]);
 });
 
 // ---------- estado del traspaso al devolver el chat al bot ----------

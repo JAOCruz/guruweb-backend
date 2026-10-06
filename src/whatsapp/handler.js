@@ -51,12 +51,25 @@ function _setAIRetryDelayMs(ms) {
 
 // Envía la respuesta del agente y la guarda; devuelve el id del mensaje guardado para ligar las
 // herramientas del turno (respond lo hace dentro del candado del teléfono).
-function agentDeliver(sock, remoteJid, phone, client) {
-  return async (text) => {
+// Si el chat dejó de ser del bot mientras el turno corría (un empleado lo tomó, pausa, cambio de modo) no se
+// manda nada; salvo que fue este mismo turno el que lo pasó a una persona: su mensaje de espera sí va.
+function agentDeliver(sock, remoteJid, phone) {
+  return async (text, { handoff = false } = {}) => {
+    if (!handoff && !shouldBotRespond(phone)) {
+      console.log(`[WA] Agent reply dropped — bot no longer responding to ${phone}`);
+      return null;
+    }
     await sock.sendMessage(remoteJid, { text });
+    // Se busca el cliente de nuevo: una herramienta pudo registrarlo durante el turno.
+    const client = await Client.findByPhone(phone);
     const row = await Message.create({ phone, clientId: client?.id || null, direction: 'outbound', content: text });
     return row?.id || null;
   };
+}
+
+// Opciones comunes de respond para un chat del agente.
+function agentOpts(phone, media, sock, remoteJid) {
+  return { media: media || [], shouldRun: () => shouldBotRespond(phone), deliver: agentDeliver(sock, remoteJid, phone) };
 }
 
 // `media`: los medios del lote (solo el agente los usa; el motor viejo recibe `savedMedia`).
@@ -86,7 +99,7 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
       const syntheticMsg = { key: { remoteJid: entry.remoteJid } };
       const agent = engineFor(phone) === 'agent';
       const response = agent
-        ? await agentRespond(phone, entry.text, { media: entry.media || [], deliver: agentDeliver(entry.sock, entry.remoteJid, phone, entry.client) })
+        ? await agentRespond(phone, entry.text, agentOpts(phone, entry.media, entry.sock, entry.remoteJid))
         : await routeMessage(phone, entry.text, syntheticMsg, entry.savedMedia);
       if (response && response !== AI_DEFERRED) {
         // El agente ya entregó (deliver); el motor viejo se envía aquí.
@@ -97,7 +110,7 @@ function scheduleAIRetry(phone, text, savedMedia, remoteJid, sock, client, media
         // Exhausted retries — graceful message instead of the robotic fallback
         await sendResponse(entry.sock, entry.remoteJid,
           '🦉 Estamos procesando varias solicitudes en este momento. Un miembro de nuestro equipo le atenderá en breve, gracias por su paciencia.',
-          syntheticMsg, phone, entry.client);
+          syntheticMsg, phone, entry.client ?? await Client.findByPhone(phone));
       }
     } catch (err) {
       console.error('[WA] AI retry error:', err.message);
@@ -394,8 +407,10 @@ async function processBatch(phone, batch, sock) {
   }
 
   // Chat pasado a una persona por el agente: un "urgente" fuera de horario avisa al admin (una sola vez).
-  // El bot no responde (está en manual); el aviso nunca frena el lote.
-  if (combinedText && isManualMode(phone)) {
+  // Solo lotes frescos (no la ráfaga de mensajes viejos tras una reconexión). El bot no responde (está en
+  // manual); el aviso nunca frena el lote.
+  const fresh = batch.some((b) => b.isStale !== true);
+  if (fresh && combinedText && isManualMode(phone)) {
     try {
       await notifyUrgentAfterHandoff(phone, combinedText);
     } catch (err) {
@@ -411,10 +426,11 @@ async function processBatch(phone, batch, sock) {
 
   // Chats del agente: él decide cuándo pasar a una persona (sin la detección de reclamaciones por HTTP).
   // respond envía y guarda la respuesta vía deliver y liga las herramientas del turno al mensaje guardado.
+  // Dentro del candado del teléfono respond vuelve a preguntar (shouldRun) si el chat sigue siendo del bot:
+  // un lote encolado mientras el turno anterior lo pasó a una persona no corre el modelo ni manda nada.
   if (engineFor(phone) === 'agent') {
-    const client = await Client.findByPhone(phone);
-    const response = await agentRespond(phone, combinedText, { media: allMedia, deliver: agentDeliver(sock, remoteJid, phone, client) });
-    if (response === AI_DEFERRED) scheduleAIRetry(phone, combinedText, null, remoteJid, sock, client, allMedia);
+    const response = await agentRespond(phone, combinedText, agentOpts(phone, allMedia, sock, remoteJid));
+    if (response === AI_DEFERRED) scheduleAIRetry(phone, combinedText, null, remoteJid, sock, null, allMedia);
     return;
   }
 
@@ -684,7 +700,7 @@ async function processMessage(msg, sock, isHistory) {
 
     // Only buffer for processing if it's an inbound message that should get a bot response
     if (!isFromMe && !isHistory) {
-      bufferMessage(phone, { msg, text, savedMedia, willRespond }, sock);
+      bufferMessage(phone, { msg, text, savedMedia, willRespond, isStale }, sock);
     }
 
   } catch (err) {

@@ -321,7 +321,7 @@ async function processSingleMessage(message, value) {
       cloudApi.markAsRead(message.id).catch((err) => console.warn('[WA Cloud] markAsRead failed:', err.message));
     }
     // Same as Baileys: grouped for 3s, media analyzed, then answered only if willRespond
-    bufferMessage(phone, { msg: normalized, text: finalText, savedMedia, willRespond }, cloudSock(phone));
+    bufferMessage(phone, { msg: normalized, text: finalText, savedMedia, willRespond, isStale }, cloudSock(phone));
   } finally {
     processingIds.delete(message.id);
   }

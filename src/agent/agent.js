@@ -170,7 +170,7 @@ async function isRepeating(phone, text, now) {
 async function handoff(ctx, motivo) {
   try {
     const r = await runTool('pasar_a_humano', { motivo }, ctx);
-    if (r && r.mensaje) return r.mensaje;
+    if (r && r.mensaje) { ctx.handedOff = true; return r.mensaje; }
   } catch (err) {
     console.error(`[Agent] ${ctx.phone} traspaso falló:`, err.code || err.name || 'error');
   }
@@ -224,16 +224,17 @@ async function attempt({ provider, system, ctx, turn, stats }) {
   }
 }
 
-// Un turno: devuelve { reply, toolLogIds }. reply es '' (nada que mandar), AI_DEFERRED o el texto.
+// Un turno: devuelve { reply, toolLogIds, handoff }. reply es '' (nada que mandar), AI_DEFERRED o el texto;
+// handoff es true si este turno pasó el chat a una persona (su mensaje de espera debe mandarse igual).
 async function respondNow(phone, text, { media = [], provider, now = new Date() } = {}) {
   const t0 = Date.now();
   const stats = { calls: 0, tools: 0 };
-  const ctx = { phone, client: null, botUserId: null, now, lastText: String(text || ''), toolLogIds: [] };
+  const ctx = { phone, client: null, botUserId: null, now, lastText: String(text || ''), toolLogIds: [], handedOff: false };
   // Estado del turno, fuera del try: si algo falla después de un traspaso, se reutiliza su mensaje.
   const turn = { messages: [], toolCount: 0, allowed: new Set(), totals: [], handoffMessage: null, wrote: false };
   const done = (reply, note) => {
     console.log(`[Agent] ${phone} ${note} calls=${stats.calls} tools=${stats.tools} ${Date.now() - t0}ms`);
-    return { reply, toolLogIds: ctx.toolLogIds };
+    return { reply, toolLogIds: ctx.toolLogIds, handoff: !!turn.handoffMessage || ctx.handedOff };
   };
   try {
     provider = provider || getProvider();
@@ -288,22 +289,31 @@ async function respondNow(phone, text, { media = [], provider, now = new Date() 
  * @param {Array}  [opts.media] medios del lote: { id, media_type, analysis?, transcription? }
  * @param {object} [opts.provider] adaptador del modelo (por defecto getProvider())
  * @param {Date}   [opts.now]
- * @param {(text: string) => Promise<number|null>} [opts.deliver] envía y guarda la respuesta; devuelve el id del
- *   mensaje guardado (o null). Corre dentro del candado del teléfono y las herramientas del turno se ligan a ese id.
- *   Tiene un tope de opts.deliverTimeoutMs (20 s por defecto): pasado ese tiempo el ciclo sigue sin ligar nada.
+ * @param {() => boolean} [opts.shouldRun] se consulta dentro del candado, justo antes del turno: si devuelve false
+ *   (el chat ya no es del bot: lo pasó a una persona un turno anterior, lo tomó un empleado, pausa), el turno se
+ *   omite sin llamar al modelo y se devuelve ''.
+ * @param {(text: string, info: { handoff: boolean }) => Promise<number|null>} [opts.deliver] envía y guarda la
+ *   respuesta; devuelve el id del mensaje guardado (o null). Corre dentro del candado del teléfono y las herramientas
+ *   del turno se ligan a ese id. info.handoff es true cuando este mismo turno pasó el chat a una persona (el chat ya
+ *   está en manual, pero su mensaje de espera debe mandarse). Tiene un tope de opts.deliverTimeoutMs (20 s por
+ *   defecto): pasado ese tiempo el ciclo sigue sin ligar nada.
  * @param {number} [opts.deliverTimeoutMs]
- * @returns {Promise<string>} el texto enviado/por enviar; '' significa "nada que mandar" (lote vacío);
- *   AI_DEFERRED significa "sin cuota, reintente después". deliver no se llama en esos dos casos.
+ * @returns {Promise<string>} el texto enviado/por enviar; '' significa "nada que mandar" (lote vacío o turno
+ *   omitido); AI_DEFERRED significa "sin cuota, reintente después". deliver no se llama en esos dos casos.
  *
  * Los ciclos de un mismo teléfono (turno + entrega) van en serie: el siguiente arranca cuando el anterior entregó.
  */
 function respond(phone, text, opts = {}) {
   const prev = queues.get(phone) || Promise.resolve();
   const run = prev.catch(() => {}).then(async () => {
-    const { reply, toolLogIds } = await respondNow(phone, text, opts);
+    if (typeof opts.shouldRun === 'function' && !opts.shouldRun()) {
+      console.log(`[Agent] ${phone} turno omitido: el bot ya no responde este chat`);
+      return '';
+    }
+    const { reply, toolLogIds, handoff } = await respondNow(phone, text, opts);
     if (typeof opts.deliver === 'function' && reply && reply !== AI_DEFERRED) {
       try {
-        const messageId = await withTimeout(Promise.resolve(opts.deliver(reply)), opts.deliverTimeoutMs || DELIVER_TIMEOUT_MS);
+        const messageId = await withTimeout(Promise.resolve(opts.deliver(reply, { handoff })), opts.deliverTimeoutMs || DELIVER_TIMEOUT_MS);
         await attachToolLogs(messageId, toolLogIds);
       } catch (err) {
         console.error(`[Agent] ${phone} entrega falló:`, err.code || err.name || 'error');

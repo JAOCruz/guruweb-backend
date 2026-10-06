@@ -474,3 +474,29 @@ test('priceGuard no toca cédulas, fechas, horas, teléfonos, porcentajes ni can
     'Son 3 originales, 2 páginas, un 30% y 500 mil de valor; cuesta 1,200 dólares. Caso #1500.';
   assert.deepEqual(priceGuard(text, new Set()), { text, blocked: [] });
 });
+
+test('shouldRun se consulta dentro del candado: si el chat ya no es del bot, el turno se omite sin modelo ni entrega', async () => {
+  const p = createFakeProvider([{ text: 'No debía salir' }]);
+  const delivered = [];
+  const deliver = async (t) => { delivered.push(t); return null; };
+  let allowed = false;
+  const out = await respond(PHONE, 'hola', { provider: p, deliver, shouldRun: () => allowed });
+  assert.equal(out, '');
+  assert.equal(p.calls.length, 0);
+  assert.deepEqual(delivered, []);
+  allowed = true;
+  assert.equal(await respond(PHONE, 'hola', { provider: p, deliver, shouldRun: () => allowed }), 'No debía salir');
+  assert.deepEqual(delivered, ['No debía salir']);
+});
+
+test('deliver recibe handoff=true solo cuando ese turno pasó el chat a una persona', async () => {
+  const infos = [];
+  const deliver = async (_t, info) => { infos.push(info); return null; };
+  await respond(PHONE, 'hola', { provider: createFakeProvider([{ text: 'Buenas' }]), deliver });
+  await respond(PHONE, 'tengo una queja', { provider: createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'pasar_a_humano', args: { motivo: 'reclamación' } }] }, { text: 'Entiendo.' }]), deliver });
+  handler.setManualMode(PHONE, false);
+  // Traspaso sin modelo (falla del modelo dos veces) también lo marca.
+  await respond(PHONE, 'otra cosa', { provider: failing(null), deliver });
+  assert.deepEqual(infos.map((i) => i.handoff), [false, true, true]);
+});
