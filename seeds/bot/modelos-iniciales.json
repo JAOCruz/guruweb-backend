@@ -9,7 +9,7 @@
   { "modelo": "PODER DE AUTORIZACIÓN PARA VIAJE DE MENOR", "servicio": "Poder - Viaje de Menor" },
   { "modelo": "PODER DE REPRESENTACION DE GUARDA Y CUSTODIA A MENOR DE EDAD", "servicio": "Poder - Guarda y Tutela de Menor" },
   { "modelo": "PODER CUOTA LITIS", "servicio": "Poder Cuota Litis" },
-  { "modelo": "PODER DE AUTORIZACION PARA EXPEDIR CERTIFICACION DE NO ANTECEDENTES PENALES", "servicio": "Poder - Retirar Certificaciones" },
+  { "modelo": "PODER DE AUTORIZACION PARA EXPEDIR CERTIFICACION DE NO ANTECEDENTES PENALES", "servicio": null },
   { "modelo": "DECLARACION DE SOLTERIA", "servicio": "Declaración Jurada - Soltería" },
   { "modelo": "DECLARACION DE UNION LIBRE", "servicio": "Declaración Jurada - Unión Libre" },
   { "modelo": "DECLARACION JURADA DE BIENES E INGRESOS", "servicio": "Declaración Jurada - Bienes e Ingresos" },

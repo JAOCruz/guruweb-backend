@@ -65,7 +65,25 @@ test('the seed has 20 distinct models and every service exists in the catalog sn
     assert.ok(!servicios.has(e.servicio), `servicio repetido: ${e.servicio}`);
     servicios.add(e.servicio);
   }
-  assert.ok(servicios.size >= 15);
+  assert.equal(servicios.size, 17);
+});
+
+test('without --dry-run the script refuses to run where the Railway volume does not exist, before any write', async () => {
+  const saved = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  process.env.RAILWAY_VOLUME_MOUNT_PATH = path.join(os.tmpdir(), `no-volume-${Date.now()}`);
+  const called = [];
+  try {
+    await assert.rejects(run({ dryRun: false, tagger: async (id) => { called.push(id); }, log: quiet }), /railway ssh.*no existe el volumen/);
+    assert.deepEqual(called, []);
+    assert.deepEqual(await links(), []);
+    assert.equal(await versions(), 1);
+    // --dry-run still works without the volume
+    const r = await run({ dryRun: true, tagger: async (id) => { called.push(id); }, log: quiet });
+    assert.equal(r.models.length, 20);
+    assert.deepEqual(called, []);
+  } finally {
+    process.env.RAILWAY_VOLUME_MOUNT_PATH = saved;
+  }
 });
 
 test('--dry-run resolves everything and writes nothing', async () => {

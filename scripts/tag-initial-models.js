@@ -10,12 +10,15 @@
 //   railway run node -r dotenv/config scripts/tag-initial-models.js --dry-run
 //   railway run node -r dotenv/config scripts/tag-initial-models.js [--user=<username>]
 //
-// --dry-run: hace todo de solo lectura e imprime lo que haría.
+// --dry-run: hace todo de solo lectura e imprime lo que haría (funciona sin el volumen).
+// Sin --dry-run exige que exista el volumen de Railway (RAILWAY_VOLUME_MOUNT_PATH): las versiones etiquetadas se
+// guardan ahí, así que el etiquetado real se corre dentro del contenedor (railway ssh), no con `railway run`.
 // --user: usuario que figura como autor de las versiones (por defecto ninguno: "—" en Etiquetas).
 const fs = require('fs');
 const path = require('path');
 const pool = require('../src/db/pool');
 const Tags = require('../src/documentos/templateTags');
+const { getStorageRoot } = require('../src/utils/storage');
 const { tagModel, tagModels, originalFile } = require('../src/routes/documentosTags');
 
 const DEFAULT_FILE = path.join(__dirname, '..', 'seeds', 'bot', 'modelos-iniciales.json');
@@ -65,6 +68,15 @@ async function resolveUser(username) {
   return rows[0].id;
 }
 
+// The tagged versions are saved on the Railway volume (same root as src/utils/storage.js). `railway run`
+// executes on this machine, where that path does not exist: the real run must happen inside the container.
+function assertVolume() {
+  const root = getStorageRoot();
+  let ok = false;
+  try { ok = fs.statSync(root).isDirectory(); } catch { ok = false; }
+  if (!ok) throw new Error(`Corre el etiquetado dentro del contenedor de Railway (railway ssh): aquí no existe el volumen ${root}`);
+}
+
 async function linkServices(links) {
   const client = await pool.connect();
   try {
@@ -112,6 +124,7 @@ async function run({ dryRun = false, file = DEFAULT_FILE, tagger = tagModel, use
     return result;
   }
 
+  assertVolume(); // before any write
   await linkServices(links);
   log(`Ligados ${links.length} servicios.`);
   const nameOf = new Map(toTag.map((m) => [m.id, m.name]));
