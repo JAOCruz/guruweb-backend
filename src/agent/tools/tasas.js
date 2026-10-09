@@ -9,10 +9,18 @@ const SEARCH_TIMEOUT_MS = 15000;
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
+// Primer objeto JSON con clave "monto": prueba cada '{' contra cada '}' posterior (tolera prosa con llaves y '}' dentro de textos).
 function parseRespuesta(text) {
-  const m = String(text || '').match(/\{[\s\S]*?\}/);
-  if (!m) return null;
-  try { return JSON.parse(m[0]); } catch { return null; }
+  const s = String(text || '');
+  for (let i = s.indexOf('{'); i !== -1; i = s.indexOf('{', i + 1)) {
+    for (let j = s.indexOf('}', i); j !== -1; j = s.indexOf('}', j + 1)) {
+      try {
+        const o = JSON.parse(s.slice(i, j + 1));
+        if (o && typeof o === 'object' && !Array.isArray(o) && 'monto' in o) return o;
+      } catch { /* sigue probando */ }
+    }
+  }
+  return null;
 }
 
 async function estimar_tasa(args, ctx = {}) {
@@ -38,7 +46,8 @@ async function estimar_tasa(args, ctx = {}) {
       'Responda SOLO con JSON: {"monto": número en RD$ o null si no lo encuentra, "fuente": "url", "nota": "aclaración corta"}.';
     const res = await provider.search({ prompt, timeoutMs: SEARCH_TIMEOUT_MS });
     const data = parseRespuesta(res && res.text);
-    const monto = data ? Number(data.monto) : NaN;
+    const bruto = data ? data.monto : null;
+    const monto = typeof bruto === 'string' ? Number(bruto.replace(/[^0-9.]/g, '')) : Number(bruto);
     if (!Number.isFinite(monto) || monto <= 0) return porConfirmar;
 
     const fuente = (typeof data.fuente === 'string' && data.fuente.trim()) || (res.sources && res.sources[0]) || null;

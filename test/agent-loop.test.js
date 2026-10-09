@@ -526,3 +526,18 @@ test('respond con cutoff: un inbound guardado después del corte no entra al con
   assert.equal(await respond(PHONE, 'hola', { provider: p, cutoff: id }), 'ok');
   assert.deepEqual(p.calls[0].messages, [{ role: 'user', text: 'hola' }]);
 });
+
+test('estimar_tasa usa el proveedor del turno para buscar (sin proveedor real)', async () => {
+  await pool.query(`DROP TABLE IF EXISTS tasas_cache`);
+  await pool.query(`CREATE TABLE tasas_cache (id SERIAL PRIMARY KEY, concepto_key TEXT UNIQUE NOT NULL, concepto TEXT, monto NUMERIC, fuente TEXT, nota TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`);
+  const searches = [];
+  const p = createFakeProvider([
+    { toolCalls: [{ id: '1', name: 'estimar_tasa', args: { concepto: 'marbete' } }] },
+    { text: 'El marbete ronda RD$1,500 aproximado, lo confirma la institución.' }],
+  { search: async (r) => { searches.push(r); return { text: '{"monto":1500}', sources: ['https://dgii.gov.do'] }; } });
+  await respond(PHONE, 'cuanto es el marbete', { provider: p });
+  assert.equal(searches.length, 1);
+  const l = await logs();
+  assert.equal(l[0].herramienta, 'estimar_tasa');
+  assert.equal(JSON.parse(JSON.stringify(l[0].resultado)).monto_aproximado, 1500);
+});

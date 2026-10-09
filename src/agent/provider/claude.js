@@ -50,7 +50,8 @@ async function search({ prompt, timeoutMs = 15000 }) {
   try {
     const res = await withTimeout(client.messages.create({
       model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-5-5',
-      max_tokens: 1024,
+      max_tokens: 4000, // el pensamiento y el filtrado dinámico también gastan tokens
+      output_config: { effort: 'low' },
       tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
       messages: [{ role: 'user', content: prompt }],
     }, { timeout: timeoutMs, maxRetries: 0 }), timeoutMs);
@@ -62,7 +63,9 @@ async function search({ prompt, timeoutMs = 15000 }) {
         for (const r of b.content) if (r && r.url) sources.push(r.url);
       }
     }
-    return { text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join(''), sources };
+    const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    if (!/\{/.test(text)) console.error('[Agent] búsqueda sin JSON, stop_reason:', res.stop_reason || 'desconocido');
+    return { text, sources };
   } catch (err) {
     if (err.code === 'TIMEOUT') throw err;
     if (isQuotaError(err)) { const e = new Error('Cuota agotada'); e.code = 'QUOTA'; throw e; }

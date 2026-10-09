@@ -65,3 +65,16 @@ test('estimar_tasa está registrada en TOOLS', () => {
   assert.ok(t);
   assert.deepEqual(t.parameters.required, ['concepto']);
 });
+
+test('monto con formato y JSON rodeado de prosa o llaves', async () => {
+  const casos = [
+    ['{"monto":"RD$1,500"}', 1500],
+    ['El {marbete} cuesta: {"monto":900,"nota":"incluye } y {"}', 900],
+    ['{"otro":1} luego {"monto":"2,250.50","fuente":"https://x.do"}', 2250.5],
+  ];
+  let i = 0;
+  for (const [text, esperado] of casos) {
+    const r = await estimar_tasa({ concepto: `c${i++}` }, { provider: mk(() => ({ text, sources: [] })).p });
+    assert.equal(r.monto_aproximado, esperado, text);
+  }
+});

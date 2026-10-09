@@ -253,6 +253,7 @@ async function respondNow(phone, text, { media = [], provider, now = new Date(),
   };
   try {
     provider = provider || getProvider();
+    ctx.provider = provider; // las herramientas con búsqueda web (estimar_tasa) usan el mismo proveedor del turno
     ctx.client = await Client.findByPhone(phone);
     ctx.botUserId = await getBotUserId();
     const current = turnText(text, media);
