@@ -55,3 +55,48 @@ test('sin notarización, un servicio por tramos da solo la digitación aunque no
   const r = calculatePrice(ACTO, { includeNotarization: false });
   assert.equal(r.total, 250); assert.equal(r.falta, null);
 });
+
+// ---------- precio por foja y duplicados ----------
+
+test('por foja: legal simple de 2 fojas estimadas = 500 + notarización', () => {
+  const r = calculatePrice({ foja_tipo: 'legal_simple', fojas: 2, notarizacion_price: '500' });
+  assert.equal(r.total, 1000); assert.equal(r.fojas, 2);
+  assert.equal(r.tarifaPorFoja, 250); assert.equal(r.fojasEstimadas, true);
+});
+test('por foja: las fojas pasadas mandan y ya no son estimadas', () => {
+  const r = calculatePrice({ foja_tipo: 'legal_simple', fojas: 2, notarizacion_price: '500' }, { fojas: 3 });
+  assert.equal(r.breakdown.digitacion, 750); assert.equal(r.fojas, 3);
+  assert.equal(r.fojasEstimadas, false);
+});
+test('por foja ignora digitacion_price y multiplica por cantidad', () => {
+  const r = calculatePrice({ foja_tipo: 'carta_simple', digitacion_price: '999', fojas: 1 }, { quantity: 2 });
+  assert.equal(r.total, 300);
+});
+test('por foja con tramos: acto de venta de 2 fojas en 500K = 500 + 700', () => {
+  const r = calculatePrice({ ...ACTO, foja_tipo: 'legal_simple', fojas: 2 }, { assetValue: 500000 });
+  assert.equal(r.total, 1200);
+});
+test('por foja con tramos y sin valor del bien pide el valor', () => {
+  const r = calculatePrice({ ...ACTO, foja_tipo: 'legal_simple', fojas: 2 });
+  assert.equal(r.total, null); assert.equal(r.falta, 'valor_del_bien');
+});
+test('por foja por confirmar no da monto', () => {
+  assert.equal(calculatePrice({ foja_tipo: 'legal_simple', fojas: 2, por_confirmar: true }).total, null);
+});
+test('fojas inválidas (0, -1, 1.5, "x") cuentan como no dadas', () => {
+  for (const bad of [0, -1, 1.5, 'x']) {
+    const a = calculatePrice({ foja_tipo: 'legal_simple', fojas: 2 }, { fojas: bad });
+    assert.equal(a.fojas, 2); assert.equal(a.breakdown.digitacion, 500);
+    const b = calculatePrice({ foja_tipo: 'legal_simple' }, { fojas: bad });
+    assert.equal(b.fojas, 1); assert.equal(b.breakdown.digitacion, 250);
+  }
+});
+test('duplicados: 1–2 fojas a 500, 3+ a 700, suma al total y al desglose', () => {
+  const s2 = calculatePrice({ foja_tipo: 'legal_simple', fojas: 2 }, { duplicados: 2 });
+  assert.equal(s2.breakdown.duplicados, 1000); assert.equal(s2.total, 500 + 1000);
+  const s3 = calculatePrice({ foja_tipo: 'legal_simple', fojas: 2 }, { fojas: 3, duplicados: 1 });
+  assert.equal(s3.breakdown.duplicados, 700); assert.equal(s3.total, 750 + 700);
+  const fijo = calculatePrice({ digitacion_price: '250' }, { fojas: 3, duplicados: 1 });
+  assert.equal(fijo.breakdown.duplicados, 700); assert.equal(fijo.total, 950);
+  assert.deepEqual(calculatePrice({ digitacion_price: '250' }).breakdown, { digitacion: 250, notarizacion: 0 });
+});
