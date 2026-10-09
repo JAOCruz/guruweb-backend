@@ -191,3 +191,12 @@ test('buscar_servicio trae por_foja (o null si no va por foja)', async () => {
   const o = await buscar_servicio({ consulta: 'copia certificada' });
   assert.equal(o.resultados[0].por_foja, null);
 });
+
+test('calcular_precio: cantidad son documentos aparte; las fojas de un servicio por foja van en fojas', () => {
+  const { TOOLS } = require('../src/agent/tools');
+  const p = TOOLS.find((t) => t.name === 'calcular_precio').parameters.properties;
+  assert.doesNotMatch(p.cantidad.description, /documentos, páginas/);
+  assert.match(p.cantidad.description, /documentos/);
+  assert.match(p.cantidad.description, /fojas/);
+  assert.match(p.cantidad.description, /no en cantidad|no van en cantidad|nunca en cantidad/i);
+});

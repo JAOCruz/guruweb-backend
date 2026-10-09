@@ -1,4 +1,5 @@
 // Aplica seeds/bot/fojas.json: actualiza foja_tipo y fojas por nombre exacto, en una transacción.
+// La unidad pasa a 'por documento': las fojas ya van en el precio (antes, p. ej., las instancias iban 'por hoja').
 // Uso: node -r dotenv/config scripts/fojas/apply.js [--dry-run] [--file seeds/bot/fojas.json]
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +14,7 @@ async function applyFojas({ file, dryRun = false }) {
     await client.query('BEGIN');
     for (const it of items) {
       const r = await client.query(
-        'UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3',
+        "UPDATE service_catalog SET foja_tipo = $1, fojas = $2, unit_type = 'por documento' WHERE name = $3",
         [it.foja_tipo, it.fojas, it.nombre]);
       if (r.rowCount > 0) aplicados += 1; else saltados.push(it.nombre);
     }

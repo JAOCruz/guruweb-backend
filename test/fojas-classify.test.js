@@ -51,8 +51,8 @@ test('templatePages y fojasFor', () => {
 
 test('applyFojas: aplica 2 de 3 y dryRun no cambia nada', async () => {
   await pool.query('DROP TABLE IF EXISTS service_catalog CASCADE');
-  await pool.query('CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, foja_tipo TEXT, fojas INT)');
-  await pool.query(`INSERT INTO service_catalog (name) VALUES ('A'), ('B')`);
+  await pool.query('CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, foja_tipo TEXT, fojas INT, unit_type TEXT)');
+  await pool.query(`INSERT INTO service_catalog (name, unit_type) VALUES ('A', 'por hoja'), ('B', 'por documento'), ('C', 'por hoja')`);
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fj-')), 'f.json');
   fs.writeFileSync(file, JSON.stringify([
     { nombre: 'A', foja_tipo: 'legal_simple', fojas: 2 },
@@ -65,6 +65,9 @@ test('applyFojas: aplica 2 de 3 y dryRun no cambia nada', async () => {
   const r = await applyFojas({ file });
   assert.equal(r.aplicados, 2);
   assert.equal((await pool.query(`SELECT fojas FROM service_catalog WHERE name='A'`)).rows[0].fojas, 2);
+  // Por foja, la unidad es el documento (las fojas van aparte): 'por hoja' pasa a 'por documento'.
+  assert.equal((await pool.query(`SELECT unit_type FROM service_catalog WHERE name='A'`)).rows[0].unit_type, 'por documento');
+  assert.equal((await pool.query(`SELECT unit_type FROM service_catalog WHERE name='C'`)).rows[0].unit_type, 'por hoja');
   await pool.query('DROP TABLE service_catalog CASCADE');
 });
 

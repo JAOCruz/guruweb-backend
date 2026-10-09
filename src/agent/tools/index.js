@@ -48,7 +48,9 @@ const TOOLS = [
       properties: {
         servicio_id: { type: 'integer', description: 'Id del servicio, tomado de buscar_servicio.' },
         valor_del_bien: { type: 'number', description: 'Valor del vehículo, inmueble u otro bien, cuando el precio depende de él.' },
-        cantidad: { type: 'integer', description: 'Cuántas unidades (documentos, páginas, originales). Por defecto 1.' },
+        cantidad: { type: 'integer', description: 'Cuántos documentos o unidades separados pide (p. ej. 3 cartas distintas, 10 copias). ' +
+          'Por defecto 1. En un servicio por foja, las páginas del documento van en fojas, no en cantidad; los originales ' +
+          'adicionales van en duplicados.' },
         con_notarizacion: { type: 'boolean', description: 'false si el cliente quiere solo la redacción, sin notarizar. Por defecto true.' },
         fojas: { type: 'integer', description: 'Cuántas fojas (caras impresas) tiene el documento, si el servicio va por foja y el cliente lo dijo.' },
         duplicados: { type: 'integer', description: 'Originales adicionales o duplicados que pide el cliente.' },
