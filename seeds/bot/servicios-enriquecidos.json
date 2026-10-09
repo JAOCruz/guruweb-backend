@@ -1956,7 +1956,7 @@
   {
     "nombre": "Fotocopia 11x17\"",
     "incluye": "Organización completa del expediente a imprimir y vigilancia constante de la calidad.",
-    "reglas": "Las impresiones erróneas se cobran si se solicitaron por equivocación. Los archivos deben venir en un formato admisible (PDF, JPEG, PNG, Word). Indique cantidad, tamaño, a color o blanco y negro, y a un lado o a dos.\nA color: RD$100.",
+    "reglas": "Las impresiones erróneas se cobran si se solicitaron por equivocación. Los archivos deben venir en un formato admisible (PDF, JPEG, PNG, Word). Indique cantidad, tamaño, a color o blanco y negro, y a un lado o a dos.\nEs en blanco y negro; a color, cotice el servicio Impresión Color 11x17.",
     "notarizacion": "no_aplica",
     "descripcion": "Fotocopia tamaño 11x17.",
     "alias": [

@@ -42,10 +42,11 @@ UPDATE service_catalog SET digitacion_price = 250, unit_type = 'por juego de has
 WHERE name = 'Foto 2x2';
 
 UPDATE service_catalog SET digitacion_price = 50 WHERE name = 'Fotocopia 11x17"';
+-- Sin montos en las reglas: el guardián de precios solo deja pasar montos que salen de herramientas.
 UPDATE service_catalog
-SET reglas = CASE WHEN coalesce(reglas, '') = '' THEN 'A color: RD$100.' ELSE reglas || E'\nA color: RD$100.' END
+SET reglas = CASE WHEN coalesce(reglas, '') = '' THEN 'Es en blanco y negro; a color, cotice el servicio Impresión Color 11x17.' ELSE reglas || E'\nEs en blanco y negro; a color, cotice el servicio Impresión Color 11x17.' END
 WHERE name = 'Fotocopia 11x17"'
-  AND position('RD$100' in coalesce(reglas, '')) = 0;
+  AND position('a color, cotice' in coalesce(reglas, '')) = 0;
 
 -- 4. Actos de venta: sin tramos por confirmar; Contrato de Venta Bienes usa la tabla A
 UPDATE service_catalog

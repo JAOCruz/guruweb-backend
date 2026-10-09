@@ -179,7 +179,7 @@ test('ningún texto de los seeds reales trae montos: los precios viven solo en l
   const MONTO = /RD\$\s?\d|\d[\d,.]*\s*pesos/i;
   const walk = (v, where) => {
     // Única excepción: la regla de color de Fotocopia 11x17" que fija la migración de Leandro (ronda 1).
-    if (typeof v === 'string') assert.doesNotMatch(v.replace('A color: RD$100.', ''), MONTO, `${where}: "${v.slice(0, 80)}"`);
+    if (typeof v === 'string') assert.doesNotMatch(v, MONTO, `${where}: "${v.slice(0, 80)}"`);
     else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${where}[${i}]`));
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, `${where}.${k}`);
   };

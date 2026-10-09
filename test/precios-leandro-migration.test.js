@@ -76,7 +76,8 @@ test('las correcciones de Leandro quedan aplicadas y la migración es idempotent
   const copia = await row('Fotocopia 11x17"');
   assert.equal(Number(copia.digitacion_price), 50);
   assert.equal(copia.por_confirmar, false);
-  assert.equal(occurrences(copia.reglas, 'RD$100'), 1);
+  assert.equal(occurrences(copia.reglas, 'a color, cotice el servicio Impresión Color 11x17.'), 1);
+  assert.doesNotMatch(copia.reglas, /RD\$/);
   const esc = await row('Escáner de Documento');
   assert.equal(esc.por_confirmar, true);
   assert.equal(Number(esc.digitacion_price), 5);
@@ -179,7 +180,8 @@ test('resembrar los seeds reales después de la migración no devuelve los texto
   await seedBotKnowledge({ dir });
   assert.deepEqual(await reglas(), migradas);
   assert.equal(occurrences(migradas['Certificación Estatus Jurídico Inmueble'], 'No incluye impuestos.'), 1);
-  assert.equal(occurrences(migradas['Fotocopia 11x17"'], 'A color: RD$100.'), 1);
+  assert.equal(occurrences(migradas['Fotocopia 11x17"'], 'Es en blanco y negro; a color, cotice el servicio Impresión Color 11x17.'), 1);
+  assert.doesNotMatch(migradas['Fotocopia 11x17"'], /RD\$/);
   assert.match(migradas['Estatutos Sociales'], /Incluye 1 original; cada original adicional o duplicado se cobra aparte\./);
   assert.match(migradas['Contrato de Alquiler - Vivienda (Sencillo)'], /Incluye 2 originales; cada original adicional o duplicado se cobra aparte\./);
   for (const r of Object.values(migradas)) assert.doesNotMatch(r, /hasta 2 originales|Máximo 2 originales/);
