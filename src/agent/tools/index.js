@@ -23,7 +23,8 @@ const TOOLS = [
       '"declaración de soltería"). Úsela apenas el cliente mencione un documento, certificación o servicio, para saber si lo hacemos, ' +
       'su id, qué incluye, sus reglas, requisitos y si lleva notarización. Devuelve hasta 5 resultados; el precio que trae es solo ' +
       'de referencia: para decirle un monto al cliente use calcular_precio. Si depende_del_valor es true, el precio viene nulo: ' +
-      'pregunte el valor del bien y páselo a calcular_precio.',
+      'pregunte el valor del bien y páselo a calcular_precio. Si trae por_foja, el servicio se cobra por foja (cada cara impresa es una foja): ' +
+      'tarifa por foja y fojas_estimadas son solo referencia.',
     parameters: {
       type: 'object',
       properties: {
@@ -38,7 +39,9 @@ const TOOLS = [
       'que no haya salido de esta herramienta. Si el servicio depende del valor del bien (actos de venta, traspasos), pregunte el valor ' +
       'primero y páselo en valor_del_bien; si devuelve falta: "valor_del_bien", pregúntelo y vuelva a llamar. Si devuelve ' +
       'por_confirmar o total nulo, diga "se lo confirmo" y cree la solicitud; si devuelve rango, dé el rango y diga que el ' +
-      'digitador lo confirma.',
+      'digitador lo confirma. Si el servicio va por foja (devuelve tarifa_por_foja) y el cliente no dijo cuántas fojas, el precio es ' +
+      'estimado (fojas_estimadas: true): dígalo así y pregunte cuántas fojas; con fojas dadas el precio es exacto. Si pide originales ' +
+      'adicionales o duplicados, pase duplicados.',
     parameters: {
       type: 'object',
       properties: {
@@ -46,6 +49,8 @@ const TOOLS = [
         valor_del_bien: { type: 'number', description: 'Valor del vehículo, inmueble u otro bien, cuando el precio depende de él.' },
         cantidad: { type: 'integer', description: 'Cuántas unidades (documentos, páginas, originales). Por defecto 1.' },
         con_notarizacion: { type: 'boolean', description: 'false si el cliente quiere solo la redacción, sin notarizar. Por defecto true.' },
+        fojas: { type: 'integer', description: 'Cuántas fojas (caras impresas) tiene el documento, si el servicio va por foja y el cliente lo dijo.' },
+        duplicados: { type: 'integer', description: 'Originales adicionales o duplicados que pide el cliente.' },
       },
       required: ['servicio_id'],
     },
@@ -137,6 +142,8 @@ const TOOLS = [
               cantidad: { type: 'integer', description: 'Unidades. Por defecto 1.' },
               valor_del_bien: { type: 'number', description: 'Valor del bien, si el precio depende de él.' },
               con_notarizacion: { type: 'boolean', description: 'false si va sin notarizar.' },
+              fojas: { type: 'integer', description: 'Fojas (caras impresas) del documento, si el servicio va por foja.' },
+              duplicados: { type: 'integer', description: 'Originales adicionales o duplicados (línea aparte).' },
             },
             required: ['servicio_id'],
           },

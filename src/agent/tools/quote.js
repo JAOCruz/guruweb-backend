@@ -1,10 +1,11 @@
 const pool = require('../../db/pool');
 const Invoice = require('../../models/Invoice');
 const { calculatePrice } = require('../../models/servicePricing');
+const { duplicadoPrice, validFojas } = require('../../models/fojaRates');
 const { activeAdminIds, notifyUsers } = require('./notify');
 const { ensureClient } = require('./client');
 
-// partidas: [{ servicio_id, cantidad?, valor_del_bien?, con_notarizacion? }]
+// partidas: [{ servicio_id, cantidad?, valor_del_bien?, con_notarizacion?, fojas?, duplicados? }]
 // El bot nunca manda precios: todo se recalcula con el catálogo.
 async function preparar_cotizacion(args, ctx) {
   const partidas = args && args.partidas;
@@ -27,13 +28,16 @@ async function preparar_cotizacion(args, ctx) {
       assetValue: p.valor_del_bien == null ? null : Number(p.valor_del_bien),
       includeNotarization: p.con_notarizacion !== false,
     };
-    const unit = calculatePrice(s, { ...opts, quantity: 1 });
+    const unit = calculatePrice(s, { ...opts, quantity: 1, fojas: p.fojas }); // los duplicados van en su propia línea
     if (unit.falta === 'valor_del_bien') { faltaValor.push(s.name); continue; }
     if (unit.total === null || unit.total <= 0) { sinPrecio.push(s.name); continue; }
     let desc = s.name;
     if (unit.tramo) desc += ` (tramo ${unit.tramo})`;
     else if (opts.assetValue) desc += ` (valor ${opts.assetValue})`;
+    if (unit.tarifaPorFoja !== null && unit.fojas) desc += ` (${unit.fojas} fojas)`;
     items.push({ desc, cantidad, precio: unit.total });
+    const dup = validFojas(p.duplicados);
+    if (dup) items.push({ desc: 'Original adicional o duplicado', cantidad: dup, precio: duplicadoPrice(unit.fojas ?? validFojas(s.fojas) ?? 1) });
   }
   if (sinPrecio.length || faltaValor.length) {
     const out = { error: sinPrecio.length ? 'hay partidas sin precio confirmado' : 'falta el valor del bien' };

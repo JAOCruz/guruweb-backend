@@ -401,6 +401,16 @@ test('collectAmounts junta total, precio, rango, desglose y cantidad por precio;
   assert.deepEqual([...s].sort((a, b) => a - b), [100, 300, 450, 500, 700, 800, 950, 1200]);
 });
 
+test('collectAmounts: tarifa_por_foja y monto_aproximado se permiten; las fojas no; ninguno entra a totals', () => {
+  const s = new Set();
+  const totals = [];
+  collectAmounts({ tarifa_por_foja: 250, fojas: 2 }, s, totals);
+  collectAmounts({ monto_aproximado: 1500 }, s, totals);
+  assert.deepEqual([...s].sort((a, b) => a - b), [250, 1500]);
+  assert.equal(s.has(2), false);
+  assert.deepEqual(totals, []);
+});
+
 test('el valor del bien que el modelo pasó a calcular_precio se puede repetir con RD$', async () => {
   const p = createFakeProvider([
     { toolCalls: [{ id: '1', name: 'calcular_precio', args: { servicio_id: ids.acto, valor_del_bien: 500000 } }] },

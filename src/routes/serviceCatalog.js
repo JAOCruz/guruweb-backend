@@ -1,6 +1,7 @@
 const express = require('express');
 const Service = require('../models/serviceCatalog');
 const { calculatePrice } = require('../models/servicePricing');
+const { FOJA_RATES, validFojas } = require('../models/fojaRates');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -53,10 +54,22 @@ router.get('/search/:name', async (req, res) => {
   }
 });
 
+// foja_tipo: una de las 4 claves o null; fojas: entero positivo o null. Devuelve un mensaje de error o null.
+function fojaError(body) {
+  const { foja_tipo, fojas } = body;
+  if (foja_tipo !== undefined && foja_tipo !== null && !Object.prototype.hasOwnProperty.call(FOJA_RATES, foja_tipo)) {
+    return `foja_tipo debe ser uno de: ${Object.keys(FOJA_RATES).join(', ')} (o null)`;
+  }
+  if (fojas !== undefined && fojas !== null && (typeof fojas === 'string' || validFojas(fojas) === null)) {
+    return 'fojas debe ser un entero positivo (o null)';
+  }
+  return null;
+}
+
 // Calculate total price for a service (digitación + notarización based on asset value)
 router.post('/calculate', async (req, res) => {
   try {
-    const { serviceId, assetValue, quantity = 1, includeNotarization = true } = req.body;
+    const { serviceId, assetValue, quantity = 1, includeNotarization = true, fojas, duplicados } = req.body;
     if (!serviceId) {
       return res.status(400).json({ error: 'serviceId is required' });
     }
@@ -67,7 +80,7 @@ router.post('/calculate', async (req, res) => {
     }
 
     const qty = Number(quantity) || 1;
-    const calc = calculatePrice(service, { assetValue, quantity: qty, includeNotarization });
+    const calc = calculatePrice(service, { assetValue, quantity: qty, includeNotarization, fojas, duplicados });
 
     res.json({
       service: {
@@ -76,6 +89,8 @@ router.post('/calculate', async (req, res) => {
         unit_type: service.unit_type,
         digitacion_price: service.digitacion_price,
         notarizacion_price: service.notarizacion_price,
+        foja_tipo: service.foja_tipo,
+        fojas: service.fojas,
       },
       quantity: qty,
       assetValue: assetValue || null,
@@ -83,6 +98,9 @@ router.post('/calculate', async (req, res) => {
       total: calc.total,
       porConfirmar: calc.porConfirmar,
       rango: calc.rango,
+      fojas: calc.fojas,
+      tarifaPorFoja: calc.tarifaPorFoja,
+      fojasEstimadas: calc.fojasEstimadas,
       falta: calc.falta, // 'valor_del_bien' si el servicio va por tramos y no se mandó assetValue
     });
   } catch (err) {
@@ -94,12 +112,14 @@ router.post('/calculate', async (req, res) => {
 // Create service (admin only)
 router.post('/', requireRole('admin'), async (req, res) => {
   try {
-    const { name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type } = req.body;
+    const { name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, foja_tipo, fojas } = req.body;
     if (!name || digitacion_price === undefined) {
       return res.status(400).json({ error: 'name and digitacion_price are required' });
     }
+    const errFoja = fojaError(req.body);
+    if (errFoja) return res.status(400).json({ error: errFoja });
     const service = await Service.create({
-      name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type
+      name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, foja_tipo, fojas
     });
     res.status(201).json({ service });
   } catch (err) {
@@ -111,7 +131,9 @@ router.post('/', requireRole('admin'), async (req, res) => {
 // Update service (admin only)
 router.put('/:id', requireRole('admin'), async (req, res) => {
   try {
-    const { name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, active } = req.body;
+    const { name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, active, foja_tipo, fojas } = req.body;
+    const errFoja = fojaError(req.body);
+    if (errFoja) return res.status(400).json({ error: errFoja });
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
@@ -121,6 +143,8 @@ router.put('/:id', requireRole('admin'), async (req, res) => {
     if (price_tiers !== undefined) updates.price_tiers = JSON.stringify(price_tiers);
     if (unit_type !== undefined) updates.unit_type = unit_type;
     if (active !== undefined) updates.active = active;
+    if (foja_tipo !== undefined) updates.foja_tipo = foja_tipo;
+    if (fojas !== undefined) updates.fojas = fojas;
 
     const service = await Service.update(req.params.id, updates);
     if (!service) {

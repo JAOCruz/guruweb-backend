@@ -13,6 +13,7 @@ test.beforeEach(async () => {
   await pool.query(`CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, description TEXT, category_id INT, digitacion_price NUMERIC, notarizacion_price NUMERIC, price_tiers JSONB DEFAULT '[]', unit_type TEXT, active BOOLEAN DEFAULT true)`);
   await pool.query(`CREATE TABLE invoices (id SERIAL PRIMARY KEY)`);
   await runSqlFile('migrations/20261005_bot_agent.sql');
+  await runSqlFile('migrations/20261009_precios_leandro_1.sql');
   await pool.query(`INSERT INTO service_categories (id, name) VALUES (1, 'Actos de venta')`);
   const ins = async (name, cols = {}) => {
     const c = { name, category_id: 1, unit_type: 'por documento', ...cols };
@@ -30,6 +31,7 @@ test.beforeEach(async () => {
   ids.conf = await ins('Estatus Jurídico', { digitacion_price: 1000, por_confirmar: true });
   ids.a = await ins('Copia certificada', { digitacion_price: 700, notarizacion_price: 0 });
   ids.b = await ins('Legalización', { digitacion_price: 1000 });
+  ids.foja = await ins('Carta Legal Simple', { digitacion_price: 100, foja_tipo: 'legal_simple', fojas: 2 });
   ids.inactivo = await ins('Venta de carro vieja', { digitacion_price: 1, active: false, alias: ['venta del carro'] });
   const pasos = (arr) => JSON.stringify(arr);
   await pool.query(`INSERT INTO tramites (nombre, alias, pasos, preguntas_obligatorias, reglas) VALUES
@@ -156,4 +158,28 @@ test('ver_tramite: un paso por tramos (sin valor) queda en faltan_precios y el t
   assert.equal(r.pasos[0].precio, null);
   assert.equal(r.pasos[0].depende_del_valor, true);
   assert.equal(r.pasos[1].precio, 700);
+});
+
+test('servicio por foja: calcular_precio usa la tarifa y marca las fojas como estimadas', async () => {
+  const r = await calcular_precio({ servicio_id: ids.foja });
+  assert.equal(r.total, 500);
+  assert.equal(r.tarifa_por_foja, 250);
+  assert.equal(r.fojas, 2);
+  assert.equal(r.fojas_estimadas, true);
+  assert.ok(!('tarifa_por_foja' in r.desglose) && !('fojas' in r.desglose));
+});
+test('con fojas dadas, calcular_precio ya no es estimado; duplicados salen en el desglose', async () => {
+  const r = await calcular_precio({ servicio_id: ids.foja, fojas: 4 });
+  assert.equal(r.total, 1000);
+  assert.equal(r.fojas, 4);
+  assert.equal(r.fojas_estimadas, false);
+  const d = await calcular_precio({ servicio_id: ids.foja, fojas: 2, duplicados: 1 });
+  assert.equal(d.desglose.duplicados, 500);
+  assert.equal(d.total, 1000);
+});
+test('buscar_servicio trae por_foja (o null si no va por foja)', async () => {
+  const r = await buscar_servicio({ consulta: 'carta legal simple' });
+  assert.deepEqual(r.resultados[0].por_foja, { tipo: 'legal_simple', tarifa: 250, fojas_estimadas: 2 });
+  const o = await buscar_servicio({ consulta: 'copia certificada' });
+  assert.equal(o.resultados[0].por_foja, null);
 });

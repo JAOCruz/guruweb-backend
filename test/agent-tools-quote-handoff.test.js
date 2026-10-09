@@ -27,6 +27,7 @@ test.beforeEach(async () => {
   await pool.query(`CREATE TABLE notifications (id SERIAL PRIMARY KEY, user_id INT NOT NULL, type VARCHAR(50) NOT NULL, title VARCHAR(255) NOT NULL, message TEXT NOT NULL, link TEXT, read BOOLEAN DEFAULT false, read_at TIMESTAMPTZ, metadata JSONB DEFAULT '{}', created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query('CREATE TABLE wa_bot_state (key TEXT PRIMARY KEY, value JSONB, updated_at TIMESTAMPTZ)');
   await runSqlFile('migrations/20261005_bot_agent.sql');
+  await runSqlFile('migrations/20261009_precios_leandro_1.sql');
   clearCache();
   const mk = async (u, role, name) => (await pool.query(
     `INSERT INTO users (username, email, password_hash, name, role) VALUES ($1,$2,'x',$3,$4) RETURNING id`, [u, `${u}@t.co`, name, role])).rows[0].id;
@@ -43,6 +44,7 @@ test.beforeEach(async () => {
     conf: await ins('Estatus Jurídico', { dig: 1000, pc: true }),
     cero: await ins('Servicio en cero', { dig: 0 }),
   };
+  ids.foja = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, price_tiers, foja_tipo, fojas) VALUES ('Carta Legal Simple',1,100,'[]','legal_simple',2) RETURNING id`)).rows[0].id;
   clientId = (await pool.query(`INSERT INTO clients (phone, name) VALUES ($1, 'Ana Cliente') RETURNING id`, [PHONE])).rows[0].id;
   const client = (await pool.query('SELECT * FROM clients WHERE id=$1', [clientId])).rows[0];
   ctx = { phone: PHONE, client, botUserId, now: OPEN };
@@ -190,4 +192,18 @@ test('dos "urgente" a la vez avisan una sola vez', async () => {
   assert.equal((await notifs('handoff')).length, before + 1);
   const st = (await pool.query(`SELECT value FROM wa_bot_state WHERE key=$1`, [`handoff:${PHONE}`])).rows[0].value;
   assert.equal(st.urgente_avisado, true); assert.equal(st.motivo, 'x');
+});
+
+test('preparar_cotizacion: partida por foja lleva (N fojas) y los duplicados van en su propia línea', async () => {
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.foja, fojas: 3, duplicados: 2 }] }, ctx);
+  assert.equal(r.error, undefined);
+  const inv = (await pool.query('SELECT * FROM invoices WHERE id = $1', [r.invoice_id])).rows[0];
+  assert.equal(inv.items.length, 2);
+  assert.match(inv.items[0].desc, /\(3 fojas\)$/);
+  assert.equal(inv.items[0].precio, 750);
+  assert.equal(inv.items[1].desc, 'Original adicional o duplicado');
+  assert.equal(inv.items[1].cantidad, 2);
+  assert.equal(inv.items[1].precio, 700);
+  assert.equal(Number(inv.total), 750 + 1400);
+  assert.equal(r.total, 2150);
 });

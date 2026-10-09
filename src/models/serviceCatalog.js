@@ -1,12 +1,12 @@
 const pool = require('../db/pool');
 
 const Service = {
-  async create({ name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type }) {
+  async create({ name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, foja_tipo, fojas }) {
     const { rows } = await pool.query(
-      `INSERT INTO service_catalog (name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+      `INSERT INTO service_catalog (name, description, category_id, digitacion_price, notarizacion_price, price_tiers, unit_type, foja_tipo, fojas, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
        RETURNING *`,
-      [name, description || null, category_id || null, digitacion_price || null, notarizacion_price || null, JSON.stringify(price_tiers || []), unit_type || 'por documento']
+      [name, description || null, category_id || null, digitacion_price || null, notarizacion_price || null, JSON.stringify(price_tiers || []), unit_type || 'por documento', foja_tipo || null, fojas || null]
     );
     return rows[0];
   },

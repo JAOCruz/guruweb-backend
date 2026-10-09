@@ -1,6 +1,7 @@
 const pool = require('../../db/pool');
 const { fold } = require('../text');
 const { calculatePrice } = require('../../models/servicePricing');
+const { FOJA_RATES, validFojas } = require('../../models/fojaRates');
 
 const SELECT = `SELECT s.*, c.name AS categoria FROM service_catalog s
   LEFT JOIN service_categories c ON c.id = s.category_id`;
@@ -71,6 +72,8 @@ async function buscar_servicio(args = {}, ctx) {
         notarizacion: s.notarizacion || null,
         tiempo_entrega: s.tiempo_entrega || null,
         unidad: s.unit_type || null,
+        // Servicio por foja: tarifa por foja y fojas que se asumen si el cliente no dice cuántas.
+        por_foja: FOJA_RATES[s.foja_tipo] ? { tipo: s.foja_tipo, tarifa: FOJA_RATES[s.foja_tipo], fojas_estimadas: validFojas(s.fojas) ?? 1 } : null,
       };
     });
   return { resultados };
@@ -86,9 +89,12 @@ async function calcular_precio(args = {}, ctx) {
     assetValue: args.valor_del_bien ?? null,
     quantity: args.cantidad ?? 1,
     includeNotarization: args.con_notarizacion !== false,
+    fojas: args.fojas, duplicados: args.duplicados,
   });
+  // fojas y tarifa_por_foja van fuera de desglose: el guardián de precios permite todo número positivo dentro de él.
   return {
     servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
+    fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
   };
 }
