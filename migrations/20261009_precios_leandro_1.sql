@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS tasas_cache (
 -- 3. Conflictos resueltos: quita "por confirmar" y la nota del seed
 UPDATE service_catalog SET
   por_confirmar = false,
-  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), '(^|\n)Precio por confirmar:[^\n]*', '', 'g'), E'\n '), '')
+  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), '\n?Precio por confirmar:.*?Leandro confirma\.\s*', '', 'g'), E'\n '), '')
 WHERE name = 'Certificación Estatus Jurídico Inmueble'
    OR name LIKE 'Instancia%'
    OR name IN ('Estatutos Sociales', 'Nómina de Pagos/Presencia', 'Foto 2x2', 'Fotocopia 11x17"');
@@ -64,7 +64,7 @@ WHERE name = 'Contrato de Venta Bienes';
 -- 5. Mensajería: trámites a 1,000 por documento, sin impuestos
 UPDATE service_catalog SET
   digitacion_price = 1000, unit_type = 'por documento', por_confirmar = false,
-  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), 'Precio por confirmar con el digitador \([^)]*\)\.\s*', '', 'g'), E'\n '), '')
+  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), 'Precio por confirmar con el digitador \([^)]*\)\.\s*|El precio depende del mensajero y de la distancia; los impuestos y tasas del Estado los paga el cliente y no son parte del precio\.\s*', '', 'g'), E'\n '), '')
 WHERE name IN ('Mensajería - Legalización en Procuraduría', 'Mensajería - Depósito de Traspaso en DGII', 'Mensajería - Solicitud de Certificación');
 
 UPDATE service_catalog
@@ -109,3 +109,15 @@ FROM (VALUES
   ('Original adicional o duplicado (3 o más fojas)', 700)
 ) AS v(name, price)
 WHERE NOT EXISTS (SELECT 1 FROM service_catalog s WHERE s.name = v.name);
+
+-- 7. Originales: por defecto 1; 2 solo en alquileres sencillos
+UPDATE service_catalog SET reglas = regexp_replace(reglas,
+  '(El abogado notario firma hasta 2 originales; los demás van como duplicados\.|Máximo 2 originales firmados por el notario; los demás van como duplicados\.)',
+  'Incluye 2 originales; cada original adicional o duplicado se cobra aparte.', 'g')
+WHERE (name ~ '^Contrato de Alquiler.*Sencillo' OR name = 'Contrato de Alquileres o Renta Inmueble (Sencillo)')
+  AND reglas ~ '(El abogado notario firma hasta 2 originales|Máximo 2 originales firmados por el notario); los demás van como duplicados\.';
+
+UPDATE service_catalog SET reglas = regexp_replace(reglas,
+  '(El abogado notario firma hasta 2 originales; los demás van como duplicados\.|Máximo 2 originales firmados por el notario; los demás van como duplicados\.)',
+  'Incluye 1 original; cada original adicional o duplicado se cobra aparte.', 'g')
+WHERE reglas ~ '(El abogado notario firma hasta 2 originales|Máximo 2 originales firmados por el notario); los demás van como duplicados\.';
