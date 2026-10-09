@@ -2,7 +2,7 @@
   {
     "nombre": "Cesión de Crédito",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato para ceder un crédito o una deuda a otra persona.",
     "alias": [
@@ -14,7 +14,7 @@
   {
     "nombre": "Recibo de Descargo / Pago",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Recibo que deja constancia de un pago o de que no se debe nada.",
     "alias": [
@@ -28,7 +28,7 @@
   {
     "nombre": "Contrato de Hipoteca",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de hipoteca sobre un inmueble.",
     "alias": [
@@ -40,7 +40,7 @@
   {
     "nombre": "Permuta",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato para intercambiar un bien por otro.",
     "alias": [
@@ -52,7 +52,7 @@
   {
     "nombre": "Promesa de Compra-Venta",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Promesa o intención de compraventa de un bien.",
     "alias": [
@@ -65,7 +65,7 @@
   {
     "nombre": "Contrato de Anticresis",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de anticresis sobre un inmueble.",
     "alias": [
@@ -75,7 +75,7 @@
   {
     "nombre": "Aporte en Naturaleza",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Aporte de un bien al capital de una empresa.",
     "alias": [
@@ -86,7 +86,7 @@
   {
     "nombre": "Contrato de Prenda",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de prenda o garantía sobre un bien mueble.",
     "alias": [
@@ -99,7 +99,7 @@
   {
     "nombre": "Contrato de Alquiler - Vivienda Sencillo",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 2 originales; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler de casa o apartamento, versión sencilla.",
     "alias": [
@@ -115,7 +115,7 @@
   {
     "nombre": "Contrato de Alquiler - Vivienda Avanzado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler de casa o apartamento con cláusulas avanzadas.",
     "alias": [
@@ -126,7 +126,7 @@
   {
     "nombre": "Contrato de Renta - Vehículo",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de renta o alquiler de un vehículo.",
     "alias": [
@@ -140,7 +140,7 @@
   {
     "nombre": "Contrato de Renta - Local Comercial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler de un local comercial.",
     "alias": [
@@ -152,7 +152,7 @@
   {
     "nombre": "Contrato de Renta - Terreno",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler de un terreno.",
     "alias": [
@@ -164,7 +164,7 @@
   {
     "nombre": "Contrato de Alquiler Amueblado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler de una vivienda amueblada.",
     "alias": [
@@ -176,7 +176,7 @@
   {
     "nombre": "Comodato (Uso)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Préstamo de uso de un bien sin pago (comodato).",
     "alias": [
@@ -187,7 +187,7 @@
   {
     "nombre": "Pagaré Notarial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Pagaré con firma ante notario para garantizar una deuda.",
     "alias": [
@@ -200,7 +200,7 @@
   {
     "nombre": "Partición Amigable",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Reparto amistoso de bienes entre herederos o socios.",
     "alias": [
@@ -213,7 +213,7 @@
   {
     "nombre": "Donación Entre Vivos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Donación de bienes en vida a hijos u otras personas.",
     "alias": [
@@ -227,7 +227,7 @@
   {
     "nombre": "Determinación de Herederos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Acto que establece quiénes son los herederos de un fallecido.",
     "alias": [
@@ -241,7 +241,7 @@
   {
     "nombre": "Acuerdo Amigable",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Acuerdo amigable entre dos partes para resolver un asunto.",
     "alias": [
@@ -255,7 +255,7 @@
   {
     "nombre": "Acuerdo Amigable Especializado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Acuerdo amigable con cláusulas especializadas.",
     "alias": [
@@ -265,7 +265,7 @@
   {
     "nombre": "Descargo y Finiquito - Inmuebles",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Descargo y finiquito por la entrega o pago de un inmueble.",
     "alias": [
@@ -276,7 +276,7 @@
   {
     "nombre": "Contrato Personalizado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato redactado a la medida de su caso.",
     "alias": [
@@ -288,7 +288,7 @@
   {
     "nombre": "Asamblea Extraordinaria/Ordinaria",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Acta de asamblea ordinaria o extraordinaria.",
     "alias": [
@@ -301,7 +301,7 @@
   {
     "nombre": "Formulario Sucesiones y Donaciones DGII",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Formulario de sucesiones y donaciones de la DGII.",
     "alias": [
@@ -314,7 +314,7 @@
   {
     "nombre": "Contrato de Poderes (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Poder o contrato de poderes sencillo.",
     "alias": [
@@ -326,7 +326,7 @@
   {
     "nombre": "Contrato de Alquileres o Renta Inmueble (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 2 originales; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de alquiler o renta de inmueble sencillo.",
     "alias": [
@@ -336,7 +336,7 @@
   {
     "nombre": "Contrato de Venta Bienes",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de bienes; la notarización depende del valor del bien.",
     "alias": [
@@ -350,7 +350,7 @@
   {
     "nombre": "Recibo de Descargo y Recibo de Pago (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "recibo de descargo sencillo"
@@ -359,19 +359,19 @@
   {
     "nombre": "Recibo de Descargo y Recibo de Pago (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Recibo de Descargo y Recibo de Pago (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Pagaré Notarial (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "pagare sencillo"
@@ -381,21 +381,21 @@
   {
     "nombre": "Pagaré Notarial (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documentos de identidad del deudor y del acreedor (cédula o pasaporte); monto adeudado (pesos, dólares, bienes); plazo de pago; interés o penalidad acordada; bien en garantía (vehículos, inmuebles), si lo hay. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Pagaré Notarial (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documentos de identidad del deudor y del acreedor (cédula o pasaporte); monto adeudado (pesos, dólares, bienes); plazo de pago; interés o penalidad acordada; bien en garantía (vehículos, inmuebles), si lo hay. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Partición Amigable (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "acto de particion"
@@ -405,14 +405,14 @@
   {
     "nombre": "Acto de Partición Amigable (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Datos de los sucesores o herederos (cédula o pasaporte); datos de los bienes (matrículas, certificaciones); dos testigos instrumentales (cédula o pasaporte); datos del abogado apoderado; cómo se realizará la partición (pliego, sentencias, documentos); fecha del documento. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acto de Donación Entre Vivos (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "acto de donacion extenso"
@@ -422,14 +422,14 @@
   {
     "nombre": "Acto de Donación Entre Vivos (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documentos de identidad de los donantes y de los donatarios (cédula o pasaporte); datos de los bienes a donar (propiedades, matrículas); cláusulas condicionales a tomar en cuenta. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Acuerdo Amigable (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "acuerdo sencillo"
@@ -438,19 +438,19 @@
   {
     "nombre": "Acuerdo Amigable Especializado o Extenso (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Acuerdo Amigable Especializado o Extenso (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Contrato de Alquiler - Vivienda (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 2 originales; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "alquiler de vivienda sencillo"
@@ -460,21 +460,21 @@
   {
     "nombre": "Contrato de Alquiler - Vivienda (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documentos de identidad del propietario y del inquilino (cédula o pasaporte); datos del inmueble (dimensiones, habitaciones, ubicación); si lleva garante o fiador solidario; monto mensual y cuenta de pago; cantidad de depósitos; condiciones (gastos, mascotas, servicios); fecha de inicio y vigencia."
   },
   {
     "nombre": "Contrato de Alquiler - Vivienda (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documentos de identidad del propietario y del inquilino (cédula o pasaporte); datos del inmueble (dimensiones, habitaciones, ubicación); si lleva garante o fiador solidario; monto mensual y cuenta de pago; cantidad de depósitos; condiciones (gastos, mascotas, servicios); fecha de inicio y vigencia."
   },
   {
     "nombre": "Contrato de Alquiler - Local Comercial (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 2 originales; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "alquiler local sencillo"
@@ -483,19 +483,19 @@
   {
     "nombre": "Contrato de Alquiler - Local Comercial (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Contrato de Alquiler - Local Comercial (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Contrato de Renta de Vehículo (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "renta de vehiculo sencillo"
@@ -505,21 +505,21 @@
   {
     "nombre": "Contrato de Renta de Vehículo (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documento de identidad del propietario y del inquilino (cédula o pasaporte; si es compañía, RNC); datos del vehículo (matrícula DGII o Aduanas); finalidad del alquiler; tiempo del alquiler (días, meses, años); método, fechas y modalidad de pago."
   },
   {
     "nombre": "Contrato de Renta de Vehículo (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "requisitos": "Documento de identidad del propietario y del inquilino (cédula o pasaporte; si es compañía, RNC); datos del vehículo (matrícula DGII o Aduanas); finalidad del alquiler; tiempo del alquiler (días, meses, años); método, fechas y modalidad de pago."
   },
   {
     "nombre": "Contrato de Alquiler - Nave Comercial (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 2 originales; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional",
     "alias": [
       "alquiler de nave",
@@ -531,19 +531,19 @@
   {
     "nombre": "Contrato de Alquiler - Nave Comercial (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Contrato de Alquiler - Nave Comercial (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
     "notarizacion": "opcional"
   },
   {
     "nombre": "Acto de Venta - Motocicleta",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una motocicleta o pasola.",
     "alias": [
@@ -559,7 +559,7 @@
   {
     "nombre": "Acto de Venta - Vehículo Liviano",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un carro, jeepeta o camioneta.",
     "alias": [
@@ -578,7 +578,7 @@
   {
     "nombre": "Acto de Venta - Vehículo Pesado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un camión, autobús u otro vehículo pesado.",
     "alias": [
@@ -593,7 +593,7 @@
   {
     "nombre": "Acto de Venta - Bien Inmueble",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una casa, apartamento u otro inmueble.",
     "alias": [
@@ -609,7 +609,7 @@
   {
     "nombre": "Acto de Venta - Terreno",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un terreno o solar.",
     "alias": [
@@ -623,7 +623,7 @@
   {
     "nombre": "Acto de Venta - Punto Comercial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un negocio o punto comercial.",
     "alias": [
@@ -636,7 +636,7 @@
   {
     "nombre": "Acto de Venta - Nave Marítima",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una embarcación.",
     "alias": [
@@ -649,7 +649,7 @@
   {
     "nombre": "Acto de Venta - Ganado/Animal",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de ganado o un animal.",
     "alias": [
@@ -662,7 +662,7 @@
   {
     "nombre": "Acto de Venta - Máquina Industrial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de una máquina o equipo industrial.",
     "alias": [
@@ -674,7 +674,7 @@
   {
     "nombre": "Acto de Venta Condicional - Vehículo",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Venta de vehículo a plazos, con condiciones hasta completar el pago.",
     "alias": [
@@ -689,7 +689,7 @@
   {
     "nombre": "Acto de Venta Condicional - Inmueble",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
     "notarizacion": "opcional",
     "descripcion": "Venta de inmueble a plazos, con condiciones hasta completar el pago.",
     "alias": [
@@ -702,7 +702,7 @@
   {
     "nombre": "Testamento",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Testamento ante notario.",
     "alias": [
@@ -715,7 +715,7 @@
   {
     "nombre": "Divorcio Mutuo Consentimiento",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Estipulaciones y convenciones para un divorcio por mutuo consentimiento.",
     "alias": [
@@ -731,7 +731,7 @@
   {
     "nombre": "Matrimonio / Estipulaciones",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Contrato o capitulaciones de matrimonio.",
     "alias": [
@@ -746,7 +746,7 @@
   {
     "nombre": "Poder - Depositar Documentos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que otra persona deposite documentos por usted.",
     "alias": [
@@ -757,7 +757,7 @@
   {
     "nombre": "Poder - Retirar Certificaciones",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que otra persona retire certificaciones o documentos por usted.",
     "alias": [
@@ -769,7 +769,7 @@
   {
     "nombre": "Poder - Realizar Pagos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que otra persona realice pagos o servicios por usted.",
     "alias": [
@@ -781,7 +781,7 @@
   {
     "nombre": "Poder - Guarda y Tutela de Menor",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para la guarda y tutela de un menor.",
     "alias": [
@@ -795,7 +795,7 @@
   {
     "nombre": "Poder - Viaje de Menor",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para autorizar el viaje de un menor.",
     "alias": [
@@ -811,7 +811,7 @@
   {
     "nombre": "Poder - Venta de Propiedades",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que otra persona venda una propiedad por usted.",
     "alias": [
@@ -824,7 +824,7 @@
   {
     "nombre": "Poder - Cobrar Suma de Dinero",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que otra persona cobre una suma de dinero por usted.",
     "alias": [
@@ -836,7 +836,7 @@
   {
     "nombre": "Poder - Procesos Judiciales",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder para que un abogado o persona lo represente en procesos judiciales.",
     "alias": [
@@ -850,7 +850,7 @@
   {
     "nombre": "Poder - Ampliatorio",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder que amplía las facultades de un poder anterior.",
     "alias": [
@@ -861,7 +861,7 @@
   {
     "nombre": "Poder Cuota Litis",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder cuota litis para que un abogado cobre un porcentaje del caso.",
     "alias": [
@@ -874,7 +874,7 @@
   {
     "nombre": "Declaración Jurada - Unión Libre",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de unión libre o concubinato.",
     "alias": [
@@ -889,7 +889,7 @@
   {
     "nombre": "Declaración Jurada - Soltería",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de soltería.",
     "alias": [
@@ -903,7 +903,7 @@
   {
     "nombre": "Declaración Jurada - Residencia/Domicilio",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de residencia o domicilio.",
     "alias": [
@@ -916,7 +916,7 @@
   {
     "nombre": "Declaración Jurada - No Convivencia",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de no convivencia.",
     "alias": [
@@ -927,19 +927,19 @@
   {
     "nombre": "Declaración Jurada - Mejora Const. Estado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria"
   },
   {
     "nombre": "Declaración Jurada - Mejora Const. Particulares",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria"
   },
   {
     "nombre": "Declaración Jurada - Bienes e Ingresos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de bienes e ingresos o actividad comercial.",
     "alias": [
@@ -954,7 +954,7 @@
   {
     "nombre": "Declaración Jurada - Portador de Arma",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "portador de arma",
@@ -964,7 +964,7 @@
   {
     "nombre": "Declaración Jurada - Pérdida Certificado Título",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada por pérdida de un certificado de título.",
     "alias": [
@@ -976,13 +976,13 @@
   {
     "nombre": "Declaración Jurada - Fabricación de Trailers",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria"
   },
   {
     "nombre": "Declaración Jurada - Procedencia/Lavado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de procedencia de fondos (lavado de activos).",
     "alias": [
@@ -994,7 +994,7 @@
   {
     "nombre": "Declaración Jurada - Cambio Nombre Empresa",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "cambio de nombre de empresa"
@@ -1003,7 +1003,7 @@
   {
     "nombre": "Declaración Jurada - Pérdida Cert. Financiero",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "perdida de certificado financiero"
@@ -1012,7 +1012,7 @@
   {
     "nombre": "Declaración Jurada - Propiedad Comercial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "propiedad comercial",
@@ -1022,7 +1022,7 @@
   {
     "nombre": "Declaración Jurada - Conversión de Moneda",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de conversión de moneda.",
     "alias": [
@@ -1033,7 +1033,7 @@
   {
     "nombre": "Notoriedad - No Convivencia",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de notoriedad de no convivencia (desvinculación del núcleo familiar).",
     "alias": [
@@ -1044,7 +1044,7 @@
   {
     "nombre": "Notoriedad - Conocen al Fallecido",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de notoriedad de personas que conocen al fallecido.",
     "alias": [
@@ -1059,7 +1059,7 @@
   {
     "nombre": "Notoriedad - Buena Conducta",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de notoriedad de buena conducta.",
     "alias": [
@@ -1070,7 +1070,7 @@
   {
     "nombre": "Notoriedad - Buena Conducta Empleado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "buena conducta de empleado"
@@ -1079,7 +1079,7 @@
   {
     "nombre": "Notoriedad - Manutención Parental",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "manutencion parental",
@@ -1089,7 +1089,7 @@
   {
     "nombre": "Notoriedad - No Descendencia",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "no descendencia",
@@ -1099,7 +1099,7 @@
   {
     "nombre": "Notoriedad - Domicilio",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de notoriedad de domicilio.",
     "alias": [
@@ -1109,7 +1109,7 @@
   {
     "nombre": "Comprobación de Documentos",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de comprobación notarial de documentos.",
     "alias": [
@@ -1121,7 +1121,7 @@
   {
     "nombre": "Comprobación de Autenticidad",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de comprobación de autenticidad de documentos.",
     "alias": [
@@ -1132,7 +1132,7 @@
   {
     "nombre": "Comprobación de Evento",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de comprobación notarial de un evento (visita del notario).",
     "alias": [
@@ -1145,7 +1145,7 @@
   {
     "nombre": "Compulsa Notarial",
     "incluye": "Redacción y notarización de la compulsa del documento registrado. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Compulsa notarial de un documento registrado.",
     "alias": [
@@ -1157,7 +1157,7 @@
   {
     "nombre": "Acto Constitutivo (EIRL, SRL)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto constitutivo de una empresa (EIRL o SRL).",
     "alias": [
@@ -1173,7 +1173,7 @@
   {
     "nombre": "Estatutos Sociales",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Estatutos sociales de una empresa.",
     "alias": [
@@ -1185,7 +1185,7 @@
   {
     "nombre": "Nómina de Pagos/Presencia",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Nómina de presencia o de pagos de una empresa.",
     "alias": [
@@ -1198,7 +1198,7 @@
   {
     "nombre": "Cartas o Comunicaciones - Certificando Firmas",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Carta o comunicación con firmas certificadas por notario.",
     "alias": [
@@ -1212,7 +1212,7 @@
   {
     "nombre": "Coletilla y Notarizar documento Fiel y Conforme",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Coletilla notarial que certifica una copia como fiel y conforme al original.",
     "alias": [
@@ -1226,7 +1226,7 @@
   {
     "nombre": "Declaración Jurada - Soltería, Domicilio, Unión Libre (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de soltería, domicilio o unión libre, versión extensa.",
     "alias": [
@@ -1239,7 +1239,7 @@
   {
     "nombre": "Declaración Jurada - Soltería, Domicilio, Unión Libre (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Declaración jurada de soltería, domicilio o unión libre, versión avanzada.",
     "alias": [
@@ -1250,7 +1250,7 @@
   {
     "nombre": "Notoriedad Jurada (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Acto de notoriedad jurada.",
     "alias": [
@@ -1263,7 +1263,7 @@
   {
     "nombre": "Notoriedad de Determinación de Herederos (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "notoriedad de herederos",
@@ -1274,14 +1274,14 @@
   {
     "nombre": "Notoriedad de Determinación de Herederos (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "requisitos": "Documento o prueba de identidad del difunto (cédula, pasaporte, acta de defunción); documentos de identidad de los herederos; si estaba casado o en unión libre; bienes que dejó (títulos, matrículas, certificaciones); documentos de identidad de los comparecientes que declaran buena y válida la sucesión. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Declaración de Testamento - Bienes Post Mortem (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "declaracion de testamento",
@@ -1292,14 +1292,14 @@
   {
     "nombre": "Declaración de Testamento - Bienes Post Mortem (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "requisitos": "Documento de identidad del testador (cédula o pasaporte); si el testador puede firmar; documentos de identidad de los herederos; bienes a dejar; dos testigos instrumentales (cédula o pasaporte); fecha del documento. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Estipulación y Convenciones de Divorcio Mutuo Consentimiento (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "estipulaciones y convenciones",
@@ -1310,14 +1310,14 @@
   {
     "nombre": "Estipulación y Convenciones de Divorcio Mutuo Consentimiento (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "requisitos": "Documentos de identidad de ambos cónyuges; acta de matrimonio; datos de los hijos (actas) si los hay; acuerdo sobre bienes, guarda y pensión. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Poder Especial de Autorización (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder especial para autorizar a otra persona a hacer una gestión por usted.",
     "alias": [
@@ -1335,7 +1335,7 @@
   {
     "nombre": "Poder Especial de Autorización (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "descripcion": "Poder especial de autorización extenso.",
     "alias": [
@@ -1346,7 +1346,7 @@
   {
     "nombre": "Poder Cuota Litis (Sencillo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "alias": [
       "cuota litis sencillo"
@@ -1356,14 +1356,14 @@
   {
     "nombre": "Poder Cuota Litis (Extensivo)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "requisitos": "Documento de identidad de quien autoriza y del abogado apoderado (cédula o pasaporte); motivo del poder y porcentaje acordado; informaciones adicionales. Qué abogado notario desea usar (puede usar el nuestro)."
   },
   {
     "nombre": "Poder Cuota Litis (Avanzado)",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original. Abogado notario público libre de tachas y de la jurisdicción que corresponda, asistencia y seguimiento de nuestros agentes y doble revisión de la administración.",
-    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. El abogado notario firma hasta 2 originales; los demás van como duplicados. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
+    "reglas": "Es un acto auténtico: lleva firma y sello de un abogado notario. El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Las partes firman en presencia del notario. Precios de notarización regulados por la Ley 140-15.",
     "notarizacion": "obligatoria",
     "requisitos": "Documento de identidad de quien autoriza y del abogado apoderado (cédula o pasaporte); motivo del poder y porcentaje acordado; informaciones adicionales. Qué abogado notario desea usar (puede usar el nuestro)."
   },
@@ -1765,7 +1765,7 @@
   {
     "nombre": "Certificación Estatus Jurídico Inmueble",
     "incluye": "Seguimiento diario del estado de la solicitud, copia de los documentos subidos en nuestra base de datos, recordatorios y ayuda de servicio al cliente.",
-    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. La rapidez depende de la Jurisdicción Inmobiliaria, de la calidad del expediente y de qué tan actualizado esté el inmueble.",
+    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. La rapidez depende de la Jurisdicción Inmobiliaria, de la calidad del expediente y de qué tan actualizado esté el inmueble.\nNo incluye impuestos.",
     "notarizacion": "no_aplica",
     "descripcion": "Certificación de estatus jurídico o de no gravamen de un inmueble ante la Jurisdicción Inmobiliaria.",
     "alias": [
@@ -1956,7 +1956,7 @@
   {
     "nombre": "Fotocopia 11x17\"",
     "incluye": "Organización completa del expediente a imprimir y vigilancia constante de la calidad.",
-    "reglas": "Las impresiones erróneas se cobran si se solicitaron por equivocación. Los archivos deben venir en un formato admisible (PDF, JPEG, PNG, Word). Indique cantidad, tamaño, a color o blanco y negro, y a un lado o a dos.",
+    "reglas": "Las impresiones erróneas se cobran si se solicitaron por equivocación. Los archivos deben venir en un formato admisible (PDF, JPEG, PNG, Word). Indique cantidad, tamaño, a color o blanco y negro, y a un lado o a dos.\nA color: RD$100.",
     "notarizacion": "no_aplica",
     "descripcion": "Fotocopia tamaño 11x17.",
     "alias": [

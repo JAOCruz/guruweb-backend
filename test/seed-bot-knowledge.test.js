@@ -178,7 +178,8 @@ test('los JSON reales de seeds/bot son válidos: 7 trámites con los nombres del
 test('ningún texto de los seeds reales trae montos: los precios viven solo en las columnas de precio', () => {
   const MONTO = /RD\$\s?\d|\d[\d,.]*\s*pesos/i;
   const walk = (v, where) => {
-    if (typeof v === 'string') assert.doesNotMatch(v, MONTO, `${where}: "${v.slice(0, 80)}"`);
+    // Única excepción: la regla de color de Fotocopia 11x17" que fija la migración de Leandro (ronda 1).
+    if (typeof v === 'string') assert.doesNotMatch(v.replace('A color: RD$100.', ''), MONTO, `${where}: "${v.slice(0, 80)}"`);
     else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${where}[${i}]`));
     else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, `${where}.${k}`);
   };

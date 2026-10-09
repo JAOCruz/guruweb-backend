@@ -164,3 +164,25 @@ test('quitar la nota de "por confirmar" no se come el texto entre dos notas', as
   assert.equal((await row('Estatutos Sociales')).reglas, 'Antes.\nTexto del medio que debe quedar.\nDespués.');
   assert.equal((await row('Nómina de Pagos/Presencia')).reglas, 'Medio. Resto.');
 });
+
+test('resembrar los seeds reales después de la migración no devuelve los textos viejos', async () => {
+  const path = require('path');
+  const { seedBotKnowledge } = require('../src/db/seedBotKnowledge');
+  const dir = path.join(__dirname, '..', 'seeds', 'bot');
+  await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, unit_type) VALUES ('Contrato de Alquiler - Vivienda (Sencillo)', 1, 500, 'por documento')`);
+  const nombres = ['Certificación Estatus Jurídico Inmueble', 'Fotocopia 11x17"', 'Estatutos Sociales', 'Nómina de Pagos/Presencia',
+    'Contrato de Alquiler - Vivienda (Sencillo)', 'Mensajería - Legalización en Procuraduría', 'Mensajería - Recolección de Firmas'];
+  const reglas = async () => Object.fromEntries(await Promise.all(nombres.map(async (n) => [n, (await row(n)).reglas])));
+  await seedBotKnowledge({ dir });
+  await migrar();
+  const migradas = await reglas();
+  await seedBotKnowledge({ dir });
+  assert.deepEqual(await reglas(), migradas);
+  assert.equal(occurrences(migradas['Certificación Estatus Jurídico Inmueble'], 'No incluye impuestos.'), 1);
+  assert.equal(occurrences(migradas['Fotocopia 11x17"'], 'A color: RD$100.'), 1);
+  assert.match(migradas['Estatutos Sociales'], /Incluye 1 original; cada original adicional o duplicado se cobra aparte\./);
+  assert.match(migradas['Contrato de Alquiler - Vivienda (Sencillo)'], /Incluye 2 originales; cada original adicional o duplicado se cobra aparte\./);
+  for (const r of Object.values(migradas)) assert.doesNotMatch(r, /hasta 2 originales|Máximo 2 originales/);
+  assert.doesNotMatch(migradas['Mensajería - Legalización en Procuraduría'], /Precio por confirmar|depende del mensajero/);
+  assert.equal(occurrences(migradas['Mensajería - Recolección de Firmas'], 'pendiente de Leandro'), 1);
+});
