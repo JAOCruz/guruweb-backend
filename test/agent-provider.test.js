@@ -62,3 +62,14 @@ test('isQuotaError reconoce 429 y RESOURCE_EXHAUSTED', () => {
   assert.equal(isQuotaError(new Error('RESOURCE_EXHAUSTED: quota')), true);
   assert.equal(isQuotaError(new Error('timeout')), false);
 });
+
+test('fake sin search no tiene el método; con search lo expone', async () => {
+  assert.equal(createFakeProvider([]).search, undefined);
+  const p = createFakeProvider([], { search: async () => ({ text: 'x', sources: [] }) });
+  assert.equal((await p.search({ prompt: 'a' })).text, 'x');
+});
+
+test('gemini y claude exponen search', () => {
+  assert.equal(typeof getProvider('gemini').search, 'function');
+  assert.equal(typeof getProvider('claude').search, 'function');
+});

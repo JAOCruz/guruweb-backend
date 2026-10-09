@@ -8,6 +8,7 @@ const { preparar_cotizacion } = require('./quote');
 const { pasar_a_humano } = require('./handoff');
 const { ver_modelo, preparar_documento } = require('./documents');
 const { avisar_pago } = require('./payment');
+const { estimar_tasa } = require('./tasas');
 const { withTimeout } = require('../provider');
 
 // Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
@@ -217,6 +218,19 @@ const TOOLS = [
     },
   },
   {
+    name: 'estimar_tasa',
+    description: 'Estima una tasa oficial (marbete, matrícula, ayuntamiento, legalización, impuesto de transferencia…). El monto es ' +
+      'aproximado: dígalo siempre como aproximado y que lo confirma la institución; nunca lo sume al total de la cotización. ' +
+      'Si devuelve por_confirmar, diga que la institución lo confirma.',
+    parameters: {
+      type: 'object',
+      properties: {
+        concepto: { type: 'string', description: 'La tasa o impuesto a estimar (p. ej. "marbete de un carro", "legalización en Procuraduría").' },
+      },
+      required: ['concepto'],
+    },
+  },
+  {
     name: 'pasar_a_humano',
     description: 'Pasa el chat a una persona del equipo: lo pone en modo manual, avisa al asignado o al admin y devuelve el mensaje de ' +
       'espera, que debe enviarse tal cual. Úsela con reclamaciones, dudas o disputas de pagos (un comprobante va con avisar_pago), ' +
@@ -235,7 +249,7 @@ const TOOLS = [
 
 const HANDLERS = {
   buscar_servicio, calcular_precio, ver_tramite, guardar_datos_cliente, leer_documento,
-  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento, avisar_pago,
+  crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento, avisar_pago, estimar_tasa,
 };
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 

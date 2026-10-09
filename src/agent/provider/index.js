@@ -23,8 +23,8 @@ function getProvider(name = process.env.BOT_AI_PROVIDER || 'gemini') {
     if (!fakeProvider) throw new Error('No hay proveedor fake registrado (use setFakeProvider)');
     return fakeProvider;
   }
-  if (name === 'gemini') return { name, chat: (req) => require('./gemini').chat(req) };
-  if (name === 'claude') return { name, chat: (req) => require('./claude').chat(req) };
+  if (name === 'gemini') return { name, chat: (req) => require('./gemini').chat(req), search: (req) => require('./gemini').search(req) };
+  if (name === 'claude') return { name, chat: (req) => require('./claude').chat(req), search: (req) => require('./claude').search(req) };
   throw new Error(`Proveedor desconocido: ${name}`);
 }
 

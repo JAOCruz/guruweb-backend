@@ -42,4 +42,32 @@ async function chat({ system, messages, tools = [], timeoutMs }) {
   }
 }
 
-module.exports = { chat, toClaudeMessages };
+// Búsqueda web con la herramienta de servidor de Anthropic. Devuelve { text, sources: [url] }.
+async function search({ prompt, timeoutMs = 15000 }) {
+  const { isQuotaError, withTimeout } = require('./index');
+  const Anthropic = require('@anthropic-ai/sdk');
+  const client = new Anthropic();
+  try {
+    const res = await withTimeout(client.messages.create({
+      model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-5-5',
+      max_tokens: 1024,
+      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
+      messages: [{ role: 'user', content: prompt }],
+    }, { timeout: timeoutMs, maxRetries: 0 }), timeoutMs);
+    const blocks = res.content || [];
+    const sources = [];
+    for (const b of blocks) {
+      // En un error, content es un objeto (no una lista): se ignora.
+      if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) {
+        for (const r of b.content) if (r && r.url) sources.push(r.url);
+      }
+    }
+    return { text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join(''), sources };
+  } catch (err) {
+    if (err.code === 'TIMEOUT') throw err;
+    if (isQuotaError(err)) { const e = new Error('Cuota agotada'); e.code = 'QUOTA'; throw e; }
+    throw err;
+  }
+}
+
+module.exports = { chat, search, toClaudeMessages };

@@ -66,4 +66,24 @@ async function chat({ system, messages, tools = [], timeoutMs }) {
   }
 }
 
-module.exports = { chat, toGeminiContents, toGeminiSchema };
+// Búsqueda web con Google Search (grounding). Devuelve { text, sources: [url] }.
+async function search({ prompt, timeoutMs = 15000 }) {
+  const { isQuotaError, withTimeout } = require('./index');
+  const genAI = new GoogleGenerativeAI(require('../../config').gemini.apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: [{ googleSearch: {} }] });
+  try {
+    const result = await withTimeout(model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }), timeoutMs);
+    const response = result.response;
+    let text = '';
+    try { text = response.text(); } catch { text = ''; }
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const sources = (Array.isArray(chunks) ? chunks : []).map((c) => c?.web?.uri).filter(Boolean);
+    return { text, sources };
+  } catch (err) {
+    if (err.code === 'TIMEOUT') throw err;
+    if (isQuotaError(err)) { const e = new Error('Cuota agotada'); e.code = 'QUOTA'; throw e; }
+    throw err;
+  }
+}
+
+module.exports = { chat, search, toGeminiContents, toGeminiSchema };
