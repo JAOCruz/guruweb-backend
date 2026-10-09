@@ -8,6 +8,7 @@ function num(v) {
 }
 
 // Devuelve { total, breakdown, porConfirmar, rango, tramo, falta, dependeDelValor, fojas, tarifaPorFoja, fojasEstimadas }.
+// - Con precio_rango y sin digitacion_price, foja_tipo se ignora (total null, se da el rango).
 // - Con service.foja_tipo (carta_simple|carta_motivada|legal_simple|legal_motivada) la digitación es
 //   tarifa × fojas × cantidad e ignora digitacion_price. Fojas: la pasada (válida) > service.fojas > 1;
 //   fojasEstimadas es true si no se pasaron fojas.
@@ -23,7 +24,9 @@ function calculatePrice(service, { assetValue = null, quantity = 1, includeNotar
   const dig = num(service.digitacion_price);
   const notBase = num(service.notarizacion_price);
   const tiers = Array.isArray(service.price_tiers) ? service.price_tiers : [];
-  const rate = FOJA_RATES[service.foja_tipo] ?? null;
+  // Un servicio por rango sin digitación (p. ej. Antiplagio) no va por foja aunque tenga foja_tipo.
+  const soloRango = rango !== null && dig === null;
+  const rate = soloRango ? null : FOJA_RATES[service.foja_tipo] ?? null;
   const fojasDadas = validFojas(fojas);
   const nFojas = fojasDadas ?? validFojas(service.fojas) ?? 1;
   const nDup = validFojas(duplicados) ?? 0;

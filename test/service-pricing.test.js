@@ -100,3 +100,12 @@ test('duplicados: 1–2 fojas a 500, 3+ a 700, suma al total y al desglose', () 
   assert.equal(fijo.breakdown.duplicados, 700); assert.equal(fijo.total, 950);
   assert.deepEqual(calculatePrice({ digitacion_price: '250' }).breakdown, { digitacion: 250, notarizacion: 0 });
 });
+test('servicio por rango sin digitación: foja_tipo no inventa precio (sigue como rango, total null)', () => {
+  const r = calculatePrice({ foja_tipo: 'legal_simple', fojas: 1, digitacion_price: null, precio_rango: { min: 15000, max: 30000 } });
+  assert.equal(r.total, null);
+  assert.deepEqual(r.rango, { min: 15000, max: 30000 });
+  assert.equal(r.tarifaPorFoja, null);
+  assert.equal(r.fojas, null);
+  assert.equal(r.fojasEstimadas, false);
+  assert.equal(r.breakdown.digitacion, 0);
+});

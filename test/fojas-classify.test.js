@@ -75,3 +75,20 @@ test('excel.py genera un xlsx no vacío', { skip: spawnSync('python3', ['-c', 'i
   execFileSync('python3', [path.join(__dirname, '..', 'scripts/fojas/excel.py'), j, x]);
   assert.ok(fs.statSync(x).size > 0);
 });
+
+test('classifyTipo salta servicios con precio_rango o por trabajo (no van por foja)', () => {
+  assert.equal(classifyTipo('Antiplagio', REDACTAR, { precio_rango: { min: 800, max: 1000 }, unit_type: 'por trabajo' }), null);
+  assert.equal(classifyTipo('Elaboración de Monográfico Personalizado', REDACTAR, { precio_rango: { min: 15000, max: 30000 } }), null);
+  assert.equal(classifyTipo('Trabajo Escolar', REDACTAR, { precio_rango: null, unit_type: 'por trabajo' }), null);
+  assert.equal(classifyTipo('Acto de Venta - Vehículo Liviano', REDACTAR, { precio_rango: null, unit_type: 'por documento' }), 'legal_simple');
+});
+
+test('fojas.json no trae servicios con precio_rango en los seeds', () => {
+  const seeds = path.join(__dirname, '..', 'seeds', 'bot');
+  const rd = (f) => JSON.parse(fs.readFileSync(path.join(seeds, f), 'utf8'));
+  const conRango = new Set([...rd('servicios-nuevos.json'), ...rd('servicios-enriquecidos.json')]
+    .filter((s) => s.precio_rango != null || s.unit_type === 'por trabajo').map((s) => s.nombre));
+  assert.ok(conRango.has('Antiplagio'));
+  const malos = rd('fojas.json').filter((e) => conRango.has(e.nombre)).map((e) => e.nombre);
+  assert.deepEqual(malos, []);
+});

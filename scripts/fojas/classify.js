@@ -9,7 +9,10 @@ const { FOJA_RATES } = require('../../src/models/fojaRates');
 
 const CAT_REDACTAR = fold('Redactar o digitar un documento');
 
-function classifyTipo(name, categoria) {
+// service: { precio_rango, unit_type } de la fila. Los servicios con precio_rango o "por trabajo"
+// (Antiplagio, monográficos, asignaciones escolares) se cotizan por rango, no por foja.
+function classifyTipo(name, categoria, service = {}) {
+  if ((service && service.precio_rango != null) || fold((service && service.unit_type) || '') === 'por trabajo') return null;
   const n = fold(name);
   if (fold(categoria) !== CAT_REDACTAR && !n.startsWith('instancia')) return null;
   if (/coletilla|original adicional o duplicado/.test(n)) return null;
@@ -81,13 +84,13 @@ async function main() {
   const out = path.resolve(opt('--out', 'seeds/bot/fojas.json'));
   const pool = require('../../src/db/pool');
   const { rows } = await pool.query(
-    `SELECT s.name, c.name AS categoria, s.digitacion_price
+    `SELECT s.name, c.name AS categoria, s.digitacion_price, s.precio_rango, s.unit_type
        FROM service_catalog s LEFT JOIN service_categories c ON c.id = s.category_id
       WHERE s.active = true ORDER BY c.name, s.name`);
   const pagesMap = templatePages(dir);
   const list = [];
   for (const r of rows) {
-    const tipo = classifyTipo(r.name, r.categoria);
+    const tipo = classifyTipo(r.name, r.categoria, r);
     if (!tipo) continue;
     const { fojas, fuente } = fojasFor(r.name, pagesMap, { precioAnterior: r.digitacion_price, tarifa: FOJA_RATES[tipo] });
     list.push({
