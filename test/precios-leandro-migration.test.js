@@ -154,3 +154,13 @@ test('originales: 1 por defecto y 2 solo en alquileres sencillos, sin montos y u
   assert.equal(viejas, 0);
   assert.doesNotMatch(poder.reglas + alq.reglas, /RD\$|\d{3}/);
 });
+
+test('quitar la nota de "por confirmar" no se come el texto entre dos notas', async () => {
+  await pool.query(`UPDATE service_catalog SET reglas = $1 WHERE name = 'Estatutos Sociales'`,
+    ['Antes.\nPrecio por confirmar: a. Leandro confirma.\nTexto del medio que debe quedar.\nPrecio por confirmar: b. Leandro confirma.\nDespués.']);
+  await pool.query(`UPDATE service_catalog SET reglas = $1 WHERE name = 'Nómina de Pagos/Presencia'`,
+    ['Precio por confirmar: a. Leandro confirma. Medio. Precio por confirmar: b. Leandro confirma. Resto.']);
+  await migrar();
+  assert.equal((await row('Estatutos Sociales')).reglas, 'Antes.\nTexto del medio que debe quedar.\nDespués.');
+  assert.equal((await row('Nómina de Pagos/Presencia')).reglas, 'Medio. Resto.');
+});

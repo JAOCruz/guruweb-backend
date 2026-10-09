@@ -23,10 +23,12 @@ CREATE TABLE IF NOT EXISTS tasas_cache (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Conflictos resueltos: quita "por confirmar" y la nota del seed
+-- 3. Conflictos resueltos: quita "por confirmar" y la nota del seed.
+--    La nota nunca cruza líneas y termina en el primer "Leandro confirma." (en PostgreSQL un .*? tras un \n? greedy
+--    se vuelve greedy y se comería el texto entre dos notas).
 UPDATE service_catalog SET
   por_confirmar = false,
-  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), '\n?Precio por confirmar:.*?Leandro confirma\.\s*', '', 'g'), E'\n '), '')
+  reglas = NULLIF(btrim(regexp_replace(coalesce(reglas, ''), '\n?Precio por confirmar:(?:(?!Leandro confirma\.)[^\n])*Leandro confirma\.[ ]*', '', 'g'), E'\n '), '')
 WHERE name = 'Certificación Estatus Jurídico Inmueble'
    OR name LIKE 'Instancia%'
    OR name IN ('Estatutos Sociales', 'Nómina de Pagos/Presencia', 'Foto 2x2', 'Fotocopia 11x17"');
