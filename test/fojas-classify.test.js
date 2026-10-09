@@ -41,6 +41,12 @@ test('templatePages y fojasFor', () => {
   assert.deepEqual(fojasFor('Carta de Poder', m), { fojas: 2, fuente: 'modelo: carta de poder' });
   assert.equal(fojasFor('Acto de Venta de Vehículo Liviano', m).fojas, 3);
   assert.deepEqual(fojasFor('Otra cosa', m), { fojas: 1, fuente: 'por defecto' });
+  // Sin modelo: las fojas salen del precio anterior para que el precio no cambie de golpe.
+  assert.deepEqual(fojasFor('Otra cosa', m, { precioAnterior: 500, tarifa: 250 }), { fojas: 2, fuente: 'estimado del precio anterior' });
+  assert.deepEqual(fojasFor('Otra cosa', m, { precioAnterior: 1000, tarifa: 300 }), { fojas: 3, fuente: 'estimado del precio anterior' });
+  assert.deepEqual(fojasFor('Otra cosa', m, { precioAnterior: 100, tarifa: 250 }), { fojas: 1, fuente: 'estimado del precio anterior' });
+  assert.deepEqual(fojasFor('Otra cosa', m, { precioAnterior: null, tarifa: 250 }), { fojas: 1, fuente: 'por defecto' });
+  assert.equal(fojasFor('Carta de Poder', m, { precioAnterior: 5000, tarifa: 250 }).fojas, 2); // el modelo manda
 });
 
 test('applyFojas: aplica 2 de 3 y dryRun no cambia nada', async () => {

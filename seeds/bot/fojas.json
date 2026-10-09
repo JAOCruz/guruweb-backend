@@ -1,0 +1,1559 @@
+[
+  {
+    "nombre": "Acto Constitutivo (EIRL, SRL)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Donación Entre Vivos (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 3,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 800,
+    "precio_nuevo": 750
+  },
+  {
+    "nombre": "Acto de Donación Entre Vivos (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Partición Amigable (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 800,
+    "precio_nuevo": 700
+  },
+  {
+    "nombre": "Acto de Partición Amigable (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 350
+  },
+  {
+    "nombre": "Acto de Venta - Bien Inmueble",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta Condicional - Inmueble",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Venta Condicional - Vehículo",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Venta - Ganado/Animal",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Venta - Máquina Industrial",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acto de Venta - Motocicleta",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 200,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta - Nave Marítima",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta - Punto Comercial",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 350,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta - Terreno",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta - Vehículo Liviano",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acto de Venta - Vehículo Pesado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acuerdo Amigable",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: acuerdo amigable de comodato o uso gratuito",
+    "precio_anterior": 350,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Acuerdo Amigable Especializado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Acuerdo Amigable Especializado o Extenso (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Acuerdo Amigable Especializado o Extenso (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 3,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 700,
+    "precio_nuevo": 750
+  },
+  {
+    "nombre": "Acuerdo Amigable (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Acuerdo de Matrimonio bajo Separación de Bienes",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: acuerdo de matrimonio bajo separacion de bienes",
+    "precio_anterior": null,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Antiplagio",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Aporte en Naturaleza",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: contrato de aporte en naturaleza",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Asamblea Extraordinaria/Ordinaria",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Carta de Garantía Migratoria",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Cartas o Comunicaciones - Certificando Firmas",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Cesión de Crédito",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: contrato de cesion de credito",
+    "precio_anterior": 250,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Comodato (Uso)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Comprobación de Autenticidad",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 350
+  },
+  {
+    "nombre": "Comprobación de Documentos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Comprobación de Evento",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Alquiler Amueblado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquileres o Renta Inmueble (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Alquiler - Local Comercial (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Contrato de Alquiler - Local Comercial (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 600,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Local Comercial (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Nave Comercial (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 6,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1500,
+    "precio_nuevo": 1500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Nave Comercial (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Contrato de Alquiler - Nave Comercial (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Vivienda (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 600,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Vivienda Avanzado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Vivienda (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Alquiler - Vivienda (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Alquiler - Vivienda Sencillo",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Anticresis",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: contrato de anticresis de inmueble",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Hipoteca",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: contrato de hipoteca convencional",
+    "precio_anterior": 350,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Poderes (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Prenda",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Prestación de Servicios",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Renta de Vehículo (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Contrato de Renta de Vehículo (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Renta de Vehículo (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Renta - Local Comercial",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Contrato de Renta - Terreno",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Renta - Vehículo",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Subcontratación",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Trabajo Indefinido",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Trabajo Temporal",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato de Venta Bienes",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Contrato Personalizado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Declaración de Testamento - Bienes Post Mortem (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Declaración de Testamento - Bienes Post Mortem (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Bienes e Ingresos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Cambio Nombre Empresa",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Conversión de Moneda",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Fabricación de Trailers",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Mejora Const. Estado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Mejora Const. Particulares",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - No Convivencia",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Pérdida Cert. Financiero",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Pérdida Certificado Título",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Personas Físicas",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Personas Jurídicas",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Portador de Arma",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Procedencia/Lavado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Propiedad Comercial",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Declaración Jurada - Residencia/Domicilio",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Soltería",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Soltería, Domicilio, Unión Libre (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 350,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Soltería, Domicilio, Unión Libre (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Declaración Jurada - Unión Libre",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Descargo y Finiquito - Inmuebles",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Determinación de Herederos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 2,
+    "fuente": "modelo: determinacion de herederos",
+    "precio_anterior": 500,
+    "precio_nuevo": 700
+  },
+  {
+    "nombre": "Divorcio Mutuo Consentimiento",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Donación Entre Vivos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Elaboración de Análisis, Síntesis o Asignación Escolar",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Elaboración de Monográfico Personalizado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Estatutos Sociales",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "modelo: instancia solicitud de estatutos sociales de razon social en onapi",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Estipulación y Convenciones de Divorcio Mutuo Consentimiento (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 4,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 1000,
+    "precio_nuevo": 1000
+  },
+  {
+    "nombre": "Estipulación y Convenciones de Divorcio Mutuo Consentimiento (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Formulario Sucesiones y Donaciones DGII",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Instancia - Asuntos de Agrimensura",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia Avanzada",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia - Ayuda Social",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 200,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Comunicación a Junta de Vecinos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 100,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Comunicación Interna de Empresa",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Escrito Ampliatorio de Defensa",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia Personalizada",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia - Publicación de Periódico",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Reclamo de Servicio",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Reclamo Formal de Devolución",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Recurso Administrativo",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia Sencilla",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Matrimonio / Estipulaciones",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Modelo de Documento (solo el modelo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Nómina de Pagos/Presencia",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Notoriedad - Buena Conducta",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad - Buena Conducta Empleado",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad - Conocen al Fallecido",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad de Determinación de Herederos (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 2,
+    "fuente": "modelo: determinacion de herederos",
+    "precio_anterior": 1000,
+    "precio_nuevo": 700
+  },
+  {
+    "nombre": "Notoriedad de Determinación de Herederos (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 2,
+    "fuente": "modelo: determinacion de herederos",
+    "precio_anterior": 500,
+    "precio_nuevo": 700
+  },
+  {
+    "nombre": "Notoriedad - Domicilio",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad Jurada (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad - Manutención Parental",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad - No Convivencia",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Notoriedad - No Descendencia",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Pagaré Notarial",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "modelo: acto autentico - pagare notarial",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Pagaré Notarial (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 600,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Pagaré Notarial (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Pagaré Notarial (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Partición Amigable",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_motivada",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 350
+  },
+  {
+    "nombre": "Permuta",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder - Ampliatorio",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder - Cobrar Suma de Dinero",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder Cuota Litis",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "modelo: poder cuota litis",
+    "precio_anterior": 200,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder Cuota Litis (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "modelo: poder cuota litis",
+    "precio_anterior": 500,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder Cuota Litis (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "modelo: poder cuota litis",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder Cuota Litis (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "modelo: poder cuota litis",
+    "precio_anterior": 200,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Depositar Documentos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder Especial de Autorización (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder Especial de Autorización (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Guarda y Tutela de Menor",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Primera Placa o Matrícula",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Procesos Judiciales",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder - Realizar Pagos",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Representar Sucesión o Herencia",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Retirar Certificaciones",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 250,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Traspaso de Inmueble",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Traspaso de Vehículo",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "por defecto",
+    "precio_anterior": null,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Poder - Venta de Propiedades",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 400,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Poder - Viaje de Menor",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Promesa de Compra-Venta",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Recibo de Descargo / Pago",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Recibo de Descargo y Recibo de Pago (Avanzado)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Recibo de Descargo y Recibo de Pago (Extensivo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Recibo de Descargo y Recibo de Pago (Sencillo)",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 250
+  },
+  {
+    "nombre": "Testamento",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "legal_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 500
+  },
+  {
+    "nombre": "Instancia - Arrendamiento Inmueble",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Asignación de Sala",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Autorización",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Avalúo de Inmueble",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 200,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Comunicación/Invitación",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 3,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 450
+  },
+  {
+    "nombre": "Instancia - Construcción",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Corrección",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Depósito de Documentos",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Depósito de Inventario",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia - Desglose de Expediente",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Desglose de Pago",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Fijación de Audiencia",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Inscripción Nombre Comercial",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Levantamiento",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Oposición",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 200,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Pronunciamiento",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Prórroga de Expediente",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Recogida de Escombros",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Recurso de Amparo",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_motivada",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 500,
+    "precio_nuevo": 600
+  },
+  {
+    "nombre": "Instancia - Recurso de Apelación",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_motivada",
+    "fojas": 2,
+    "fuente": "modelo: recurso de apelacion",
+    "precio_anterior": 500,
+    "precio_nuevo": 600
+  },
+  {
+    "nombre": "Instancia - Recurso de Reconsideración",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_motivada",
+    "fojas": 2,
+    "fuente": "modelo: recurso de reconsideracion",
+    "precio_anterior": 500,
+    "precio_nuevo": 600
+  },
+  {
+    "nombre": "Instancia - Solicitud de Certificaciones",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Solicitud de Documentos",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Instancia - Subsanación de Expediente",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 2,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Instancia - Transferencia",
+    "categoria": "Redactar y Certificar una Traducción",
+    "foja_tipo": "carta_simple",
+    "fojas": 1,
+    "fuente": "estimado del precio anterior",
+    "precio_anterior": 150,
+    "precio_nuevo": 150
+  }
+]

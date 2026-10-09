@@ -48,7 +48,9 @@ function templatePages(dir) {
 
 const tokens = (s) => new Set(fold(s).split(/[^a-z0-9ñ]+/).filter((t) => t.length >= 3));
 
-function fojasFor(name, pagesMap) {
+// Sin modelo: las fojas se estiman del precio anterior (precio / tarifa, mínimo 1) para que el precio
+// no cambie de golpe hasta que Leandro revise; sin precio anterior, 1.
+function fojasFor(name, pagesMap, { precioAnterior = null, tarifa = null } = {}) {
   const n = fold(name);
   const nt = tokens(n);
   let best = null;
@@ -62,7 +64,13 @@ function fojasFor(name, pagesMap) {
     } else continue;
     if (!best || score > best.score) best = { score, key, pages };
   }
-  if (!best) return { fojas: 1, fuente: 'por defecto' };
+  if (!best) {
+    const p = Number(precioAnterior);
+    if (precioAnterior != null && p > 0 && Number(tarifa) > 0) {
+      return { fojas: Math.max(1, Math.round(p / Number(tarifa))), fuente: 'estimado del precio anterior' };
+    }
+    return { fojas: 1, fuente: 'por defecto' };
+  }
   return { fojas: best.pages, fuente: `modelo: ${best.key}` };
 }
 
@@ -81,7 +89,7 @@ async function main() {
   for (const r of rows) {
     const tipo = classifyTipo(r.name, r.categoria);
     if (!tipo) continue;
-    const { fojas, fuente } = fojasFor(r.name, pagesMap);
+    const { fojas, fuente } = fojasFor(r.name, pagesMap, { precioAnterior: r.digitacion_price, tarifa: FOJA_RATES[tipo] });
     list.push({
       nombre: r.name, categoria: r.categoria, foja_tipo: tipo, fojas, fuente,
       precio_anterior: r.digitacion_price == null ? null : Number(r.digitacion_price),
