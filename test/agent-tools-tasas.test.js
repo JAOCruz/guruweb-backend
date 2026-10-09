@@ -78,3 +78,31 @@ test('monto con formato y JSON rodeado de prosa o llaves', async () => {
     assert.equal(r.monto_aproximado, esperado, text);
   }
 });
+
+test('monto con punto de miles, coma de miles y porcentajes', async () => {
+  const casos = [
+    ['{"monto":"1.500"}', 1500],
+    ['{"monto":"RD$1.500,00"}', 1500],
+    ['{"monto":"1,500"}', 1500],
+    ['{"monto":"12.345.678"}', 12345678],
+    ['{"monto":"1500.75"}', 1500.75],
+  ];
+  let i = 0;
+  for (const [text, esperado] of casos) {
+    const r = await estimar_tasa({ concepto: `m${i++}` }, { provider: mk(() => ({ text, sources: [] })).p });
+    assert.equal(r.monto_aproximado, esperado, text);
+  }
+  // Un porcentaje (impuesto de transferencia 2%) no es un monto en RD$: menos de 50 queda por confirmar y no se guarda.
+  for (const text of ['{"monto":2,"nota":"2% del valor"}', '{"monto":"2"}', '{"monto":49}']) {
+    const r = await estimar_tasa({ concepto: 'Impuesto de transferencia' }, { provider: mk(() => ({ text, sources: [] })).p });
+    assert.deepEqual(r, { concepto: 'Impuesto de transferencia', monto_aproximado: null, por_confirmar: true }, text);
+  }
+  assert.equal((await pool.query(`SELECT COUNT(*)::int n FROM tasas_cache WHERE concepto_key = 'impuesto de transferencia'`)).rows[0].n, 0);
+});
+
+test('el prompt pide que los porcentajes vayan en la nota, no en monto', async () => {
+  const { p, calls } = mk(() => ({ text: '{"monto":null}', sources: [] }));
+  await estimar_tasa({ concepto: 'Impuesto de transferencia' }, { provider: p });
+  assert.match(calls[0].prompt, /porcentaje/i);
+  assert.match(calls[0].prompt, /nota/);
+});

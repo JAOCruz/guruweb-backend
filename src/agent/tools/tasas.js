@@ -8,6 +8,27 @@ const CACHE_DIAS = 30;
 const SEARCH_TIMEOUT_MS = 15000;
 
 const hoy = () => new Date().toISOString().slice(0, 10);
+// Ninguna tasa oficial en RD$ baja de esto; un número menor suele ser un porcentaje (p. ej. el 2% de transferencia).
+const MONTO_MINIMO = 50;
+
+// Monto en RD$ desde número o texto: "RD$1,500", "1.500" y "RD$1.500,00" son 1500; "2,250.50" es 2250.5.
+function parseMonto(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return NaN;
+  let s = v.replace(/[^0-9.,]/g, '');
+  if (!s) return NaN;
+  const punto = s.lastIndexOf('.');
+  const coma = s.lastIndexOf(',');
+  if (punto !== -1 && coma !== -1) {
+    // El separador que va último es el decimal; el otro es de miles.
+    s = coma > punto ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  } else if (coma !== -1) {
+    s = /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.replace(',', '.');
+  } else if (punto !== -1 && /^\d{1,3}(\.\d{3})+$/.test(s)) {
+    s = s.replace(/\./g, '');
+  }
+  return Number(s);
+}
 
 // Primer objeto JSON con clave "monto": prueba cada '{' contra cada '}' posterior (tolera prosa con llaves y '}' dentro de textos).
 function parseRespuesta(text) {
@@ -43,12 +64,12 @@ async function estimar_tasa(args, ctx = {}) {
 
     const prompt = `Busque en la web el monto oficial vigente en República Dominicana de: "${concepto}". ` +
       'Use fuentes oficiales (DGII, INTRANT, Procuraduría, ayuntamientos, Banreservas). ' +
+      'Si la tasa es un porcentaje (p. ej. 2% del valor), ponga el porcentaje en "nota" y monto null; nunca ponga un porcentaje en "monto". ' +
       'Responda SOLO con JSON: {"monto": número en RD$ o null si no lo encuentra, "fuente": "url", "nota": "aclaración corta"}.';
     const res = await provider.search({ prompt, timeoutMs: SEARCH_TIMEOUT_MS });
     const data = parseRespuesta(res && res.text);
-    const bruto = data ? data.monto : null;
-    const monto = typeof bruto === 'string' ? Number(bruto.replace(/[^0-9.]/g, '')) : Number(bruto);
-    if (!Number.isFinite(monto) || monto <= 0) return porConfirmar;
+    const monto = parseMonto(data ? data.monto : null);
+    if (!Number.isFinite(monto) || monto < MONTO_MINIMO) return porConfirmar;
 
     const fuente = (typeof data.fuente === 'string' && data.fuente.trim()) || (res.sources && res.sources[0]) || null;
     const nota = typeof data.nota === 'string' ? data.nota : null;
