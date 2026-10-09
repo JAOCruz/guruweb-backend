@@ -153,7 +153,8 @@ test('los JSON reales de seeds/bot son válidos: 7 trámites con los nombres del
     if (c.grupo) assert.ok(Number.isInteger(c.tramos_desde), 'grupo sin tramos_desde');
     else assert.ok(catalogNames.has(c.nombre) && c.motivo, `conflicto inválido: ${JSON.stringify(c)}`);
   }
-  assert.ok(conflictos.some((c) => c.grupo === 'Acto de Venta' && c.tramos_desde === 3000001));
+  // Ronda 1 de Leandro: solo queda pendiente el Escáner (los demás conflictos se resolvieron en la migración).
+  assert.deepEqual(conflictos.map((c) => c.nombre), ['Escáner de Documento']);
 
   const esperados = ['Traspaso de vehículo', 'Salida de menor', 'Ayuntamiento', 'Compulsa', 'Apostilla de documento', 'Apostilla de certificación', 'Legalización de traducción'];
   assert.deepEqual(tramites.map((t) => t.nombre).sort(), [...esperados].sort());
