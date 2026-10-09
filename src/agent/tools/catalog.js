@@ -73,7 +73,7 @@ async function buscar_servicio(args = {}, ctx) {
         tiempo_entrega: s.tiempo_entrega || null,
         unidad: s.unit_type || null,
         // Servicio por foja: tarifa por foja y fojas que se asumen si el cliente no dice cuántas.
-        por_foja: FOJA_RATES[s.foja_tipo] ? { tipo: s.foja_tipo, tarifa: FOJA_RATES[s.foja_tipo], fojas_estimadas: validFojas(s.fojas) ?? 1 } : null,
+        por_foja: FOJA_RATES[s.foja_tipo] ? { tipo: s.foja_tipo, tarifa_por_foja: FOJA_RATES[s.foja_tipo], fojas_aprox: validFojas(s.fojas) ?? 1 } : null,
       };
     });
   return { resultados };

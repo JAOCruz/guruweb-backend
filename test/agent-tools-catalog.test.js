@@ -160,6 +160,14 @@ test('ver_tramite: un paso por tramos (sin valor) queda en faltan_precios y el t
   assert.equal(r.pasos[1].precio, 700);
 });
 
+test('buscar_servicio: por_foja trae tarifa_por_foja (monto permitido) y las fojas aproximadas, no como monto', async () => {
+  const { collectAmounts } = require('../src/agent/agent');
+  const { resultados } = await buscar_servicio({ consulta: 'carta legal simple' });
+  const f = resultados.find((x) => x.id === ids.foja);
+  assert.deepEqual(f.por_foja, { tipo: 'legal_simple', tarifa_por_foja: 250, fojas_aprox: 2 });
+  const s = collectAmounts({ resultados }, new Set());
+  assert.ok(s.has(250)); assert.ok(!s.has(2));
+});
 test('servicio por foja: calcular_precio usa la tarifa y marca las fojas como estimadas', async () => {
   const r = await calcular_precio({ servicio_id: ids.foja });
   assert.equal(r.total, 500);
@@ -179,7 +187,7 @@ test('con fojas dadas, calcular_precio ya no es estimado; duplicados salen en el
 });
 test('buscar_servicio trae por_foja (o null si no va por foja)', async () => {
   const r = await buscar_servicio({ consulta: 'carta legal simple' });
-  assert.deepEqual(r.resultados[0].por_foja, { tipo: 'legal_simple', tarifa: 250, fojas_estimadas: 2 });
+  assert.deepEqual(r.resultados[0].por_foja, { tipo: 'legal_simple', tarifa_por_foja: 250, fojas_aprox: 2 });
   const o = await buscar_servicio({ consulta: 'copia certificada' });
   assert.equal(o.resultados[0].por_foja, null);
 });

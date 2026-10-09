@@ -24,7 +24,7 @@ const TOOLS = [
       'su id, qué incluye, sus reglas, requisitos y si lleva notarización. Devuelve hasta 5 resultados; el precio que trae es solo ' +
       'de referencia: para decirle un monto al cliente use calcular_precio. Si depende_del_valor es true, el precio viene nulo: ' +
       'pregunte el valor del bien y páselo a calcular_precio. Si trae por_foja, el servicio se cobra por foja (cada cara impresa es una foja): ' +
-      'tarifa por foja y fojas_estimadas son solo referencia.',
+      'tarifa_por_foja y fojas_aprox son solo referencia.',
     parameters: {
       type: 'object',
       properties: {
