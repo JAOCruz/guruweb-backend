@@ -966,10 +966,10 @@
     "nombre": "Notoriedad de Determinación de Herederos (Avanzado)",
     "categoria": "Redactar o digitar un documento",
     "foja_tipo": "legal_motivada",
-    "fojas": 2,
-    "fuente": "modelo: determinacion de herederos",
+    "fojas": 3,
+    "fuente": "modelo: determinacion de herederos (ajustado al precio anterior)",
     "precio_anterior": 1000,
-    "precio_nuevo": 700
+    "precio_nuevo": 1050
   },
   {
     "nombre": "Notoriedad de Determinación de Herederos (Extensivo)",
@@ -1110,10 +1110,10 @@
     "nombre": "Poder Cuota Litis (Avanzado)",
     "categoria": "Redactar o digitar un documento",
     "foja_tipo": "legal_simple",
-    "fojas": 1,
-    "fuente": "modelo: poder cuota litis",
+    "fojas": 2,
+    "fuente": "modelo: poder cuota litis (ajustado al precio anterior)",
     "precio_anterior": 500,
-    "precio_nuevo": 250
+    "precio_nuevo": 500
   },
   {
     "nombre": "Poder Cuota Litis (Extensivo)",

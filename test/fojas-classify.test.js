@@ -92,3 +92,39 @@ test('fojas.json no trae servicios con precio_rango en los seeds', () => {
   const malos = rd('fojas.json').filter((e) => conRango.has(e.nombre)).map((e) => e.nombre);
   assert.deepEqual(malos, []);
 });
+
+test('fojasFor: variantes (Avanzado)/(Extensivo) usan el mayor entre el modelo y el estimado del precio', () => {
+  const m = new Map([['poder cuota litis', 1], ['determinacion de herederos', 2]]);
+  assert.deepEqual(fojasFor('Poder Cuota Litis (Avanzado)', m, { precioAnterior: 500, tarifa: 250 }),
+    { fojas: 2, fuente: 'modelo: poder cuota litis (ajustado al precio anterior)' });
+  assert.deepEqual(fojasFor('Notoriedad de Determinación de Herederos (AVANZADO)', m, { precioAnterior: 1000, tarifa: 350 }),
+    { fojas: 3, fuente: 'modelo: determinacion de herederos (ajustado al precio anterior)' });
+  // El modelo gana si el estimado es menor
+  assert.deepEqual(fojasFor('Poder Cuota Litis (Extensivo)', m, { precioAnterior: 300, tarifa: 250 }),
+    { fojas: 1, fuente: 'modelo: poder cuota litis' });
+  assert.deepEqual(fojasFor('Notoriedad de Determinación de Herederos (Extensivo)', m, { precioAnterior: 500, tarifa: 350 }),
+    { fojas: 2, fuente: 'modelo: determinacion de herederos' });
+  // Sin variante, el modelo manda aunque el precio anterior sea alto
+  assert.deepEqual(fojasFor('Poder Cuota Litis', m, { precioAnterior: 5000, tarifa: 250 }), { fojas: 1, fuente: 'modelo: poder cuota litis' });
+  // Variante sin precio anterior: el modelo
+  assert.deepEqual(fojasFor('Poder Cuota Litis (Avanzado)', m), { fojas: 1, fuente: 'modelo: poder cuota litis' });
+});
+
+test('fojas.json: las variantes (Avanzado)/(Extensivo) con modelo siguen la misma regla', () => {
+  const { FOJA_RATES } = require('../src/models/fojaRates');
+  const { fold } = require('../src/agent/text');
+  const items = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seeds', 'bot', 'fojas.json'), 'utf8'));
+  let vistos = 0;
+  for (const e of items) {
+    assert.equal(e.precio_nuevo, FOJA_RATES[e.foja_tipo] * e.fojas, e.nombre);
+    if (!/\((avanzado|extensivo)\)/.test(fold(e.nombre)) || !e.fuente.startsWith('modelo:') || e.precio_anterior == null) continue;
+    vistos += 1;
+    const est = Math.max(1, Math.round(e.precio_anterior / FOJA_RATES[e.foja_tipo]));
+    assert.ok(e.fojas >= est, `${e.nombre}: ${e.fojas} < ${est}`);
+  }
+  assert.ok(vistos >= 4);
+  const notoriedad = items.find((e) => e.nombre === 'Notoriedad de Determinación de Herederos (Avanzado)');
+  assert.deepEqual([notoriedad.fojas, notoriedad.precio_nuevo, notoriedad.fuente], [3, 1050, 'modelo: determinacion de herederos (ajustado al precio anterior)']);
+  const poder = items.find((e) => e.nombre === 'Poder Cuota Litis (Avanzado)');
+  assert.deepEqual([poder.fojas, poder.precio_nuevo, poder.fuente], [2, 500, 'modelo: poder cuota litis (ajustado al precio anterior)']);
+});

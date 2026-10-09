@@ -52,7 +52,8 @@ function templatePages(dir) {
 const tokens = (s) => new Set(fold(s).split(/[^a-z0-9ñ]+/).filter((t) => t.length >= 3));
 
 // Sin modelo: las fojas se estiman del precio anterior (precio / tarifa, mínimo 1) para que el precio
-// no cambie de golpe hasta que Leandro revise; sin precio anterior, 1.
+// no cambie de golpe hasta que Leandro revise; sin precio anterior, 1. En variantes (Avanzado)/(Extensivo)
+// con modelo, el mayor entre las páginas del modelo y ese estimado.
 function fojasFor(name, pagesMap, { precioAnterior = null, tarifa = null } = {}) {
   const n = fold(name);
   const nt = tokens(n);
@@ -67,12 +68,15 @@ function fojasFor(name, pagesMap, { precioAnterior = null, tarifa = null } = {})
     } else continue;
     if (!best || score > best.score) best = { score, key, pages };
   }
+  const p = Number(precioAnterior);
+  const estimado = precioAnterior != null && p > 0 && Number(tarifa) > 0 ? Math.max(1, Math.round(p / Number(tarifa))) : null;
   if (!best) {
-    const p = Number(precioAnterior);
-    if (precioAnterior != null && p > 0 && Number(tarifa) > 0) {
-      return { fojas: Math.max(1, Math.round(p / Number(tarifa))), fuente: 'estimado del precio anterior' };
-    }
+    if (estimado !== null) return { fojas: estimado, fuente: 'estimado del precio anterior' };
     return { fojas: 1, fuente: 'por defecto' };
+  }
+  // El modelo es la versión básica: en "(Avanzado)"/"(Extensivo)" (más fojas) gana el mayor entre modelo y estimado.
+  if (/\((avanzado|extensivo)\)/.test(n) && estimado !== null && estimado > best.pages) {
+    return { fojas: estimado, fuente: `modelo: ${best.key} (ajustado al precio anterior)` };
   }
   return { fojas: best.pages, fuente: `modelo: ${best.key}` };
 }
