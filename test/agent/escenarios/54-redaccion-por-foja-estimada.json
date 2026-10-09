@@ -1,0 +1,13 @@
+{
+  "nombre": "redaccion por foja estimada",
+  "turnos": ["hola", "necesito que me redacten un poder para vender una propiedad, solo la redaccion"],
+  "espera": {
+    "herramientas_incluye": ["calcular_precio"],
+    "termina_sin_traspaso": true,
+    "texto_coincide": "foja"
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

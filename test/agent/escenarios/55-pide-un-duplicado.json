@@ -1,0 +1,12 @@
+{
+  "nombre": "pide un duplicado",
+  "turnos": ["hola", "necesito un contrato de alquiler de una vivienda, sencillo, redactado", "quiero 3 originales, cuanto me sale"],
+  "espera": {
+    "herramientas_incluye": ["calcular_precio"],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -15,7 +15,7 @@ const path = require('path');
 
 process.env.RAILWAY_VOLUME_MOUNT_PATH = fs.mkdtempSync(path.join(os.tmpdir(), 'bot-eval-'));
 // helpers/db.js rechaza cualquier base que no sea local y fija DATABASE_URL antes de cargar el pool.
-const { pool } = require('../test/helpers/db');
+const { pool, runSqlFile } = require('../test/helpers/db');
 const { createAgentSchema } = require('../test/helpers/agentDb');
 const { seedBotKnowledge } = require('../src/db/seedBotKnowledge');
 const { getProvider } = require('../src/agent/provider');
@@ -74,6 +74,12 @@ async function setupDb() {
   await pool.query(`SELECT setval(pg_get_serial_sequence('service_categories','id'), COALESCE((SELECT MAX(id) FROM service_categories),1))`);
   await pool.query(`SELECT setval(pg_get_serial_sequence('service_catalog','id'), COALESCE((SELECT MAX(id) FROM service_catalog),1))`);
   const r = await seedBotKnowledge({ dir: path.join(ROOT, 'seeds', 'bot') });
+  // Precios de Leandro, ronda 1: la migración (fojas, duplicados, mensajería, Uber, tasas_cache) es idempotente y
+  // vuelve a crear lo que el DELETE de arriba borró; luego se aplican las fojas de seeds/bot/fojas.json.
+  await runSqlFile('migrations/20261009_precios_leandro_1.sql');
+  for (const f of JSON.parse(fs.readFileSync(path.join(ROOT, 'seeds', 'bot', 'fojas.json'), 'utf8'))) {
+    await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
+  }
   await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
 }

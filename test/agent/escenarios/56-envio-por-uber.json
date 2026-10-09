@@ -1,0 +1,12 @@
+{
+  "nombre": "envio por uber",
+  "turnos": ["hola", "ya me hicieron un acto de venta con ustedes, quiero que me lo envien a mi casa, cuanto cuesta el envio"],
+  "espera": {
+    "termina_sin_traspaso": true,
+    "texto_coincide": "Uber"
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

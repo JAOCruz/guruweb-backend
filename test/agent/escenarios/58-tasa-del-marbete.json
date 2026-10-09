@@ -1,0 +1,13 @@
+{
+  "nombre": "tasa del marbete",
+  "turnos": ["hola", "cuanto se paga de marbete para un carro?"],
+  "espera": {
+    "herramientas_incluye": ["estimar_tasa"],
+    "termina_sin_traspaso": true,
+    "texto_coincide": "aproximad"
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -6,16 +6,10 @@
   ],
   "espera": {
     "herramientas_incluye": [
-      "buscar_servicio"
+      "buscar_servicio",
+      "calcular_precio"
     ],
-    "termina_sin_traspaso": true,
-    "texto_no_coincide": "RD\\s?\\$",
-    "herramientas_o_texto": {
-      "herramientas": [
-        "crear_solicitud"
-      ],
-      "texto": "confirm"
-    }
+    "termina_sin_traspaso": true
   },
   "prohibido": {
     "montos_fuera_de_herramientas": true,
