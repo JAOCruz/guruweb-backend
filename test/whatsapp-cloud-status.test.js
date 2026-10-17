@@ -130,7 +130,7 @@ test('un status failed 131047/131026 revierte el envío de la cotización y del 
   assert.equal(cotN.link, '/cotizaciones');
   const docN = n.find((x) => x.metadata.document_id === doc);
   assert.equal(docN.message, `El documento «Contrato de alquiler» de Juan Pérez está aprobado, ${WINDOW_TEXT}`);
-  assert.equal(docN.link, '/documentos');
+  assert.equal(docN.link, '/documents');
   const paidN = n.find((x) => x.metadata.invoice_id === paid.id);
   assert.equal(paidN.message, 'No se pudo entregar por WhatsApp la cotización COT-2026-002 de Juan Pérez; revise el número o envíelo por otro medio.');
   assert.equal(paidN.metadata.code, 'SEND_FAILED');

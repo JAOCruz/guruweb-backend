@@ -459,7 +459,7 @@ test('M1: cada envío que sale avisa a los admins una sola vez, con 📤 y el no
   const docN = n.filter((x) => x.title === '📤 Enviado por WhatsApp: Poder especial');
   assert.equal(docN.length, 2);
   assert.match(docN[0].message, /Juan Pérez/);
-  assert.equal(docN[0].link, '/documentos');
+  assert.equal(docN[0].link, '/documents');
   assert.equal(docN[0].metadata.document_id, doc.id);
 
   // El segundo clic (ALREADY_SENT) no avisa otra vez

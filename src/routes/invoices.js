@@ -49,7 +49,7 @@ async function notifyApprovalRequested(req, inv) {
     type: 'approval',
     title: `📝 ${docKind(inv) === 'factura' ? 'Factura' : 'Cotización'} por aprobar`,
     message: `${who} pidió aprobar la ${docKind(inv)} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} por ${rd(inv.total)}.`,
-    link: '/cotizaciones',
+    link: `/cotizaciones?invoice=${inv.id}`,
     metadata: { invoice_id: inv.id },
   });
 }
@@ -64,7 +64,7 @@ async function notifyDecision(inv, approved, reason) {
     type: 'approval',
     title: `${approved ? '✅' : '❌'} ${kind === 'factura' ? 'Factura' : 'Cotización'} ${done}`,
     message: `La ${kind} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} fue ${done}${!approved && reason ? `: ${reason}` : '.'}`,
-    link: '/cotizaciones',
+    link: `/cotizaciones?invoice=${inv.id}`,
     metadata: { invoice_id: inv.id },
   });
 }

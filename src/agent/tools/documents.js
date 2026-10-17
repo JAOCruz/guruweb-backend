@@ -183,7 +183,7 @@ async function preparar_documento(args, ctx) {
     if (client.assigned_to && (await digitadoresAprueban())) recipients.add(client.assigned_to);
     await notifyUsers([...recipients], {
       type: 'document', title: `📄 Documento preparado por el bot: ${title}`,
-      message: `${clientName} — por aprobar en Documentos`, link: '/documentos',
+      message: `${clientName} — por aprobar en Documentos`, link: '/documents',
       metadata: { document_id: id, client_id: client.id, invoice_id: invoiceId },
     });
   } catch (err) {

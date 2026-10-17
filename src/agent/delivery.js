@@ -78,7 +78,7 @@ async function sendWithRetry(target, filePath, fileName, caption) {
 async function notifyAdmins(message, metadata, title = 'Envío por WhatsApp pendiente') {
   await notifyUsers(await activeAdminIds(), {
     type: 'delivery', title, message,
-    link: metadata.invoice_id && !metadata.document_id ? '/cotizaciones' : '/documentos', metadata,
+    link: metadata.invoice_id && !metadata.document_id ? '/cotizaciones' : '/documents', metadata,
   });
 }
 

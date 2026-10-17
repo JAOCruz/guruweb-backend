@@ -63,7 +63,7 @@ test('el digitador pide aprobación: avisa a cada admin activo, no al digitador'
     assert.match(n[0].message, /Hengi/);
     assert.match(n[0].message, /COT-2026-001/);
     assert.match(n[0].message, /Juan Pérez/);
-    assert.equal(n[0].link, '/cotizaciones');
+    assert.equal(n[0].link, `/cotizaciones?invoice=${inv.id}`);
   }
   assert.equal((await notifs(digitadorId)).length, 0);
 });
@@ -90,7 +90,7 @@ test('el admin aprueba: avisa al digitador que la creó', async () => {
   assert.equal(n[0].type, 'approval');
   assert.match(n[0].title, /aprobada/i);
   assert.match(n[0].message, /COT-2026-001/);
-  assert.equal(n[0].link, '/cotizaciones');
+  assert.equal(n[0].link, `/cotizaciones?invoice=${inv.id}`);
 });
 
 test('el admin rechaza: avisa al digitador con el motivo', async () => {

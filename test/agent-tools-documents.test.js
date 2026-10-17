@@ -215,7 +215,7 @@ test('preparar_documento llena el Word, crea el borrador del bot ligado a la cot
   const n = await notifs();
   assert.deepEqual(n.map((x) => x.user_id), [adminId]);
   assert.equal(n[0].title, '📄 Documento preparado por el bot: ACTO DE VENTA DE VEHÍCULO — Ana Cliente');
-  assert.equal(n[0].link, '/documentos');
+  assert.equal(n[0].link, '/documents');
   assert.equal(n[0].metadata.document_id, d.id);
 
   // invoice_id explícito: se usa si es del cliente; si es ajeno, la más reciente del cliente
