@@ -87,6 +87,15 @@ test('la guía trae las reglas de atención de Leandro (punto 3)', () => {
   assert.doesNotMatch(g, /trámite se cae/i);
 });
 
+test('la guía trae las reglas de rangos y partidas por confirmar (Leandro)', () => {
+  const g = fs.readFileSync(GUIDE, 'utf8');
+  for (const needle of ['precio_sugerido', 'por confirmar', 'el digitador confirma', 'una sola firma', 'Revisión y Formato',
+    'lenguaje jurídico', 'todas las fojas', 'Modificación']) {
+    assert.ok(g.includes(needle), `falta "${needle}" en la guía`);
+  }
+  assert.doesNotMatch(g, /No la use con servicios por confirmar/);
+});
+
 // ---------- registro de herramientas ----------
 
 test('hay exactamente 13 herramientas con los nombres del spec', () => {

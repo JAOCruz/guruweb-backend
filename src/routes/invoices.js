@@ -21,6 +21,34 @@ function blockUnapproved(req, res, invoice) {
   return false;
 }
 const Invoice = require('../models/Invoice');
+
+// ── Partidas por confirmar ──
+// Una línea { precio: null, por_confirmar: true, rango, precio_sugerido, nota } espera que una persona ponga el precio.
+const parseItems = (items) => (typeof items === 'string' ? JSON.parse(items || '[]') : items || []);
+const hasPendingPrices = (inv) => parseItems(inv.items).some((i) => i && i.por_confirmar === true);
+const lineTotal = (i) => (i && i.precio !== null && i.precio !== undefined ? Number(i.cantidad) * Number(i.precio) : 0) || 0;
+function pricesPending(res) {
+  return res.status(400).json({ error: 'Faltan precios por confirmar en la cotización', code: 'PRICES_PENDING' });
+}
+// Un precio positivo confirma la línea; si no, sigue por confirmar (sin precio).
+function settleLine(line, precio) {
+  const out = { ...line };
+  const n = Number(precio);
+  if (precio !== null && precio !== undefined && precio !== '' && Number.isFinite(n) && n > 0) {
+    out.precio = n;
+    delete out.por_confirmar;
+  } else if (out.por_confirmar) {
+    out.precio = null;
+  }
+  return out;
+}
+// El digitador asignado al cliente puede ver una cotización del bot y ponerle precios mientras no está aprobada.
+async function isPricingAssignee(req, invoice) {
+  if (!isEmployee(req.user.role) || invoice.source !== 'bot' || !invoice.client_id) return false;
+  if (!['draft', 'pending_approval'].includes(invoice.status)) return false;
+  const { rows } = await pool.query('SELECT 1 FROM clients WHERE id = $1 AND assigned_to = $2', [invoice.client_id, req.user.id]);
+  return rows.length > 0;
+}
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
 const Case = require('../models/Case');
@@ -256,7 +284,8 @@ router.get('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    // Employee can only see own invoices
+    // Employee can only see own invoices (or, to set prices, the bot quotes of their assigned clients)
+    if (await isPricingAssignee(req, invoice)) return res.json({ invoice });
     if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -336,16 +365,31 @@ router.put('/:id', async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
 
-    if (isEmployee(req.user.role)) {
-      if (invoice.created_by !== req.user.id) return res.status(403).json({ error: 'Access denied' });
-      if (invoice.status !== 'draft') return res.status(400).json({ error: 'Cannot edit a non-draft invoice' });
+    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+      if (!(await isPricingAssignee(req, invoice))) return res.status(403).json({ error: 'Access denied' });
+      // Asignado: solo los precios de las líneas que ya existen; lo demás queda como está
+      const incoming = Array.isArray(req.body.items) ? req.body.items : [];
+      const items = parseItems(invoice.items).map((line, idx) =>
+        (incoming[idx] && 'precio' in incoming[idx] ? settleLine(line, incoming[idx].precio) : line));
+      const subtotal = items.reduce((a, i) => a + lineTotal(i), 0);
+      const itbis = items.reduce((a, i) => a + (i.itbis ? lineTotal(i) * 0.18 : 0), 0);
+      const updated = await Invoice.update(invoice.id, {
+        items: JSON.stringify(items), subtotal, itbis,
+        total: Math.max(0, subtotal + itbis - Number(invoice.discount_amount || 0)),
+      });
+      await safeLog(() => logInvoice(req, 'invoice.set_prices', updated, `Puso precios en ${docLabel(updated)}`));
+      return res.json({ invoice: updated });
+    }
+    if (isEmployee(req.user.role) && invoice.status !== 'draft') {
+      return res.status(400).json({ error: 'Cannot edit a non-draft invoice' });
     }
 
     if (invoice.status === 'rejected') {
       return res.status(400).json({ error: 'Cannot edit a rejected invoice' });
     }
 
-    const { type, clientName, clientPhone, items, notes } = req.body;
+    const { type, clientName, clientPhone, notes } = req.body;
+    let { items } = req.body;
     const fields = {};
     if (type)        fields.type        = type;
     if (clientName)  fields.client_name = clientName;
@@ -357,9 +401,10 @@ router.put('/:id', async (req, res) => {
     }
 
     if (items && Array.isArray(items)) {
-      const subtotal = items.reduce((s, i) => s + (Number(i.cantidad) * Number(i.precio)), 0);
+      items = items.map((i) => (i && i.por_confirmar ? settleLine(i, i.precio) : i));
+      const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
       const itbis    = items.some(i => i.itbis)
-        ? items.reduce((s, i) => s + (i.itbis ? Number(i.cantidad) * Number(i.precio) * 0.18 : 0), 0)
+        ? items.reduce((s, i) => s + (i.itbis ? lineTotal(i) * 0.18 : 0), 0)
         : 0;
 
       // Discounts are admin-only
@@ -462,6 +507,7 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
     if (!['draft', 'pending_approval'].includes(invoice.status)) {
       return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
     }
+    if (hasPendingPrices(invoice)) return pricesPending(res);
     const updated = await Invoice.approve(invoice.id, req.user.id);
     await safeLog(() => logInvoice(req, 'invoice.approve', updated, `Aprobó ${docLabel(updated)} por ${rd(updated.total)}`));
     await safeLog(() => notifyDecision(updated, true));
@@ -480,6 +526,7 @@ router.post('/:id/approve-and-send', requireRole('admin'), async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     if (invoice.status === 'rejected') return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
+    if (hasPendingPrices(invoice)) return pricesPending(res);
 
     let approvedNow = null;
     if (['draft', 'pending_approval'].includes(invoice.status)) {
@@ -560,6 +607,7 @@ router.post('/:id/send', async (req, res) => {
     if (invoice.status === 'sent') {
       return res.status(400).json({ error: 'Invoice already sent' });
     }
+    if (hasPendingPrices(invoice)) return pricesPending(res);
 
     // Employees must request admin approval before sending
     if (isEmployee(req.user.role)) {
@@ -687,6 +735,7 @@ router.post('/:id/send-whatsapp', async (req, res) => {
     if (invoice.status === 'rejected') {
       return res.status(400).json({ error: 'Este documento fue rechazado; corrígelo antes de enviarlo', code: 'REJECTED' });
     }
+    if (hasPendingPrices(invoice)) return pricesPending(res);
     if (isEmployee(req.user.role) && !['approved', 'sent', 'paid'].includes(invoice.status)) {
       return res.status(403).json({ error: 'El admin debe aprobar este documento antes de enviarlo al cliente', code: 'APPROVAL_REQUIRED' });
     }

@@ -66,7 +66,6 @@ async function buscar_servicio(args = {}, ctx) {
         depende_del_valor: price.dependeDelValor,
         rango: price.rango,
         por_confirmar: price.porConfirmar,
-        precio_sugerido: price.precioSugerido, // estimado de un precio por confirmar: se dice como aproximado
         incluye: s.incluye || null,
         reglas: s.reglas || null,
         requisitos: s.requisitos || null,
@@ -95,7 +94,6 @@ async function calcular_precio(args = {}, ctx) {
   // fojas y tarifa_por_foja van fuera de desglose: el guardián de precios permite todo número positivo dentro de él.
   return {
     servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
-    precio_sugerido: p.precioSugerido, // estimado de un precio por confirmar: se dice como aproximado
     fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
   };

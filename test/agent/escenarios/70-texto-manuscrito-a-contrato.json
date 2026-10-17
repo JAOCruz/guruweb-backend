@@ -1,0 +1,6 @@
+{
+  "nombre": "texto escrito a mano para pasarlo a contrato",
+  "turnos": ["saludos", "tengo un contrato escrito a mano con lapicero, ya esta redactado, solo quiero que me lo pasen a computadora e imprimirlo"],
+  "espera": { "termina_sin_traspaso": true, "texto_coincide": "revisi[oó]n|formato" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

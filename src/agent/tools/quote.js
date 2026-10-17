@@ -53,8 +53,10 @@ async function preparar_cotizacion(args, ctx) {
     } else {
       const modif = s.foja_tipo === 'modificacion' && unit.rango;
       const nota = modif ? NOTA.modificacion : isTranslation(s) ? NOTA.traduccion : unit.rango ? NOTA.rango : NOTA.otro;
+      // precio_sugerido: el de catálogo, de referencia para el digitador. Al bot solo se le devuelve el de una traducción
+      // (un servicio por confirmar tiene un precio que aún no está aprobado y no se le dice al cliente).
       items.push({ desc, cantidad, precio: null, por_confirmar: true, rango: unit.rango || null,
-        precio_sugerido: fixed ?? unit.precioSugerido ?? null, nota });
+        precio_sugerido: fixed ?? unit.precioSugerido ?? null, nota, ...(isTranslation(s) ? { traduccion: true } : {}) });
     }
     const dup = validFojas(p.duplicados);
     if (dup) items.push({ desc: 'Original adicional o duplicado', cantidad: dup, precio: duplicadoPrice(unit.fojas ?? validFojas(s.fojas) ?? 1) });
@@ -93,7 +95,9 @@ async function preparar_cotizacion(args, ctx) {
   }
   // invoice_id: para que preparar_documento ligue el documento a esta cotización
   const out = { cotizacion: inv.doc_number, invoice_id: inv.id, total: subtotal, estado: (pending || inv).status };
-  if (pendientes.length) out.por_confirmar = pendientes.map((i) => ({ desc: i.desc, rango: i.rango, precio_sugerido: i.precio_sugerido }));
+  if (pendientes.length) {
+    out.por_confirmar = pendientes.map((i) => ({ desc: i.desc, rango: i.rango, precio_sugerido: i.traduccion ? i.precio_sugerido : null }));
+  }
   return out;
 }
 

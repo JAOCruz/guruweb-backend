@@ -1,0 +1,6 @@
+{
+  "nombre": "traduccion de dos actas: juntas o separadas",
+  "turnos": ["buenas", "necesito traducir dos actas de nacimiento al ingles para la embajada"],
+  "espera": { "termina_sin_traspaso": true, "texto_coincide": "junt|separad|una sola firma|cada un" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

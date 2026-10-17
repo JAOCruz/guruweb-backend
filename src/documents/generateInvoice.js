@@ -34,10 +34,18 @@ function validityNote(type) {
   return /^COTIZACI[OÓ]N$/i.test(String(type || '')) ? `Cotización válida por ${QUOTE_VALID_DAYS} días a partir de su fecha.` : '';
 }
 
+// Línea sin precio (por confirmar): el texto que va en lugar del monto; null si la línea tiene precio.
+function pendingLabel(item) {
+  if (!item || (item.precio !== null && item.precio !== undefined)) return null;
+  const r = item.rango;
+  return r && r.min && r.max ? `Por confirmar (RD$${Number(r.min).toLocaleString('en-US')} – RD$${Number(r.max).toLocaleString('en-US')})` : 'Por confirmar';
+}
+
 async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, items, notes, type = 'COTIZACIÓN', discountType = null, discountValue = 0, discountAmount = 0, discountCode = null }) {
-  const subtotal = items.reduce((s, i) => s + (i.cantidad * i.precio), 0);
+  const lineTotal = (i) => (pendingLabel(i) ? 0 : i.cantidad * i.precio);
+  const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
   const itbis = items.some(i => i.itbis)
-    ? items.reduce((s, i) => s + (i.itbis ? i.cantidad * i.precio * 0.18 : 0), 0)
+    ? items.reduce((s, i) => s + (i.itbis ? lineTotal(i) * 0.18 : 0), 0)
     : 0;
   const discountLabel = discountType
     ? `DESCUENTO${discountType === 'percentage' ? ` (${discountValue}%)` : discountType === 'coupon' && discountCode ? ` (cupón ${discountCode})` : ''}`
@@ -54,8 +62,9 @@ async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, it
     const isEmpty = !item.desc;
     let desc = isEmpty ? '&nbsp;' : clean(item.desc).substring(0, 90);
     if (!isEmpty && Number(item.cantidad) > 1) desc += ` (x${item.cantidad})`;
-    const price = isEmpty ? '' : fmt(item.precio);
-    const amount = isEmpty ? '' : fmt(item.cantidad * item.precio);
+    const pending = isEmpty ? null : pendingLabel(item);
+    const price = isEmpty ? '' : pending || fmt(item.precio);
+    const amount = isEmpty ? '' : pending ? '—' : fmt(item.cantidad * item.precio);
     return `
     <tr>
       <td class="num">${isEmpty ? '&nbsp;' : i + 1}</td>
@@ -403,4 +412,4 @@ function generateDocNumber(type = 'COT') {
   return `${type}-${year}-${seq}`;
 }
 
-module.exports = { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber, validityNote };
+module.exports = { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber, validityNote, pendingLabel };

@@ -110,7 +110,8 @@ test('con partidas por confirmar la cotización se crea igual: líneas sin preci
   assert.equal(conf.precio, null); assert.equal(conf.precio_sugerido, 1000); assert.equal(conf.nota, 'Precio por confirmar: lo confirma el digitador');
   assert.equal(cero.por_confirmar, true);
   assert.deepEqual(r.por_confirmar.map((p) => p.rango), [{ min: 250, max: 300 }, null, null]);
-  assert.equal(r.por_confirmar[1].precio_sugerido, 1000);
+  // el precio de un servicio por confirmar no está aprobado: queda para el digitador, no se le pasa al bot
+  assert.equal(r.por_confirmar[1].precio_sugerido, null);
 });
 
 test('una traducción siempre queda por confirmar con su precio como sugerido', async () => {
@@ -119,6 +120,8 @@ test('una traducción siempre queda por confirmar con su precio como sugerido', 
   const line = (await pool.query('SELECT items FROM invoices')).rows[0].items[0];
   assert.equal(line.precio, null); assert.equal(line.por_confirmar, true); assert.equal(line.precio_sugerido, 700);
   assert.equal(line.nota, 'Individual o en conjunto (una sola firma): lo confirma el digitador');
+  const r2 = await preparar_cotizacion({ partidas: [{ servicio_id: x.trad }] }, ctx);
+  assert.equal(r2.por_confirmar[0].precio_sugerido, 700); // la traducción sí: es su precio por página
 });
 
 test('modificación de 3 fojas queda como rango por confirmar; de 2 fojas tiene precio', async () => {

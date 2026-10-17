@@ -1,0 +1,6 @@
+{
+  "nombre": "apostilla con precio por rango",
+  "turnos": ["hola", "cuanto me cobran por apostillar un acta de nacimiento en cancilleria? es para españa"],
+  "espera": { "herramientas_incluye": ["calcular_precio"], "termina_sin_traspaso": true, "texto_coincide": "digitador|confirm" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

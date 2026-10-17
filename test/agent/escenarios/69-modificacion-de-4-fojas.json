@@ -1,0 +1,6 @@
+{
+  "nombre": "modificacion de un contrato de 4 fojas, todas",
+  "turnos": ["hola", "tengo un contrato de 4 fojas ya hecho y necesito que le cambien los datos de las partes en todas las fojas, cuanto sale?"],
+  "espera": { "herramientas_incluye": ["calcular_precio"], "termina_sin_traspaso": true, "texto_coincide": "rango|entre|digitador|confirm" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

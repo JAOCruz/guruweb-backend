@@ -201,13 +201,9 @@ test('calcular_precio: cantidad son documentos aparte; las fojas de un servicio 
   assert.match(p.cantidad.description, /no en cantidad|no van en cantidad|nunca en cantidad/i);
 });
 
-test('calcular_precio y buscar_servicio devuelven precio_sugerido de un servicio por confirmar', async () => {
+test('un servicio por confirmar no le pasa ningún precio al bot (ni sugerido)', async () => {
   const r = await calcular_precio({ servicio_id: ids.conf, cantidad: 2 });
   assert.equal(r.total, null);
   assert.equal(r.por_confirmar, true);
-  assert.equal(r.precio_sugerido, 2000);
-  assert.equal((await calcular_precio({ servicio_id: ids.b })).precio_sugerido, null);
-  const b = await buscar_servicio({ consulta: 'estatus juridico' });
-  const hit = (b.resultados || b.servicios || b).find?.((x) => x.id === ids.conf);
-  assert.equal(hit.precio_sugerido, 1000);
+  assert.equal('precio_sugerido' in r, false);
 });
