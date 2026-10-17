@@ -59,7 +59,12 @@ Hoy, si una partida no tiene precio fijo, `preparar_cotizacion` rechaza la cotiz
 **Redacción:** las 4 tarifas ya existen. Se reclasifica según el texto de Leandro:
 - **Notificaciones** (Sencilla, Avanzada y Personalizada, hoy en Mensajería sin `foja_tipo`): pasan a `carta_motivada`, 300 la foja. La Sencilla sube de 150 a 300.
 - **Notoriedades** (las 8 que hoy están en `legal_simple`): pasan a `legal_motivada`, 350 la foja.
-- **Texto que da el cliente** (presencial o digital) para pasarlo a documento: es redacción motivada, 300 la foja. Va como regla en la guía.
+- **Qué es "motivado"** (aclaración de Leandro del 2026-10-17): convertir hechos sueltos en lenguaje jurídico. Eso es lo que hace motivado un documento, y por eso son textos más complejos o exclusivos: carta motivada a 300 o legal motivada a 350, según el tamaño.
+- **Texto suministrado por el cliente** (escrito a mano o enviado por WhatsApp): no es una redacción motivada.
+  - **Si el texto ya está redactado** y solo hay que pasarlo, aunque sea a un contrato: se cobra **Revisión y Formato** (rango por confirmar) **más la impresión**.
+  - **Si lo que trae son hechos o ideas** que hay que convertir en lenguaje jurídico: es redacción motivada, por foja.
+  - El bot pregunta cuál de los dos casos es, y el digitador confirma.
+- Las dos reglas van en la guía.
 
 **Certificaciones:**
 - Se cobran por unidad. Cada una lleva sus propios impuestos, su garantía y su política de devolución.
