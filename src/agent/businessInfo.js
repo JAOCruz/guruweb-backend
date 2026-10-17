@@ -62,7 +62,22 @@ function formatForPrompt(info = {}) {
   if (info.direccion) lines.push(`Dirección: ${info.direccion}.`);
   if (Array.isArray(info.formas_pago) && info.formas_pago.length) lines.push(`Formas de pago: ${info.formas_pago.join(' o ')}.`);
   if (info.entregas) lines.push(`Entregas: ${info.entregas}.`);
+  if (Number(info.vigencia_cotizacion_dias) > 0) lines.push(`Las cotizaciones son válidas por ${Number(info.vigencia_cotizacion_dias)} días.`);
+  if (Array.isArray(info.instituciones) && info.instituciones.length) lines.push(`Certificaciones y trámites solo con: ${info.instituciones.join(', ')}.`);
   return lines.join('\n');
 }
 
-module.exports = { getBusinessInfo, isOpen, formatForPrompt, clearCache };
+// temas_humano: { admin: [...], digitador: [...] } o, en el formato viejo, una lista plana.
+function formatTemasHumano(t) {
+  if (Array.isArray(t)) return t.length ? `Temas que pasan a una persona (pasar_a_humano): ${t.join(', ')}.` : '';
+  if (!t || typeof t !== 'object') return '';
+  const lines = [];
+  for (const destino of ['admin', 'digitador']) {
+    if (Array.isArray(t[destino]) && t[destino].length) {
+      lines.push(`Temas que pasan a una persona (pasar_a_humano con destino "${destino}"): ${t[destino].join(', ')}.`);
+    }
+  }
+  return lines.join('\n');
+}
+
+module.exports = { getBusinessInfo, isOpen, formatForPrompt, formatTemasHumano, clearCache };

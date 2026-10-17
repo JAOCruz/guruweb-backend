@@ -4,6 +4,7 @@ const Notification = require('../models/Notification');
 const pool = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { logActivity, safeLog } = require('../services/activityLog');
+const { chatAssigned, chatUnassigned } = require('../services/chatAssignment');
 
 function logClientAssignment(req, client, user) {
   const who = client.name || client.phone;
@@ -210,6 +211,8 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
     if (!isUnassign && assignedToUser) {
       await notifyAssignment(client, assignedToUser);
     }
+    // Chat asignado: el bot se calla y corre el reloj de 20 minutos
+    await safeLog(() => (isUnassign ? chatUnassigned(client.phone) : chatAssigned(client.phone, targetUserId)));
 
     console.log(`[Clients] Client ${req.params.id} ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser.username})`} by ${req.user.username}`);
     await safeLog(() => logClientAssignment(req, client, isUnassign ? null : assignedToUser));
@@ -277,6 +280,8 @@ router.post('/assign-by-phone', requireRole('admin'), async (req, res) => {
     if (!isUnassign && assignedToUser) {
       await notifyAssignment(client, assignedToUser);
     }
+    // Chat asignado: el bot se calla y corre el reloj de 20 minutos
+    await safeLog(() => (isUnassign ? chatUnassigned(client.phone) : chatAssigned(client.phone, targetUserId)));
 
     console.log(`[Clients] Client ${client.id} (${client.phone}) ${isUnassign ? 'unassigned' : `assigned to user ${targetUserId} (${assignedToUser?.username})`} by ${req.user.username}`);
     await safeLog(() => logClientAssignment(req, client, isUnassign ? null : assignedToUser));

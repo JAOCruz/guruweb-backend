@@ -1,0 +1,6 @@
+{
+  "nombre": "error en un contrato va al digitador",
+  "turnos": ["hola", "el contrato de alquiler que me hicieron tiene mal escrita la cedula del inquilino, necesito que lo corrijan"],
+  "espera": { "termina_con_traspaso": true, "traspaso_destino": "digitador" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

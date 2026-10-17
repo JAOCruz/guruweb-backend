@@ -28,6 +28,12 @@ function toBase64(filePath) {
 /**
  * Genera un PDF de cotización/factura con estilo FACTURA_DEFINITIVA
  */
+// Vigencia de una cotización (regla de Leandro: 7 días en todos los casos). Las facturas no la llevan.
+const QUOTE_VALID_DAYS = 7;
+function validityNote(type) {
+  return /^COTIZACI[OÓ]N$/i.test(String(type || '')) ? `Cotización válida por ${QUOTE_VALID_DAYS} días a partir de su fecha.` : '';
+}
+
 async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, items, notes, type = 'COTIZACIÓN', discountType = null, discountValue = 0, discountAmount = 0, discountCode = null }) {
   const subtotal = items.reduce((s, i) => s + (i.cantidad * i.precio), 0);
   const itbis = items.some(i => i.itbis)
@@ -307,6 +313,7 @@ async function generateInvoicePDF({ clientName, clientPhone, docNumber, date, it
         <td class="notes-cell" colspan="2">
           <div class="notes-label">NOTAS (OBSERVACIONES):</div>
           ${notes ? `<div class="notes-text">${clean(notes).replace(/\n/g, '<br>')}</div>` : ''}
+          ${validityNote(type) ? `<div class="notes-text"><strong>${validityNote(type)}</strong></div>` : ''}
         </td>
         <td class="totals-cell" colspan="2">
           <table class="totals-inner">
@@ -396,4 +403,4 @@ function generateDocNumber(type = 'COT') {
   return `${type}-${year}-${seq}`;
 }
 
-module.exports = { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber };
+module.exports = { generateInvoicePDF, generateInvoiceFromTemplate, generateDocNumber, validityNote };

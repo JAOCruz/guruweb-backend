@@ -1,0 +1,6 @@
+{
+  "nombre": "gestor pide un documento para su cliente",
+  "turnos": ["buenas, soy gestor", "necesito una declaracion jurada de solteria para un cliente mio, no es para mi"],
+  "espera": { "termina_sin_traspaso": true, "texto_no_coincide": "le conviene|es ilegal|no es legal|por qué necesita" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

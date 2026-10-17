@@ -101,3 +101,13 @@ test('herramienta_no_antes_del_turno: la primera llamada exitosa no puede ir ant
   assert.equal(C.checkHerramientaNoAntesDelTurno({ preparar_documento: 3 }, l, ends).length, 1);
   assert.deepEqual(C.checkHerramientaNoAntesDelTurno({ preparar_documento: 0 }, [log('ver_modelo')], [1]), []);
 });
+
+test('traspaso_destino: el último traspaso exitoso va al destino pedido', () => {
+  const adm = [log('pasar_a_humano', { motivo: 'x', destino: 'admin' }, { mensaje: 'm' })];
+  assert.deepEqual(C.checkTraspasoDestino('admin', adm), []);
+  assert.equal(C.checkTraspasoDestino('digitador', adm).length, 1);
+  assert.equal(C.checkTraspasoDestino('admin', []).length, 1);
+  assert.deepEqual(C.checkTraspasoDestino(undefined, []), []);
+  // sin destino cuenta como digitador (lo que hace la herramienta)
+  assert.deepEqual(C.checkTraspasoDestino('digitador', [log('pasar_a_humano', { motivo: 'x' }, { mensaje: 'm' })]), []);
+});

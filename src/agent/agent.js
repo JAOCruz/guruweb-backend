@@ -184,7 +184,7 @@ async function isRepeating(phone, text, now) {
 
 async function handoff(ctx, motivo) {
   try {
-    const r = await runTool('pasar_a_humano', { motivo }, ctx);
+    const r = await runTool('pasar_a_humano', { motivo, destino: 'digitador' }, ctx);
     if (r && r.mensaje) { ctx.handedOff = true; return r.mensaje; }
   } catch (err) {
     console.error(`[Agent] ${ctx.phone} traspaso falló:`, err.code || err.name || 'error');

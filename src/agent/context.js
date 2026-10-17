@@ -5,7 +5,7 @@ const path = require('path');
 const pool = require('../db/pool');
 const Message = require('../models/Message');
 const legalProfile = require('../documentos/legalProfile');
-const { getBusinessInfo, isOpen, formatForPrompt } = require('./businessInfo');
+const { getBusinessInfo, isOpen, formatForPrompt, formatTemasHumano } = require('./businessInfo');
 
 const HISTORY_LIMIT = 30;
 const ZONA = 'America/Santo_Domingo';
@@ -85,9 +85,8 @@ async function buildContext({ phone, client, now = new Date(), cutoff = null }) 
   const zona = info.horario?.zona || ZONA;
   const abierto = isOpen(now, info.horario);
   const negocio = [formatForPrompt(info)];
-  if (Array.isArray(info.temas_humano) && info.temas_humano.length) {
-    negocio.push(`Temas que pasan a una persona (pasar_a_humano): ${info.temas_humano.join(', ')}.`);
-  }
+  const temas = formatTemasHumano(info.temas_humano);
+  if (temas) negocio.push(temas);
   const system = [
     loadGuide(),
     '---',

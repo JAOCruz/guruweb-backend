@@ -1,0 +1,6 @@
+{
+  "nombre": "pide reembolso de una redaccion",
+  "turnos": ["saludos", "ya no voy a usar el poder que me redactaron, quiero que me devuelvan el dinero"],
+  "espera": { "termina_con_traspaso": true, "traspaso_destino": "admin", "texto_no_coincide": "le devolvemos|le reembolsamos|se le devuelve el" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

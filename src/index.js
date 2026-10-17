@@ -355,6 +355,12 @@ app.listen(PORT, "0.0.0.0", () => {
   } catch (err) {
     console.error("[activity] retention not started:", err.message);
   }
+  // Chats asignados sin respuesta en 20 min de horario: aviso al admin (cada minuto)
+  try {
+    require("./services/chatAssignment").startUnattendedChecker();
+  } catch (err) {
+    console.error("[Asignación] revisión no iniciada:", err.message);
+  }
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API: http://localhost:${PORT}`);

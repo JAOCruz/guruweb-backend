@@ -1,0 +1,6 @@
+{
+  "nombre": "la cotizacion es valida por 7 dias",
+  "turnos": ["hola", "cuanto dura la cotizacion que ustedes me mandan? hasta cuando me respetan el precio?"],
+  "espera": { "termina_sin_traspaso": true, "texto_coincide": "7 días|siete días" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

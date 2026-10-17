@@ -28,6 +28,7 @@ test.beforeEach(async () => {
   await pool.query('CREATE TABLE wa_bot_state (key TEXT PRIMARY KEY, value JSONB, updated_at TIMESTAMPTZ)');
   await runSqlFile('migrations/20261005_bot_agent.sql');
   await runSqlFile('migrations/20261009_precios_leandro_1.sql');
+  await runSqlFile('migrations/20261017_reglas_atencion.sql');
   clearCache();
   const mk = async (u, role, name) => (await pool.query(
     `INSERT INTO users (username, email, password_hash, name, role) VALUES ($1,$2,'x',$3,$4) RETURNING id`, [u, `${u}@t.co`, name, role])).rows[0].id;
@@ -85,7 +86,7 @@ test('cantidad multiplica el precio unitario', async () => {
 test('pasar_a_humano pone el chat en manual, avisa y devuelve el mensaje de espera exacto', async () => {
   const r = await pasar_a_humano({ motivo: 'reclamación' }, ctx);
   assert.equal(r.urgente, false);
-  assert.equal(r.mensaje, "Un miembro de nuestro equipo se comunicará con usted a la brevedad. ⏰ Horario de atención: Lunes a Viernes, 9:00 a 18:00 hrs. Si su asunto es urgente fuera de horario, por favor indíquelo escribiendo 'urgente'.");
+  assert.equal(r.mensaje, "Un Gurú de nuestro equipo se comunicará con usted a la brevedad. ⏰ Horario de atención: Lunes a Viernes, 9:00 a 18:00 hrs. Si su asunto es urgente fuera de horario, por favor indíquelo escribiendo 'urgente'.");
   assert.equal(handler.isManualMode(PHONE), true);
   const st = (await pool.query(`SELECT value FROM wa_bot_state WHERE key=$1`, [`handoff:${PHONE}`])).rows[0].value;
   assert.equal(st.motivo, 'reclamación'); assert.equal(st.urgente_avisado, false); assert.ok(st.at);
@@ -206,4 +207,31 @@ test('preparar_cotizacion: partida por foja lleva (N fojas) y los duplicados van
   assert.equal(inv.items[1].precio, 700);
   assert.equal(Number(inv.total), 750 + 1400);
   assert.equal(r.total, 2150);
+});
+
+test('destino admin: avisa solo a los admins aunque el cliente tenga asignado', async () => {
+  await pool.query('UPDATE clients SET assigned_to=$1', [digId]);
+  ctx.client.assigned_to = digId;
+  await pasar_a_humano({ motivo: 'reclamo de precio', destino: 'admin' }, ctx);
+  assert.deepEqual((await notifs('handoff')).map((x) => x.user_id), [adminId]);
+  assert.equal(handler.isManualMode(PHONE), true);
+});
+
+test('destino digitador (o sin destino): el asignado; sin asignado, los admins', async () => {
+  await pasar_a_humano({ motivo: 'error en el contrato', destino: 'digitador' }, ctx);
+  assert.deepEqual((await notifs('handoff')).map((x) => x.user_id), [adminId]);
+  await pool.query('DELETE FROM notifications');
+  await pool.query('UPDATE clients SET assigned_to=$1', [digId]);
+  ctx.client.assigned_to = digId;
+  await pasar_a_humano({ motivo: 'estado de mi certificación', destino: 'digitador' }, ctx);
+  assert.deepEqual((await notifs('handoff')).map((x) => x.user_id), [digId]);
+});
+
+test('el mensaje de espera dice "Un Gurú", y en inglés devuelve la versión en inglés', async () => {
+  const es = await pasar_a_humano({ motivo: 'x' }, ctx);
+  assert.match(es.mensaje, /^Un Gurú de nuestro equipo/);
+  assert.doesNotMatch(es.mensaje, /abogado/i);
+  const en = await pasar_a_humano({ motivo: 'x', idioma: 'en' }, ctx);
+  assert.match(en.mensaje, /^A Gurú from our team will contact you shortly/);
+  assert.match(en.mensaje, /writing 'urgent'/);
 });

@@ -1,0 +1,6 @@
+{
+  "nombre": "cliente grosero va al admin",
+  "turnos": ["oye", "ustedes son unos ladrones y unos inutiles, que porqueria de servicio, mamaguevos"],
+  "espera": { "termina_con_traspaso": true, "traspaso_destino": "admin" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

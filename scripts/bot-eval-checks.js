@@ -56,6 +56,15 @@ function checkTermina(wantHandoff, log) {
   return [];
 }
 
+// A quién se pasó el chat: el último pasar_a_humano que salió bien (sin destino = digitador, como la herramienta).
+function checkTraspasoDestino(want, log) {
+  if (!want) return [];
+  const calls = log.filter((r) => r.herramienta === 'pasar_a_humano' && r.ok !== false);
+  if (!calls.length) return [`debía pasar a una persona con destino ${want}`];
+  const got = calls[calls.length - 1].args?.destino === 'admin' ? 'admin' : 'digitador';
+  return got === want ? [] : [`pasó a una persona con destino ${got} y debía ser ${want}`];
+}
+
 // Montos que llegaron al texto entregado sin salir de ninguna herramienta (el filtro del agente falló).
 function allowedAmounts(log) {
   const allowed = new Set(); const totals = [];
@@ -131,6 +140,7 @@ function evaluateScenario(scenario, replies, log, turnEnds) {
     ...checkPreguntaAntesDePrecio(e.pregunta_antes_de_precio, replies, log),
     ...(e.termina_con_traspaso ? checkTermina(true, log) : []),
     ...(e.termina_sin_traspaso ? checkTermina(false, log) : []),
+    ...checkTraspasoDestino(e.traspaso_destino, log),
     ...checkTextoCoincide(e.texto_coincide, replies),
     ...checkTextoNoCoincide(e.texto_no_coincide, replies),
     ...checkHerramientasOTexto(e.herramientas_o_texto, replies, log),
@@ -145,6 +155,6 @@ function evaluateScenario(scenario, replies, log, turnEnds) {
 }
 
 module.exports = {
-  evaluateScenario, checkHerramientasIncluye, checkNoHerramientas, checkPreguntaAntesDePrecio, checkTermina,
+  evaluateScenario, checkHerramientasIncluye, checkNoHerramientas, checkPreguntaAntesDePrecio, checkTermina, checkTraspasoDestino,
   checkMontos, countBloqueos, checkTextoCoincide, checkTextoNoCoincide, checkHerramientasOTexto, checkHerramientaNoAntesDelTurno, checkEntrega, checkRevelaNotario, MONEY,
 };

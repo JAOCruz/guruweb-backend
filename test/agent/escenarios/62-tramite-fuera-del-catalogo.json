@@ -1,0 +1,6 @@
+{
+  "nombre": "tramite fuera del catalogo",
+  "turnos": ["hola", "ustedes me pueden sacar la licencia de pesca deportiva en el ministerio de medio ambiente?"],
+  "espera": { "termina_sin_traspaso": true, "texto_coincide": "no (lo )?gestionamos|no lo hacemos|no trabajamos|no ofrecemos" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

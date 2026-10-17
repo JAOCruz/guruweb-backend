@@ -38,3 +38,16 @@ test('formatForPrompt incluye la dirección y "transferencia o efectivo"', async
   assert.ok(txt.includes('transferencia o efectivo'));
   assert.ok(txt.includes('9:00'));
 });
+
+test('reglas de atención: temas por destino, vigencia e instituciones en el contexto', async () => {
+  const { formatTemasHumano } = require('../src/agent/businessInfo');
+  const txt = formatTemasHumano({ admin: ['pagos', 'propuestas'], digitador: ['errores en contratos'] });
+  assert.match(txt, /destino "admin"\): pagos, propuestas\./);
+  assert.match(txt, /destino "digitador"\): errores en contratos\./);
+  // formato viejo (lista plana) sigue funcionando
+  assert.match(formatTemasHumano(['reclamaciones', 'pagos']), /Temas que pasan a una persona \(pasar_a_humano\): reclamaciones, pagos\./);
+  assert.equal(formatTemasHumano(null), '');
+  const p = formatForPrompt({ vigencia_cotizacion_dias: 7, instituciones: ['ONAPI', 'Poder Judicial'] });
+  assert.match(p, /Las cotizaciones son válidas por 7 días\./);
+  assert.match(p, /Certificaciones y trámites solo con: ONAPI, Poder Judicial\./);
+});

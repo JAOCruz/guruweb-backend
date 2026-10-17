@@ -234,15 +234,18 @@ const TOOLS = [
   },
   {
     name: 'pasar_a_humano',
-    description: 'Pasa el chat a una persona del equipo: lo pone en modo manual, avisa al asignado o al admin y devuelve el mensaje de ' +
-      'espera, que debe enviarse tal cual. Úsela con reclamaciones, dudas o disputas de pagos (un comprobante va con avisar_pago), ' +
-      'reembolsos, asesoría legal, casos en tribunal, ' +
-      'descuentos, cuando el cliente pida hablar con una persona, esté molesto, repita lo mismo, o con cualquier cosa que no pueda ' +
-      'resolver con las demás herramientas.',
+    description: 'Pasa el chat a una persona del equipo: lo pone en modo manual, avisa según el destino y devuelve el mensaje de ' +
+      'espera, que debe enviarse tal cual. Destino "admin": reclamos de precio, temas administrativos o para un superior, pagos, abonos, ' +
+      'pagos no realizados, propuestas, proveedores, clientes importantes, descuentos si insiste, devoluciones, clientes groseros o spam. ' +
+      'Destino "digitador": errores en contratos, malentendidos, tickets y reclamos del servicio, pagos de un trabajo en curso, estado de ' +
+      'una solicitud o certificación, seguimiento de trámites y procesos para otro documento, asesoría legal, casos en tribunal, cuando ' +
+      'pida hablar con una persona o con cualquier cosa que no pueda resolver. Un comprobante de pago va con avisar_pago.',
     parameters: {
       type: 'object',
       properties: {
         motivo: { type: 'string', description: 'Por qué se pasa, en pocas palabras, para quien lo atienda (p. ej. "reclamación por entrega").' },
+        destino: { type: 'string', enum: ['admin', 'digitador'], description: 'A quién va según el tema (vea la descripción). Si falta, va al digitador.' },
+        idioma: { type: 'string', enum: ['es', 'en'], description: 'Idioma en que escribe el cliente; "en" devuelve el mensaje de espera en inglés.' },
       },
       required: ['motivo'],
     },

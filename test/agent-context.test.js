@@ -77,6 +77,16 @@ test('la guía trae las reglas clave: usted, calcular_precio antes de cotizar, 3
   assert.doesNotMatch(g, /\btú\b|\btu\b/i);
 });
 
+test('la guía trae las reglas de atención de Leandro (punto 3)', () => {
+  const g = fs.readFileSync(GUIDE, 'utf8');
+  for (const needle of ['destino: "admin"', 'destino: "digitador"', 'Un Gurú', 'nunca diga que somos abogados', '7 días',
+    'idioma del cliente', 'idioma: "en"', 'República Dominicana', 'grosero', 'neutral', 'catálogo', 'Notarización y traducción',
+    'La redacción no se devuelve', 'jerga dominicana', 'Ley 140-15']) {
+    assert.ok(g.includes(needle), `falta "${needle}" en la guía`);
+  }
+  assert.doesNotMatch(g, /trámite se cae/i);
+});
+
 // ---------- registro de herramientas ----------
 
 test('hay exactamente 13 herramientas con los nombres del spec', () => {

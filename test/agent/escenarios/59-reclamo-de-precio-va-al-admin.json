@@ -1,0 +1,6 @@
+{
+  "nombre": "reclamo de precio va al admin",
+  "turnos": ["buenas", "me cobraron de mas en la cotizacion de ayer, eso no fue lo que me dijeron, quiero reclamar"],
+  "espera": { "termina_con_traspaso": true, "traspaso_destino": "admin" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}
