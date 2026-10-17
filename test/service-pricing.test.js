@@ -109,3 +109,34 @@ test('servicio por rango sin digitación: foja_tipo no inventa precio (sigue com
   assert.equal(r.fojasEstimadas, false);
   assert.equal(r.breakdown.digitacion, 0);
 });
+
+// ---------- modificación y precio sugerido (partidas por confirmar) ----------
+
+const MODIF = { digitacion_price: '100', foja_tipo: 'modificacion', fojas: 1 };
+test('modificación de 2 fojas: 150 la foja, precio fijo', () => {
+  const r = calculatePrice(MODIF, { fojas: 2 });
+  assert.equal(r.total, 300); assert.equal(r.porConfirmar, false); assert.equal(r.tarifaPorFoja, 150);
+});
+test('modificación de 3 fojas o más: rango de 100 a 150 la foja (× cantidad), por confirmar', () => {
+  const r = calculatePrice(MODIF, { fojas: 3 });
+  assert.equal(r.total, null); assert.equal(r.porConfirmar, true);
+  assert.deepEqual(r.rango, { min: 300, max: 450 });
+  assert.deepEqual(calculatePrice(MODIF, { fojas: 4, quantity: 2 }).rango, { min: 800, max: 1200 });
+  assert.equal(r.precioSugerido, null);
+});
+test('modificación de 3 fojas con notarización: la notarización va en los dos extremos', () => {
+  const r = calculatePrice({ ...MODIF, notarizacion_price: '500' }, { fojas: 3 });
+  assert.deepEqual(r.rango, { min: 800, max: 950 });
+  assert.deepEqual(calculatePrice({ ...MODIF, notarizacion_price: '500' }, { fojas: 3, includeNotarization: false }).rango, { min: 300, max: 450 });
+});
+test('fojaRates exporta la tarifa de modificación y el piso de 100', () => {
+  const { FOJA_RATES, MODIFICACION_PISO } = require('../src/models/fojaRates');
+  assert.equal(FOJA_RATES.modificacion, 150); assert.equal(MODIFICACION_PISO, 100);
+});
+test('precioSugerido: el precio que tendría un servicio por confirmar', () => {
+  const r = calculatePrice({ digitacion_price: '700', por_confirmar: true }, { quantity: 2 });
+  assert.equal(r.total, null); assert.equal(r.precioSugerido, 1400);
+  assert.equal(calculatePrice({ digitacion_price: '700' }).precioSugerido, null);
+  assert.equal(calculatePrice({ digitacion_price: null, por_confirmar: true }).precioSugerido, null);
+  assert.equal(calculatePrice({ ...ACTO, por_confirmar: true }, { assetValue: 4000000 }).precioSugerido, null); // el tramo también está por confirmar
+});

@@ -1,5 +1,5 @@
 // Cálculo de precio compartido (ruta /calculate y herramientas del agente).
-const { FOJA_RATES, duplicadoPrice, validFojas } = require('./fojaRates');
+const { FOJA_RATES, MODIFICACION_PISO, MODIFICACION_FOJAS_RANGO, duplicadoPrice, validFojas } = require('./fojaRates');
 
 function num(v) {
   if (v === null || v === undefined || v === '') return null;
@@ -7,7 +7,7 @@ function num(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-// Devuelve { total, breakdown, porConfirmar, rango, tramo, falta, dependeDelValor, fojas, tarifaPorFoja, fojasEstimadas }.
+// Devuelve { total, breakdown, porConfirmar, rango, tramo, falta, dependeDelValor, fojas, tarifaPorFoja, fojasEstimadas, precioSugerido }.
 // - Con precio_rango y sin digitacion_price, foja_tipo se ignora (total null, se da el rango).
 // - Con service.foja_tipo (carta_simple|carta_motivada|legal_simple|legal_motivada) la digitación es
 //   tarifa × fojas × cantidad e ignora digitacion_price. Fojas: la pasada (válida) > service.fojas > 1;
@@ -18,7 +18,20 @@ function num(v) {
 //   aunque el servicio no tenga notarizacion_price base (p. ej. "Contrato de Venta Bienes").
 // - Con tramos y sin valor del bien: total null y falta = 'valor_del_bien' (hay que preguntarlo).
 // - Con tramos y un valor que no cae en ninguno (hueco): total null y porConfirmar.
-function calculatePrice(service, { assetValue = null, quantity = 1, includeNotarization = true, fojas = null, duplicados = 0 } = {}) {
+// - foja_tipo 'modificacion' con 3 fojas o más: total null, porConfirmar y rango de MODIFICACION_PISO a la tarifa
+//   (× fojas × cantidad, más la notarización si aplica). Con menos fojas, tarifa × fojas × cantidad.
+// - precioSugerido: si solo service.por_confirmar deja el total en null, el total que tendría sin esa marca.
+function calculatePrice(service, opts = {}) {
+  const r = evaluate(service, opts);
+  let precioSugerido = null;
+  if (service.por_confirmar === true) {
+    const sin = evaluate({ ...service, por_confirmar: false }, opts);
+    if (sin.total !== null && sin.total > 0) precioSugerido = sin.total;
+  }
+  return { ...r, precioSugerido };
+}
+
+function evaluate(service, { assetValue = null, quantity = 1, includeNotarization = true, fojas = null, duplicados = 0 } = {}) {
   const qty = Number(quantity) || 1;
   const rango = service.precio_rango || null;
   const dig = num(service.digitacion_price);
@@ -60,13 +73,17 @@ function calculatePrice(service, { assetValue = null, quantity = 1, includeNotar
     notarizacion = notBase * qty;
   }
 
-  const porConfirmar = service.por_confirmar === true || tierPorConfirmar;
+  const modifRango = service.foja_tipo === 'modificacion' && rate !== null && nFojas >= MODIFICACION_FOJAS_RANGO;
+  const porConfirmar = service.por_confirmar === true || tierPorConfirmar || modifRango;
   const duplicadosTotal = nDup > 0 ? duplicadoPrice(nFojas) * nDup : 0;
   const total = porConfirmar || !hasPrice || falta ? null : digitacion + notarizacion + duplicadosTotal;
   const breakdown = { digitacion, notarizacion };
   if (nDup > 0) breakdown.duplicados = duplicadosTotal;
+  const rangoFinal = modifRango
+    ? { min: MODIFICACION_PISO * nFojas * qty + notarizacion, max: rate * nFojas * qty + notarizacion }
+    : rango;
   return {
-    total, breakdown, porConfirmar, rango, tramo, falta, dependeDelValor: tiers.length > 0,
+    total, breakdown, porConfirmar, rango: rangoFinal, tramo, falta, dependeDelValor: tiers.length > 0,
     fojas: rate !== null || fojasDadas !== null ? nFojas : null,
     tarifaPorFoja: rate, fojasEstimadas: rate !== null && fojasDadas === null,
   };
