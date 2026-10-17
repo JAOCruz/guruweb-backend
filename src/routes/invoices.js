@@ -37,6 +37,38 @@ function logInvoice(req, action, inv, summary, details = {}) {
   });
 }
 
+const { activeAdminIds, notifyUsers } = require('../agent/tools/notify');
+
+const docKind = (inv) => (inv.type === 'FACTURA' ? 'factura' : 'cotización');
+// Campana: un digitador pidió aprobación -> cada admin activo.
+async function notifyApprovalRequested(req, inv) {
+  if (!inv) return;
+  const u = await pool.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
+  const who = u.rows[0]?.name || u.rows[0]?.username || 'Un empleado';
+  await notifyUsers(await activeAdminIds(), {
+    type: 'approval',
+    title: `📝 ${docKind(inv) === 'factura' ? 'Factura' : 'Cotización'} por aprobar`,
+    message: `${who} pidió aprobar la ${docKind(inv)} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} por ${rd(inv.total)}.`,
+    link: '/cotizaciones',
+    metadata: { invoice_id: inv.id },
+  });
+}
+// Campana: el admin decidió -> el empleado que la creó (ni el bot ni otro admin).
+async function notifyDecision(inv, approved, reason) {
+  if (!inv || !inv.created_by) return;
+  const { rows } = await pool.query('SELECT role FROM users WHERE id = $1', [inv.created_by]);
+  if (!rows[0] || !isEmployee(rows[0].role)) return;
+  const kind = docKind(inv);
+  const done = approved ? 'aprobada' : 'rechazada';
+  await notifyUsers([inv.created_by], {
+    type: 'approval',
+    title: `${approved ? '✅' : '❌'} ${kind === 'factura' ? 'Factura' : 'Cotización'} ${done}`,
+    message: `La ${kind} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} fue ${done}${!approved && reason ? `: ${reason}` : '.'}`,
+    link: '/cotizaciones',
+    metadata: { invoice_id: inv.id },
+  });
+}
+
 const router = express.Router();
 
 // ── helper: calculate discount (admin-only feature) ──
@@ -432,6 +464,7 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
     }
     const updated = await Invoice.approve(invoice.id, req.user.id);
     await safeLog(() => logInvoice(req, 'invoice.approve', updated, `Aprobó ${docLabel(updated)} por ${rd(updated.total)}`));
+    await safeLog(() => notifyDecision(updated, true));
     res.json({ invoice: updated, message: 'Invoice approved' });
   } catch (err) {
     console.error('Approve invoice error:', err);
@@ -454,6 +487,7 @@ router.post('/:id/approve-and-send', requireRole('admin'), async (req, res) => {
     }
     const result = await delivery.sendQuote(invoice.id, { actor: req.user });
     if (approvedNow) {
+      await safeLog(() => notifyDecision(approvedNow, true));
       await safeLog(() => result.ok
         ? logInvoice(req, 'invoice.approve_send', approvedNow, `Aprobó y envió por WhatsApp ${docLabel(approvedNow)} por ${rd(approvedNow.total)}`)
         : logInvoice(req, 'invoice.approve', approvedNow, `Aprobó ${docLabel(approvedNow)} por ${rd(approvedNow.total)}`));
@@ -480,6 +514,7 @@ router.post('/:id/reject', requireRole('admin'), async (req, res) => {
     const updated = await Invoice.reject(invoice.id, req.user.id, reason);
     if (!updated) return res.status(400).json({ error: 'Failed to reject invoice' });
     await safeLog(() => logInvoice(req, 'invoice.reject', updated, `Rechazó ${docLabel(updated)}${reason ? `: ${reason}` : ''}`, { reason: reason || null }));
+    await safeLog(() => notifyDecision(updated, false, reason));
     res.json({ invoice: updated, message: 'Invoice rejected' });
   } catch (err) {
     console.error('Reject invoice error:', err);
@@ -501,6 +536,7 @@ router.post('/:id/request-approval', async (req, res) => {
     const updated = await Invoice.requestApproval(invoice.id);
     if (!updated) return res.status(400).json({ error: 'Failed to request approval' });
     await safeLog(() => logInvoice(req, 'invoice.request_approval', updated, `Pidió aprobación para ${docLabel(updated)} por ${rd(updated.total)}`));
+    await safeLog(() => notifyApprovalRequested(req, updated));
     res.json({ invoice: updated, message: 'Enviada al admin para aprobación' });
   } catch (err) {
     console.error('Request approval error:', err);
@@ -534,6 +570,7 @@ router.post('/:id/send', async (req, res) => {
         const updated = await Invoice.requestApproval(invoice.id);
         if (!updated) return res.status(400).json({ error: 'Failed to request approval' });
         await safeLog(() => logInvoice(req, 'invoice.request_approval', updated, `Pidió aprobación para ${docLabel(updated)} por ${rd(updated.total)}`));
+        await safeLog(() => notifyApprovalRequested(req, updated));
         return res.json({ invoice: updated, message: 'Invoice submitted for admin approval before sending' });
       }
       // approved -> proceed to send below
@@ -541,7 +578,8 @@ router.post('/:id/send', async (req, res) => {
 
     // Admin sending a pending_approval invoice implicitly approves it
     if (!isEmployee(req.user.role) && invoice.status === 'pending_approval') {
-      await Invoice.approve(invoice.id, req.user.id);
+      const approvedNow = await Invoice.approve(invoice.id, req.user.id);
+      await safeLog(() => notifyDecision(approvedNow, true));
     }
 
     // Generate PDF
