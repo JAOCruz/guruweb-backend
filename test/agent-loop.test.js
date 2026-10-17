@@ -541,3 +541,13 @@ test('estimar_tasa usa el proveedor del turno para buscar (sin proveedor real)',
   assert.equal(l[0].herramienta, 'estimar_tasa');
   assert.equal(JSON.parse(JSON.stringify(l[0].resultado)).monto_aproximado, 1500);
 });
+
+test('collectAmounts deja pasar precio_sugerido (no se suma a los totales)', () => {
+  const s = new Set(); const totals = [];
+  collectAmounts({ total: null, por_confirmar: true, precio_sugerido: 1400, rango: null }, s, totals);
+  assert.ok(s.has(1400));
+  assert.deepEqual(totals, []);
+  const s2 = new Set();
+  collectAmounts({ por_confirmar: [{ desc: 'Apostilla', rango: { min: 250, max: 300 }, precio_sugerido: null }] }, s2);
+  assert.ok(s2.has(250) && s2.has(300));
+});

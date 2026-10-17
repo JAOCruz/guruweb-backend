@@ -78,6 +78,7 @@ async function setupDb() {
   // vuelve a crear lo que el DELETE de arriba borró; luego se aplican las fojas de seeds/bot/fojas.json.
   await runSqlFile('migrations/20261009_precios_leandro_1.sql');
   await runSqlFile('migrations/20261017_reglas_atencion.sql');
+  await runSqlFile('migrations/20261018_partidas_por_confirmar.sql');
   for (const f of JSON.parse(fs.readFileSync(path.join(ROOT, 'seeds', 'bot', 'fojas.json'), 'utf8'))) {
     await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
   }

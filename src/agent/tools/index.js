@@ -130,7 +130,9 @@ const TOOLS = [
     name: 'preparar_cotizacion',
     description: 'Crea la cotización formal con los precios del catálogo; queda por aprobar por el admin, que la envía al cliente. ' +
       'Úsela solo después de que el cliente esté de acuerdo con el servicio y el precio calculado, y de tener los datos necesarios. ' +
-      'No la use con servicios por confirmar; las partidas que dependen del valor del bien llevan valor_del_bien. Después de usarla, dígale al cliente que un miembro del equipo la revisa y se la ' +
+      'Las partidas con precio por rango o por confirmar (y toda traducción) entran como "por confirmar": el digitador pone el precio ' +
+      'exacto; el resultado las lista en por_confirmar con su rango o precio_sugerido. Las partidas que dependen del valor del bien llevan ' +
+      'valor_del_bien. Después de usarla, dígale al cliente que un miembro del equipo la revisa y se la ' +
       'confirma en horario de atención, sin prometer un tiempo.',
     parameters: {
       type: 'object',

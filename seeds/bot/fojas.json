@@ -938,29 +938,29 @@
   {
     "nombre": "Notoriedad - Buena Conducta",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad - Buena Conducta Empleado",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad - Conocen al Fallecido",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad de Determinación de Herederos (Avanzado)",
@@ -983,47 +983,47 @@
   {
     "nombre": "Notoriedad - Domicilio",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad Jurada (Extensivo)",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 400,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad - Manutención Parental",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad - No Convivencia",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 400,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Notoriedad - No Descendencia",
     "categoria": "Redactar o digitar un documento",
-    "foja_tipo": "legal_simple",
+    "foja_tipo": "legal_motivada",
     "fojas": 2,
-    "fuente": "estimado del precio anterior",
+    "fuente": "estimado del precio anterior; legal motivada según Leandro (2026-10-17)",
     "precio_anterior": 500,
-    "precio_nuevo": 500
+    "precio_nuevo": 700
   },
   {
     "nombre": "Pagaré Notarial",
@@ -1527,6 +1527,42 @@
     "fojas": 1,
     "fuente": "estimado del precio anterior",
     "precio_anterior": 150,
+    "precio_nuevo": 150
+  },
+  {
+    "nombre": "Notificación Sencilla",
+    "categoria": "Mensajería",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "Leandro (2026-10-17): las notificaciones son documento motivado",
+    "precio_anterior": 150,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Notificación Avanzada",
+    "categoria": "Mensajería",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "Leandro (2026-10-17): las notificaciones son documento motivado",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Notificación Personalizada",
+    "categoria": "Mensajería",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "Leandro (2026-10-17): las notificaciones son documento motivado",
+    "precio_anterior": 300,
+    "precio_nuevo": 300
+  },
+  {
+    "nombre": "Modificación de Documento Existente",
+    "categoria": "Modificación de un Documento",
+    "foja_tipo": "modificacion",
+    "fojas": 1,
+    "fuente": "Leandro (2026-10-17): 150 la foja; de 3 fojas en adelante, rango 100–150",
+    "precio_anterior": 100,
     "precio_nuevo": 150
   }
 ]

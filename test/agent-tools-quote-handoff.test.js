@@ -29,6 +29,7 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20261005_bot_agent.sql');
   await runSqlFile('migrations/20261009_precios_leandro_1.sql');
   await runSqlFile('migrations/20261017_reglas_atencion.sql');
+  await runSqlFile('migrations/20261018_partidas_por_confirmar.sql');
   clearCache();
   const mk = async (u, role, name) => (await pool.query(
     `INSERT INTO users (username, email, password_hash, name, role) VALUES ($1,$2,'x',$3,$4) RETURNING id`, [u, `${u}@t.co`, name, role])).rows[0].id;
@@ -67,15 +68,81 @@ test('preparar_cotizacion recalcula con el catálogo, la crea por aprobar como e
   assert.equal(inv.items[0].cantidad, 1); assert.equal(inv.items[0].precio, 950);
   assert.match(inv.items[0].desc, /^Acto de Venta/);
   const n = await notifs('invoice');
-  assert.ok(n.length >= 1); assert.equal(n[0].link, '/cotizaciones');
+  assert.ok(n.length >= 1); assert.equal(n[0].link, `/cotizaciones?invoice=${inv.id}`);
   assert.ok(n.every((x) => x.user_id !== digId));
 });
 
-test('con una partida por confirmar no crea nada y dice cuál', async () => {
-  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.copia }, { servicio_id: ids.conf }, { servicio_id: 99999 }] }, ctx);
+test('un servicio que no existe sigue siendo error y no crea nada', async () => {
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.copia }, { servicio_id: 99999 }] }, ctx);
   assert.equal(r.error, 'hay partidas sin precio confirmado');
-  assert.deepEqual(r.sin_precio, ['Estatus Jurídico', '99999']);
+  assert.deepEqual(r.sin_precio, ['99999']);
   assert.equal((await pool.query('SELECT count(*)::int c FROM invoices')).rows[0].c, 0);
+});
+
+// ---------- partidas por confirmar ----------
+
+async function extraServices() {
+  await pool.query(`INSERT INTO service_categories (id, name) VALUES (2, 'Traducción'), (3, 'Modificación de un Documento') ON CONFLICT DO NOTHING`);
+  const ins = async (name, cat, cols) => (await pool.query(
+    `INSERT INTO service_catalog (name, category_id, digitacion_price, precio_rango, foja_tipo, fojas, por_confirmar, price_tiers)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,'[]') RETURNING id`,
+    [name, cat, cols.dig ?? null, cols.rango ? JSON.stringify(cols.rango) : null, cols.foja || null, cols.fojas || null, !!cols.pc])).rows[0].id;
+  return {
+    apostilla: await ins('Apostilla en Cancillería', 1, { rango: { min: 250, max: 300 } }),
+    trad: await ins('Traducción - Acta Natal', 2, { dig: 700 }),
+    modif: await ins('Modificación de Documento Existente', 3, { dig: 100, foja: 'modificacion', fojas: 1 }),
+  };
+}
+
+test('con partidas por confirmar la cotización se crea igual: líneas sin precio, total solo de lo confirmado', async () => {
+  const x = await extraServices();
+  const r = await preparar_cotizacion({ partidas: [
+    { servicio_id: ids.copia }, { servicio_id: x.apostilla, cantidad: 2 }, { servicio_id: ids.conf }, { servicio_id: ids.cero },
+  ] }, ctx);
+  assert.equal(r.error, undefined);
+  assert.equal(r.total, 700);
+  const inv = (await pool.query('SELECT * FROM invoices')).rows[0];
+  assert.equal(Number(inv.total), 700);
+  const [copia, apo, conf, cero] = inv.items;
+  assert.equal(copia.precio, 700); assert.equal(copia.por_confirmar, undefined);
+  assert.deepEqual({ ...apo, desc: undefined }, { desc: undefined, cantidad: 2, precio: null, por_confirmar: true,
+    rango: { min: 250, max: 300 }, precio_sugerido: null, nota: 'Precio dentro del rango: lo confirma el digitador' });
+  assert.equal(conf.precio, null); assert.equal(conf.precio_sugerido, 1000); assert.equal(conf.nota, 'Precio por confirmar: lo confirma el digitador');
+  assert.equal(cero.por_confirmar, true);
+  assert.deepEqual(r.por_confirmar.map((p) => p.rango), [{ min: 250, max: 300 }, null, null]);
+  assert.equal(r.por_confirmar[1].precio_sugerido, 1000);
+});
+
+test('una traducción siempre queda por confirmar con su precio como sugerido', async () => {
+  const x = await extraServices();
+  await preparar_cotizacion({ partidas: [{ servicio_id: x.trad }] }, ctx);
+  const line = (await pool.query('SELECT items FROM invoices')).rows[0].items[0];
+  assert.equal(line.precio, null); assert.equal(line.por_confirmar, true); assert.equal(line.precio_sugerido, 700);
+  assert.equal(line.nota, 'Individual o en conjunto (una sola firma): lo confirma el digitador');
+});
+
+test('modificación de 3 fojas queda como rango por confirmar; de 2 fojas tiene precio', async () => {
+  const x = await extraServices();
+  await preparar_cotizacion({ partidas: [{ servicio_id: x.modif, fojas: 3 }, { servicio_id: x.modif, fojas: 2 }] }, ctx);
+  const [tres, dos] = (await pool.query('SELECT items FROM invoices')).rows[0].items;
+  assert.deepEqual(tres.rango, { min: 300, max: 450 }); assert.equal(tres.precio, null);
+  assert.equal(tres.nota, 'Modificación de 3 fojas o más: lo confirma el digitador dentro del rango');
+  assert.equal(dos.precio, 300);
+});
+
+test('con precios por confirmar avisa al asignado (o a los admins) con 💲 y el enlace a la cotización', async () => {
+  const x = await extraServices();
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: x.apostilla }] }, ctx);
+  let n = await notifs('invoice');
+  assert.deepEqual(n.map((m) => m.user_id), [adminId]);
+  assert.equal(n[0].title, '💲 Cotización con precios por confirmar');
+  assert.equal(n[0].link, `/cotizaciones?invoice=${r.invoice_id}`);
+  await pool.query('DELETE FROM notifications');
+  await pool.query('UPDATE clients SET assigned_to=$1', [digId]);
+  ctx.client.assigned_to = digId;
+  await preparar_cotizacion({ partidas: [{ servicio_id: x.apostilla }] }, ctx);
+  n = await notifs('invoice');
+  assert.deepEqual(n.map((m) => m.user_id), [digId]);
 });
 
 test('cantidad multiplica el precio unitario', async () => {
@@ -131,11 +198,11 @@ test('notifyUrgentAfterHandoff no avisa abierto ni sin la palabra, y no hace nad
   assert.equal((await notifs('handoff')).length, 1);
 });
 
-test('una partida en RD$0 se rechaza como sin precio', async () => {
+test('una partida en RD$0 queda por confirmar (nunca se cotiza en cero)', async () => {
   const r = await preparar_cotizacion({ partidas: [{ servicio_id: ids.copia }, { servicio_id: ids.cero }] }, ctx);
-  assert.equal(r.error, 'hay partidas sin precio confirmado');
-  assert.deepEqual(r.sin_precio, ['Servicio en cero']);
-  assert.equal((await pool.query('SELECT count(*)::int c FROM invoices')).rows[0].c, 0);
+  assert.equal(r.error, undefined);
+  const line = (await pool.query('SELECT items FROM invoices')).rows[0].items[1];
+  assert.equal(line.precio, null); assert.equal(line.por_confirmar, true);
 });
 
 test('si pasar_a_humano ya avisó urgente, notifyUrgentAfterHandoff no repite', async () => {

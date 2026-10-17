@@ -66,7 +66,7 @@ function collectAmounts(value, set, totals = [], depth = 0) {
   if (Array.isArray(value)) { for (const v of value) collectAmounts(v, set, totals, depth + 1); return set; }
   for (const [k, v] of Object.entries(value)) {
     if ((k === 'total' || k === 'precio') && positive(v)) { set.add(v); if (k === 'total') totals.push(v); }
-    else if ((k === 'tarifa_por_foja' || k === 'monto_aproximado') && positive(v)) set.add(v); // sin totals: no se suman
+    else if ((k === 'tarifa_por_foja' || k === 'monto_aproximado' || k === 'precio_sugerido') && positive(v)) set.add(v); // sin totals: no se suman
     else if (k === 'rango' && isObj(v)) { if (positive(v.min)) set.add(v.min); if (positive(v.max)) set.add(v.max); }
     else if (k === 'desglose' && isObj(v)) {
       if (value.por_confirmar !== true && value.total !== null) for (const d of Object.values(v)) if (positive(d)) set.add(d);
