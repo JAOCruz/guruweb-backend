@@ -11,7 +11,8 @@ const NOTA = {
   rango: 'Precio dentro del rango: lo confirma el digitador',
   otro: 'Precio por confirmar: lo confirma el digitador',
 };
-const isTranslation = (s) => /traducci/i.test(s.categoria || '');
+// Por el nombre: la categoría "Redactar y Certificar una Traducción" también guarda las Instancias.
+const isTranslation = (s) => /^traducci/i.test(String(s.name || '').trim());
 
 // partidas: [{ servicio_id, cantidad?, valor_del_bien?, con_notarizacion?, fojas?, duplicados? }]
 // El bot nunca manda precios: todo se recalcula con el catálogo.

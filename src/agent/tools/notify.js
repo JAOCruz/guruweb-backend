@@ -9,7 +9,7 @@ async function activeAdminIds() {
 // El asignado del cliente (si existe) o, si no, cada admin activo.
 async function assigneeOrAdmins(assignedTo) {
   if (assignedTo) {
-    const u = await pool.query('SELECT id, name FROM users WHERE id = $1', [assignedTo]);
+    const u = await pool.query('SELECT id, name FROM users WHERE id = $1 AND is_active IS NOT FALSE', [assignedTo]);
     if (u.rows[0]) return { asignado: u.rows[0].name || null, recipients: [u.rows[0].id] };
   }
   return { asignado: null, recipients: await activeAdminIds() };

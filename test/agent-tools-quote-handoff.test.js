@@ -305,3 +305,20 @@ test('el mensaje de espera dice "Un Gurú", y en inglés devuelve la versión en
   assert.match(en.mensaje, /^A Gurú from our team will contact you shortly/);
   assert.match(en.mensaje, /writing 'urgent'/);
 });
+
+test('una Instancia en la categoría de traducciones NO es traducción: va con su precio', async () => {
+  await pool.query(`INSERT INTO service_categories (id, name) VALUES (4, 'Redactar y Certificar una Traducción') ON CONFLICT DO NOTHING`);
+  const id = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, price_tiers) VALUES ('Instancia - Oposición', 4, 300, '[]') RETURNING id`)).rows[0].id;
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: id }] }, ctx);
+  assert.equal(r.por_confirmar, undefined);
+  const line = (await pool.query('SELECT items FROM invoices')).rows[0].items[0];
+  assert.equal(line.precio, 300); assert.equal(line.por_confirmar, undefined);
+});
+
+test('un asignado desactivado no recibe el aviso: va a los admins', async () => {
+  await pool.query('UPDATE users SET is_active = false WHERE id = $1', [digId]);
+  await pool.query('UPDATE clients SET assigned_to=$1', [digId]);
+  ctx.client.assigned_to = digId;
+  await pasar_a_humano({ motivo: 'x' }, ctx);
+  assert.deepEqual((await notifs('handoff')).map((x) => x.user_id), [adminId]);
+});

@@ -123,3 +123,41 @@ test('el admin puede poner el precio y conserva los datos de las líneas que no 
   assert.equal(r.items[1].por_confirmar, undefined); assert.equal(Number(r.total), 1300);
   assert.equal((await req('POST', `/api/invoices/${inv.id}/approve`, 'admin')).status, 200);
 });
+
+test('al poner precios el asignado, el PDF viejo se descarta (no sale con "Por confirmar")', async () => {
+  const inv = await botQuote();
+  await pool.query(`UPDATE invoices SET pdf_path = '/tmp/viejo.pdf' WHERE id = $1`, [inv.id]);
+  await req('PUT', `/api/invoices/${inv.id}`, 'hengi', { items: [{ precio: 700 }, { precio: 280 }] });
+  assert.equal((await row(inv.id)).pdf_path, null);
+});
+
+test('el admin no puede dejar en blanco una línea con precio: queda por confirmar y bloquea aprobar', async () => {
+  const inv = await botQuote('pending_approval', [{ desc: 'Copia', cantidad: 1, precio: 700 }]);
+  await req('PUT', `/api/invoices/${inv.id}`, 'admin', { items: [{ desc: 'Copia', cantidad: 1, precio: null }] });
+  const r = await row(inv.id);
+  assert.equal(r.items[0].por_confirmar, true);
+  assert.equal((await req('POST', `/api/invoices/${inv.id}/approve`, 'admin')).status, 400);
+});
+
+test('descuento en porcentaje se recalcula con el subtotal nuevo cuando el asignado pone precios', async () => {
+  const inv = await botQuote();
+  await pool.query(`UPDATE invoices SET discount_type = 'percentage', discount_value = 10, discount_amount = 70 WHERE id = $1`, [inv.id]);
+  await req('PUT', `/api/invoices/${inv.id}`, 'hengi', { items: [{ precio: 700 }, { precio: 300 }] });
+  const r = await row(inv.id);
+  assert.equal(Number(r.subtotal), 1300); assert.equal(Number(r.discount_amount), 130); assert.equal(Number(r.total), 1170);
+});
+
+test('entrada rara del asignado (no objetos) no rompe: 200 y nada cambia', async () => {
+  const inv = await botQuote();
+  assert.equal((await req('PUT', `/api/invoices/${inv.id}`, 'hengi', { items: [500, 'x'] })).status, 200);
+  assert.equal((await row(inv.id)).items[1].por_confirmar, true);
+});
+
+test('cuando el asignado deja todo con precio, avisa a los admins que está lista para aprobar', async () => {
+  const inv = await botQuote();
+  await req('PUT', `/api/invoices/${inv.id}`, 'hengi', { items: [{ precio: 700 }, { precio: 280 }] });
+  const n = (await pool.query(`SELECT user_id, title, link FROM notifications ORDER BY id`)).rows;
+  assert.deepEqual(n.map((x) => x.user_id), [adminId]);
+  assert.match(n[0].title, /lista para aprobar/i);
+  assert.equal(n[0].link, `/cotizaciones?invoice=${inv.id}`);
+});

@@ -369,15 +369,28 @@ router.put('/:id', async (req, res) => {
       if (!(await isPricingAssignee(req, invoice))) return res.status(403).json({ error: 'Access denied' });
       // Asignado: solo los precios de las líneas que ya existen; lo demás queda como está
       const incoming = Array.isArray(req.body.items) ? req.body.items : [];
-      const items = parseItems(invoice.items).map((line, idx) =>
-        (incoming[idx] && 'precio' in incoming[idx] ? settleLine(line, incoming[idx].precio) : line));
+      const items = parseItems(invoice.items).map((line, idx) => {
+        const inc = incoming[idx];
+        return inc && typeof inc === 'object' && 'precio' in inc ? settleLine(line, inc.precio) : line;
+      });
       const subtotal = items.reduce((a, i) => a + lineTotal(i), 0);
       const itbis = items.reduce((a, i) => a + (i.itbis ? lineTotal(i) * 0.18 : 0), 0);
+      // El descuento que ya tenía se recalcula con el subtotal nuevo (un porcentaje cambia con los precios)
+      const discount = calculateDiscount({ subtotal, discountType: invoice.discount_type, discountValue: Number(invoice.discount_value) || 0 });
       const updated = await Invoice.update(invoice.id, {
         items: JSON.stringify(items), subtotal, itbis,
-        total: Math.max(0, subtotal + itbis - Number(invoice.discount_amount || 0)),
+        discount_amount: discount.discountAmount,
+        total: Math.max(0, subtotal + itbis - discount.discountAmount),
+        pdf_path: null, // el PDF anterior mostraba "Por confirmar": se vuelve a generar al enviar
       });
       await safeLog(() => logInvoice(req, 'invoice.set_prices', updated, `Puso precios en ${docLabel(updated)}`));
+      if (hasPendingPrices(invoice) && !hasPendingPrices(updated)) {
+        await safeLog(async () => notifyUsers(await activeAdminIds(), {
+          type: 'approval', title: '✅ Cotización lista para aprobar',
+          message: `${updated.doc_number} de ${updated.client_name || 'cliente sin nombre'} ya tiene todos sus precios.`,
+          link: `/cotizaciones?invoice=${updated.id}`, metadata: { invoice_id: updated.id },
+        }));
+      }
       return res.json({ invoice: updated });
     }
     if (isEmployee(req.user.role) && invoice.status !== 'draft') {
@@ -401,7 +414,8 @@ router.put('/:id', async (req, res) => {
     }
 
     if (items && Array.isArray(items)) {
-      items = items.map((i) => (i && i.por_confirmar ? settleLine(i, i.precio) : i));
+      // Una línea sin precio (o en 0) queda por confirmar y bloquea aprobar; nunca se cuela en blanco
+      items = items.map((i) => (i && (i.por_confirmar || i.precio === null) ? settleLine({ ...i, por_confirmar: true }, i.precio) : i));
       const subtotal = items.reduce((s, i) => s + lineTotal(i), 0);
       const itbis    = items.some(i => i.itbis)
         ? items.reduce((s, i) => s + (i.itbis ? lineTotal(i) * 0.18 : 0), 0)
