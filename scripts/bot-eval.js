@@ -79,6 +79,7 @@ async function setupDb() {
   await runSqlFile('migrations/20261009_precios_leandro_1.sql');
   await runSqlFile('migrations/20261017_reglas_atencion.sql');
   await runSqlFile('migrations/20261018_partidas_por_confirmar.sql');
+  await runSqlFile('migrations/20261019_tiempos_entrega.sql');
   for (const f of JSON.parse(fs.readFileSync(path.join(ROOT, 'seeds', 'bot', 'fojas.json'), 'utf8'))) {
     await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
   }

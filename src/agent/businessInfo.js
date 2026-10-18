@@ -63,6 +63,10 @@ function formatForPrompt(info = {}) {
   if (Array.isArray(info.formas_pago) && info.formas_pago.length) lines.push(`Formas de pago: ${info.formas_pago.join(' o ')}.`);
   if (info.entregas) lines.push(`Entregas: ${info.entregas}.`);
   if (Number(info.vigencia_cotizacion_dias) > 0) lines.push(`Las cotizaciones son válidas por ${Number(info.vigencia_cotizacion_dias)} días.`);
+  if (Array.isArray(info.tiempos_entrega) && info.tiempos_entrega.length) {
+    const t = info.tiempos_entrega.map((x) => `${x.servicio}: ${x.tiempo}${x.nota ? ` (${x.nota})` : ''}`);
+    lines.push(`Tiempos de entrega aproximados: ${t.join('; ')}.`);
+  }
   if (Array.isArray(info.instituciones) && info.instituciones.length) lines.push(`Certificaciones y trámites solo con: ${info.instituciones.join(', ')}.`);
   return lines.join('\n');
 }

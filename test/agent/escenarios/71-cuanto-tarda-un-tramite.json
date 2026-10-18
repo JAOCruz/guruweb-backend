@@ -1,0 +1,6 @@
+{
+  "nombre": "pregunta cuánto tarda una traducción y un trámite",
+  "turnos": ["buenas", "cuanto tiempo tarda una traduccion? y si es un tramite en una institucion?"],
+  "espera": { "termina_sin_traspaso": true, "texto_coincide": "aproximad|normalmente" },
+  "prohibido": { "montos_fuera_de_herramientas": true, "entrega": true }
+}

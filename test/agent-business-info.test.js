@@ -51,3 +51,12 @@ test('reglas de atención: temas por destino, vigencia e instituciones en el con
   assert.match(p, /Las cotizaciones son válidas por 7 días\./);
   assert.match(p, /Certificaciones y trámites solo con: ONAPI, Poder Judicial\./);
 });
+
+test('tiempos de entrega (punto 5) en el contexto, como aproximados', () => {
+  const p = formatForPrompt({ tiempos_entrega: [
+    { servicio: 'Digitación', tiempo: '5 a 30 minutos' },
+    { servicio: 'Trámites', tiempo: '24 a 48 horas', nota: 'algunos hasta 1 semana' },
+  ] });
+  assert.match(p, /Tiempos de entrega aproximados: Digitación: 5 a 30 minutos; Trámites: 24 a 48 horas \(algunos hasta 1 semana\)\./);
+  assert.doesNotMatch(formatForPrompt({ tiempos_entrega: [] }), /Tiempos de entrega/);
+});
