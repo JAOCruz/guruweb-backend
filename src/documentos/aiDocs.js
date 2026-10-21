@@ -1,8 +1,8 @@
-// Documentos · Gemini for personalizing documents. The model gets the document as numbered
+// Documentos · AI (Claude, Gemini as fallback) for personalizing documents. The model gets the document as numbered
 // paragraphs and answers JSON; nothing is invented (unknown data stays as it is).
 let generator = null;
 
-// Tests inject a fake; `parts` is a string or an array of Gemini parts (text / inlineData)
+// Tests inject a fake; `parts` is a string or an array of Gemini-style parts (text / inlineData)
 function setGenerator(fn) {
   generator = fn;
 }
@@ -13,7 +13,7 @@ function jsonRequest(m, parts) {
   return { contents: [{ role: 'user', parts: list }], generationConfig: { ...m.generationConfig, responseMimeType: 'application/json' } };
 }
 
-async function defaultGenerate(parts) {
+async function geminiGenerate(parts) {
   const { model, fallbackModel } = require('../llm/client');
   try {
     return (await model.generateContent(jsonRequest(model, parts))).response.text();
@@ -21,6 +21,53 @@ async function defaultGenerate(parts) {
     return (await fallbackModel.generateContent(jsonRequest(fallbackModel, parts))).response.text();
   }
 }
+
+// Claude follows the JSON rules more reliably; it reads photos and PDFs but not audios or HEIC
+const CLAUDE_IMAGES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+function claudeContent(parts) {
+  const out = [];
+  for (const p of Array.isArray(parts) ? parts : [parts]) {
+    if (typeof p === 'string') out.push({ type: 'text', text: p });
+    else if (p.text != null) out.push({ type: 'text', text: p.text });
+    else if (p.inlineData) {
+      const { mimeType, data } = p.inlineData;
+      const source = { type: 'base64', media_type: mimeType, data };
+      if (CLAUDE_IMAGES.has(mimeType)) out.push({ type: 'image', source });
+      else if (mimeType === 'application/pdf') out.push({ type: 'document', source });
+      else return null;
+    }
+  }
+  return out;
+}
+
+async function claudeGenerate(content) {
+  const Anthropic = require('@anthropic-ai/sdk');
+  const res = await new Anthropic().messages.create({
+    model: process.env.DOCS_CLAUDE_MODEL || 'claude-sonnet-5-5',
+    max_tokens: 16000,
+    messages: [{ role: 'user', content }],
+  }, { timeout: 120000, maxRetries: 1 });
+  return (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+}
+
+function docsProvider(env = process.env) {
+  return env.DOCS_AI_PROVIDER || (env.ANTHROPIC_API_KEY ? 'claude' : 'gemini');
+}
+
+// Claude first when it can read everything; Gemini for audios and whenever Claude fails
+async function routeGenerate(parts, { provider, claude, gemini, log = console.error }) {
+  const content = provider === 'claude' ? claudeContent(parts) : null;
+  if (content) {
+    try {
+      return await claude(content);
+    } catch (err) {
+      log('[documentos] Claude falló, se usa Gemini:', err.message);
+    }
+  }
+  return gemini(parts);
+}
+
+const defaultGenerate = (parts) => routeGenerate(parts, { provider: docsProvider(), claude: claudeGenerate, gemini: geminiGenerate });
 
 const ask = (parts) => (generator || defaultGenerate)(parts);
 
@@ -153,4 +200,4 @@ function describe(ops, blocks) {
   return ops.map((o) => ({ op: o.op, i: o.i, before: o.op === 'insert_after' ? null : byI.get(o.i) ?? null, after: o.op === 'delete' ? null : o.text }));
 }
 
-module.exports = { setGenerator, jsonRequest, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, describe };
+module.exports = { setGenerator, jsonRequest, claudeContent, routeGenerate, docsProvider, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, describe };
