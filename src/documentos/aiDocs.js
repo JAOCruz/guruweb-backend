@@ -7,12 +7,18 @@ function setGenerator(fn) {
   generator = fn;
 }
 
+// Every answer here is parsed as JSON: JSON mode keeps Gemini from putting raw line breaks in strings
+function jsonRequest(m, parts) {
+  const list = (Array.isArray(parts) ? parts : [parts]).map((p) => (typeof p === 'string' ? { text: p } : p));
+  return { contents: [{ role: 'user', parts: list }], generationConfig: { ...m.generationConfig, responseMimeType: 'application/json' } };
+}
+
 async function defaultGenerate(parts) {
   const { model, fallbackModel } = require('../llm/client');
   try {
-    return (await model.generateContent(parts)).response.text();
+    return (await model.generateContent(jsonRequest(model, parts))).response.text();
   } catch {
-    return (await fallbackModel.generateContent(parts)).response.text();
+    return (await fallbackModel.generateContent(jsonRequest(fallbackModel, parts))).response.text();
   }
 }
 
@@ -23,7 +29,22 @@ function parseJson(raw, open = '[', close = ']') {
   const a = s.indexOf(open);
   const b = s.lastIndexOf(close);
   if (a < 0 || b < a) throw new Error('La IA no devolvió un resultado válido');
-  return JSON.parse(s.slice(a, b + 1));
+  return JSON.parse(escapeControls(s.slice(a, b + 1)));
+}
+
+// The model copies tabs and line breaks from the document into strings without escaping them
+function escapeControls(json) {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (const ch of json) {
+    if (inString && !escaped && ch < ' ') out += JSON.stringify(ch).slice(1, -1);
+    else out += ch;
+    if (escaped) escaped = false;
+    else if (ch === '\\') escaped = inString;
+    else if (ch === '"') inString = !inString;
+  }
+  return out;
 }
 
 const numbered = (blocks) =>
@@ -132,4 +153,4 @@ function describe(ops, blocks) {
   return ops.map((o) => ({ op: o.op, i: o.i, before: o.op === 'insert_after' ? null : byI.get(o.i) ?? null, after: o.op === 'delete' ? null : o.text }));
 }
 
-module.exports = { setGenerator, planTags, deriveFields, extractValues, planFill, planEdits, describe };
+module.exports = { setGenerator, jsonRequest, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, describe };
