@@ -29,13 +29,21 @@ async function listStatuses() {
 
 const VERSION_SELECT = `
   SELECT v.id, v.template_id, v.version_number, v.file_path, v.tags, v.skipped, v.source, v.notes, v.created_at,
-         v.approved_at, COALESCE(NULLIF(cu.name, ''), cu.username) AS created_by_name,
-         COALESCE(NULLIF(au.name, ''), au.username) AS approved_by_name
+         v.approved_at, v.created_by, v.origin_document_id, COALESCE(NULLIF(cu.name, ''), cu.username) AS created_by_name,
+         COALESCE(NULLIF(au.name, ''), au.username) AS approved_by_name,
+         od.title AS origin_title, oc.name AS origin_client
   FROM template_tag_versions v
   LEFT JOIN users cu ON cu.id = v.created_by
-  LEFT JOIN users au ON au.id = v.approved_by`;
+  LEFT JOIN users au ON au.id = v.approved_by
+  LEFT JOIN portfolio_documents od ON od.id = v.origin_document_id
+  LEFT JOIN clients oc ON oc.id = od.client_id`;
 
 const publicVersion = ({ file_path, ...v }) => v;
+// Employees fill the approved text: not where it came from, nor skipped paragraphs or the values each
+// tag replaced (a client's data may be there)
+const employeeVersion = ({ file_path, skipped, origin_document_id, origin_title, origin_client, tags, ...v }) => ({
+  ...v, tags: (tags || []).map(({ example, examples, ...tag }) => tag),
+});
 
 async function getVersion(id) {
   const { rows } = await pool.query(`${VERSION_SELECT} WHERE v.id = $1`, [Number(id)]);
@@ -62,7 +70,7 @@ async function getModel(templateId, { admin }) {
   const base = { id: t.id, name: t.name, category: t.category, status };
   if (!admin) {
     if (!approved) return null;
-    return { ...base, status: 'approved', current: publicVersion(approved), approved: publicVersion(approved) };
+    return { ...base, status: 'approved', current: employeeVersion(approved), approved: employeeVersion(approved) };
   }
   return {
     ...base,
@@ -84,7 +92,7 @@ class StaleError extends Error {}
 
 // Saves `localFile` (a tagged .docx) as the next version of the model. With `baseVersionId`, refuses
 // (StaleError) when someone saved another version after that one.
-async function createVersion({ templateId, localFile, tags, skipped = [], source, notes = null, userId, baseVersionId }) {
+async function createVersion({ templateId, localFile, tags, skipped = [], source, notes = null, userId, baseVersionId, originDocumentId = null }) {
   const stored = storage.saveLocalFile(localFile, 'template_tags', `${templateId}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.docx`);
   if (localFile !== stored && localFile.startsWith(require('os').tmpdir())) fs.rm(localFile, { force: true }, () => {});
   const client = await pool.connect();
@@ -98,11 +106,11 @@ async function createVersion({ templateId, localFile, tags, skipped = [], source
       if ((latest[0]?.id || null) !== baseVersionId) throw new StaleError('stale');
     }
     const { rows } = await client.query(
-      `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, skipped, source, notes, created_by)
+      `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, skipped, source, notes, created_by, origin_document_id)
        VALUES ($1, (SELECT COALESCE(MAX(version_number), 0) + 1 FROM template_tag_versions WHERE template_id = $1),
-               $2, $3, $4, $5, $6, $7)
+               $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, version_number`,
-      [templateId, stored, JSON.stringify(tags), JSON.stringify(skipped), source, notes ? String(notes).slice(0, 500) : null, userId]
+      [templateId, stored, JSON.stringify(tags), JSON.stringify(skipped), source, notes ? String(notes).slice(0, 500) : null, userId, originDocumentId]
     );
     await client.query('COMMIT');
     return rows[0];
@@ -123,6 +131,16 @@ async function approve(versionId, adminId) {
   return v;
 }
 
+// Who saved the model's version from that client document (for the approval notice)
+async function originAuthor(templateId, documentId) {
+  const { rows } = await pool.query(
+    `SELECT created_by FROM template_tag_versions WHERE template_id = $1 AND origin_document_id = $2 AND source = 'client'
+     ORDER BY version_number LIMIT 1`,
+    [templateId, documentId]
+  );
+  return rows[0]?.created_by || null;
+}
+
 const isWord = (filePath) => path.extname(filePath || '').toLowerCase() === '.docx';
 
-module.exports = { listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, isWord, StaleError };
+module.exports = { listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };

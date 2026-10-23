@@ -75,6 +75,7 @@ test.before(async () => {
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await runSqlFile('migrations/20261002_template_tags.sql');
   await runSqlFile('migrations/20261002_template_tags.sql'); // idempotent
+  await runSqlFile('migrations/20261022_modelo_desde_documento.sql');
   await pool.query(`INSERT INTO legal_profiles (client_id, data) VALUES (1, '{"NOMBRE": "JUAN PÉREZ", "DOCUMENTO IDENTIDAD": "402-1111111-2"}')`);
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) tok[u.username] = generateToken(u);
   const app = express();

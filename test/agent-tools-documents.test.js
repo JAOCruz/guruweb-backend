@@ -53,6 +53,7 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await runSqlFile('migrations/20260929_portfolio.sql');
   await runSqlFile('migrations/20261002_template_tags.sql');
+  await runSqlFile('migrations/20261022_modelo_desde_documento.sql');
   await runSqlFile('migrations/20261005_bot_agent.sql');
   await runSqlFile('migrations/20261006_bot_fase2.sql');
   clearCache();

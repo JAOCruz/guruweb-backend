@@ -8,6 +8,10 @@ Documentos · Word engine (separate from MotherBrain's generator).
   fill <path> <out>       ← JSON {"TAG": "value" | ["1st", "2nd"…]} on stdin: exact {{TAG}} filling (tags without a value stay)
   spans <path> <out>      ← JSON [{"i": n, "start": a, "end": b, "text": "..."}]: replace character spans
   tags <path>             → JSON ["TAG", ...] every {{TAG}} in order (repeats included)
+  sanitize <path> <out>   → JSON {"outside": [{"where": "...", "text": "..."}]}: a copy without what a
+                            client's Word carries outside its text (tracked changes accepted, comments,
+                            links and content controls flattened, author/title cleared), plus the text
+                            of headers, footers and notes, to check for a client's data
 
 Edits keep each paragraph's style: the new text goes into the first run (its font/bold/size),
 inserted paragraphs copy the style of the paragraph they follow. Spans and tag filling work inside
@@ -160,6 +164,81 @@ def cmd_fill(path, out, values):
     print(out)
 
 
+W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+HYPERLINK_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+OUTSIDE = (("header", "el encabezado"), ("footer", "el pie de página"), ("footnotes", "las notas al pie"), ("endnotes", "las notas finales"))
+
+
+def w(tag):
+    return "{%s}%s" % (W_NS, tag)
+
+
+def unwrap(el):
+    """Puts the element's children where it is and drops the element."""
+    parent = el.getparent()
+    i = parent.index(el)
+    for child in list(el):
+        parent.insert(i, child)
+        i += 1
+    parent.remove(el)
+
+
+def clean_part(root):
+    for tag in ("del", "moveFrom", "commentRangeStart", "commentRangeEnd", "rPrChange", "pPrChange",
+                "sectPrChange", "tblPrChange", "trPrChange", "tcPrChange", "numberingChange"):
+        for el in list(root.iter(w(tag))):
+            el.getparent().remove(el)
+    for ref in list(root.iter(w("commentReference"))):
+        run = ref.getparent()
+        run.getparent().remove(run)
+    for tag in ("sdtPr", "sdtEndPr"):
+        for el in list(root.iter(w(tag))):
+            el.getparent().remove(el)
+    # deepest first, so nested wrappers all open up
+    for tag in ("ins", "moveTo", "hyperlink", "smartTag", "customXml", "fldSimple", "sdtContent", "sdt"):
+        for el in reversed(list(root.iter(w(tag)))):
+            unwrap(el)
+
+
+def cmd_sanitize(path, out):
+    import zipfile
+    from lxml import etree
+    outside = []
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            name = item.filename
+            if name.startswith("word/") and name.endswith(".xml") and "/" not in name[5:]:
+                root = etree.fromstring(data)
+                if name.startswith("word/comments"):
+                    for child in list(root):
+                        root.remove(child)
+                else:
+                    clean_part(root)
+                    for key, where in OUTSIDE:
+                        if name[5:].startswith(key):
+                            for para in root.iter(w("p")):
+                                text = "".join(t.text or "" for t in para.iter(w("t")))
+                                if text.strip():
+                                    outside.append({"where": where, "text": text})
+                data = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+            elif name.endswith(".rels"):
+                root = etree.fromstring(data)
+                for rel in list(root):
+                    if rel.get("Type") == HYPERLINK_REL:
+                        root.remove(rel)
+                data = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+            elif name in ("docProps/core.xml", "docProps/app.xml"):
+                root = etree.fromstring(data)
+                keep = ("created", "modified", "Application", "AppVersion", "DocSecurity", "Template")
+                for child in root:
+                    if etree.QName(child).localname not in keep and len(child) == 0:
+                        child.text = ""
+                data = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+            dst.writestr(item, data)
+    print(json.dumps({"outside": outside}, ensure_ascii=False))
+
+
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "list":
@@ -174,5 +253,7 @@ if __name__ == "__main__":
         cmd_spans(args[0], args[1], json.load(sys.stdin))
     elif cmd == "fill":
         cmd_fill(args[0], args[1], json.load(sys.stdin))
+    elif cmd == "sanitize":
+        cmd_sanitize(args[0], args[1])
     else:
         sys.exit(f"unknown command {cmd}")

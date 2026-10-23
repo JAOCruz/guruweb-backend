@@ -89,3 +89,17 @@ test('cleanTagged: tags in the house format; malformed ones are refused', () => 
   assert.throws(() => cleanTagged('a {{}} b'));
   assert.throws(() => cleanTagged('a {{NOMBRE b'));
 });
+
+test('clientDataLeft: finds the client name, cédula or phone left in paragraphs (case, accents and dashes aside)', () => {
+  const { clientDataLeft } = require('../src/documentos/tagging');
+  const texts = [
+    'PODER',
+    'Yo, {{NOMBRE}}, cédula 402 1111111 2, otorgo poder.',
+    'Firmado por Juan Perez en Santo Domingo.',
+    'Teléfono: (809) 555-0001.',
+    'Hecho el día de hoy.',
+  ];
+  const values = ['JUAN PÉREZ', '402-1111111-2', '18095550001', 'RD', ''];
+  assert.deepEqual(clientDataLeft(texts, values), [1, 2, 3]);
+  assert.deepEqual(clientDataLeft(texts, []), []);
+});

@@ -7,14 +7,15 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const pool = require('../db/pool');
 const { logActivity, safeLog } = require('../services/activityLog');
 const { resolveModelPath } = require('../documentos/templatesCatalog');
-const { listBlocks, applySpans, applyOps, fillTags, listTags } = require('../documentos/docxText');
+const { listBlocks, applySpans, applyOps, fillTags, listTags, sanitizeDocx } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
 const Tags = require('../documentos/templateTags');
 const Portfolio = require('../documentos/portfolio');
 const { fillAndStore } = require('../documentos/fillDocument');
 const LegalProfile = require('../documentos/legalProfile');
 const multer = require('multer');
-const { buildTagging, selectionSpan, normalizeKey, meta, EditError, TAG, tagsInText, cleanTagged, diffSpan } = require('../documentos/tagging');
+const { buildTagging, selectionSpan, normalizeKey, meta, EditError, TAG, tagsInText, cleanTagged, diffSpan, clientDataLeft } = require('../documentos/tagging');
+const { activeAdminIds, notifyUsers } = require('../agent/tools/notify');
 
 // Documentos · Etiquetas: AI tagging of the models, the admin's review (edits → new versions,
 // approval) and exact filling of approved models. MotherBrain's tables are only read.
@@ -57,10 +58,37 @@ async function orderedTags(file, known) {
   return [...new Set(await listTags(file))].map((k) => byKey.get(k) || meta(k));
 }
 
-async function tagModel(templateId, userId) {
-  const t = await Tags.getTemplate(templateId);
-  const file = originalFile(t);
-  if (!file) throw new TagError(404, 'NOT_FOUND', 'Este modelo no tiene un Word (.docx) para etiquetar');
+// Fields that are the same words for many people ("DOMINICANA", "SOLTERO") would flag boilerplate everywhere
+const GENERIC_FIELD = /NACIONALIDAD|ESTADO CIVIL|PROFESI|OCUPACI|SEXO|GENERO|GÉNERO|MONEDA|PAIS|PAÍS/i;
+const profileValues = (data) => Object.entries(data || {}).flatMap(([k, v]) => {
+  if (GENERIC_FIELD.test(k)) return [];
+  if (v && typeof v === 'object') return profileValues(v);
+  return typeof v === 'string' || typeof v === 'number' ? [String(v)] : [];
+});
+
+// The AI puts tags in place of a case's data in `file` (the model's Word or a client's document);
+// the result is saved as the model's next version. `extraNotes(outFile)` adds notes about the result.
+async function tagFile(t, file, { userId, source, originDocumentId = null, extraNotes, clientValues = [] }) {
+  const temps = [];
+  try {
+    if (source === 'client') {
+      // a client's Word may carry them outside the text: tracked changes, comments, links, author, headers
+      temps.push(tmpDocx());
+      const { outside } = await sanitizeDocx(file, temps[0]);
+      file = temps[0];
+      const where = [...new Set(outside.filter((o) => clientDataLeft([o.text], clientValues).length).map((o) => o.where))];
+      if (where.length) {
+        throw new TagError(422, 'CLIENT_DATA_OUTSIDE_TEXT',
+          `Hay datos del cliente en ${where.join(' y ')} del Word. Quítalos en el Word, súbelo como nueva versión y vuelve a intentarlo.`);
+      }
+    }
+    return await tagBlocks(t, file, { userId, source, originDocumentId, extraNotes, clientValues });
+  } finally {
+    for (const f of temps) fs.rm(f, { force: true }, () => {});
+  }
+}
+
+async function tagBlocks(t, file, { userId, source, originDocumentId, extraNotes, clientValues }) {
   const blocks = await listBlocks(file);
   let answer;
   try {
@@ -71,18 +99,35 @@ async function tagModel(templateId, userId) {
   }
   const { spans, tags, skipped } = buildTagging(blocks, answer);
   if (!spans.length) {
-    throw new TagError(422, 'NOTHING_TAGGED', 'La IA no pudo etiquetar este modelo sin cambiar su texto; etiquétalo a mano', { skipped });
+    throw new TagError(422, 'NOTHING_TAGGED', 'La IA no pudo etiquetar sin cambiar el texto; etiquétalo a mano', { skipped });
   }
   const out = tmpDocx();
   try {
     await applySpans(file, out, spans);
+    const replaced = tags.filter((tag) => !GENERIC_FIELD.test(tag.key)).flatMap((tag) => tag.examples || []);
+    const notes = [skipped.length ? `${skipped.length} párrafo(s) sin etiquetar: revísalos` : null, ...(extraNotes ? await extraNotes(out, replaced) : [])]
+      .filter(Boolean).join(' · ') || null;
+    // a tag's example is the value it replaced: from a client's document that is the client's data,
+    // and a label the AI wrote with a name in it gets the default one
+    const kept = source === 'client'
+      ? tags.map((tag) => ({
+        ...tag, example: null, examples: [],
+        label: clientDataLeft([tag.label], [...clientValues, ...replaced]).length ? meta(tag.key, { group: tag.group }).label : tag.label,
+      }))
+      : tags;
     return await Tags.createVersion({
-      templateId: t.id, localFile: out, tags: await orderedTags(out, tags), skipped, source: 'ai', userId,
-      notes: skipped.length ? `${skipped.length} párrafo(s) sin etiquetar: revísalos` : null,
+      templateId: t.id, localFile: out, tags: await orderedTags(out, kept), skipped, source, userId, notes, originDocumentId,
     });
   } finally {
     fs.rm(out, { force: true }, () => {});
   }
+}
+
+async function tagModel(templateId, userId) {
+  const t = await Tags.getTemplate(templateId);
+  const file = originalFile(t);
+  if (!file) throw new TagError(404, 'NOT_FOUND', 'Este modelo no tiene un Word (.docx) para etiquetar');
+  return tagFile(t, file, { userId, source: 'ai' });
 }
 
 const fail = (res, err, context) => {
@@ -293,6 +338,7 @@ router.post('/models/:id/edit', admin, async (req, res) => {
       const { file, tags } = await bodyEdit(base, ops, temps);
       const v = await Tags.createVersion({
         templateId, localFile: file, tags, skipped: [], source: 'edit', notes, userId: req.user.id, baseVersionId: latest,
+        originDocumentId: base.origin_document_id,
       });
       const model = await Tags.getModel(templateId, { admin: true });
       await safeLog(() => logActivity(req, {
@@ -379,7 +425,7 @@ router.post('/models/:id/edit', admin, async (req, res) => {
     const finalTags = tags.map(({ fileKey, ...t }) => ({ ...t, example: t.examples[0] ?? t.example ?? null }));
     const v = await Tags.createVersion({
       templateId, localFile: file, tags: await orderedTags(file, finalTags), skipped: base.skipped, source: 'edit', notes,
-      userId: req.user.id, baseVersionId: latest,
+      userId: req.user.id, baseVersionId: latest, originDocumentId: base.origin_document_id,
     });
     const model = await Tags.getModel(templateId, { admin: true });
     await safeLog(() => logActivity(req, {
@@ -449,7 +495,7 @@ router.post('/models/:id/restore', admin, async (req, res) => {
     fs.copyFileSync(old.file_path, copy);
     const v = await Tags.createVersion({
       templateId, localFile: copy, tags: old.tags, skipped: old.skipped, source: 'restore',
-      notes: `Restaurada desde v${old.version_number}`, userId: req.user.id,
+      notes: `Restaurada desde v${old.version_number}`, userId: req.user.id, originDocumentId: old.origin_document_id,
     });
     const model = await Tags.getModel(templateId, { admin: true });
     await safeLog(() => logActivity(req, {
@@ -471,9 +517,69 @@ router.post('/versions/:id/approve', admin, async (req, res) => {
       category: 'documentos', action: 'etiquetas.approve', entityType: 'modelo', entityId: v.template_id,
       summary: `Aprobó las etiquetas v${v.version_number} de «${model.name}»`,
     }));
+    // the digitador who saved it from a document learns it is now everyone's model (also after the admin's fixes)
+    const author = v.origin_document_id && await Tags.originAuthor(v.template_id, v.origin_document_id);
+    if (author && author !== req.user.id) {
+      await notifyUsers([author], {
+        type: 'approval',
+        title: '✅ Versión de modelo aprobada',
+        message: `Tu versión de «${model.name}» (v${v.version_number}) fue aprobada: desde ahora todos la usan para llenar.`,
+        link: '/documents',
+        metadata: { template_id: v.template_id, version_id: v.id },
+      });
+    }
     res.json({ model });
   } catch (err) {
     return fail(res, err, 'approve');
+  }
+});
+
+// ── A client's personalized document → a new version of its model ──
+// The AI puts tags back in place of the client's data (the new wording stays) and the version waits
+// for an admin's approval; the other admins get a notification. Only who can see the document can do it.
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+router.post('/documents/:id/as-model', async (req, res) => {
+  try {
+    const doc = await Portfolio.getDocument(req.user, req.params.id);
+    if (!doc) return sendError(res, 404, 'NOT_FOUND', 'Documento no encontrado');
+    const t = doc.template_id && await Tags.getTemplate(doc.template_id);
+    if (!t || !t.is_active) return sendError(res, 400, 'NO_MODEL', 'Este documento no salió de un modelo de nuestra selección');
+    const latestWord = doc.versions.find((v) => v.mime_type === DOCX);
+    const version = latestWord && await Portfolio.getVersion(req.user, latestWord.id);
+    if (!version || !fs.existsSync(version.file_path)) return sendError(res, 400, 'NO_WORD', 'Este documento no tiene un Word (.docx) para guardarlo como modelo');
+
+    // the client's name, phone and legal profile must not stay in the model
+    const values = [doc.client_name, doc.client_phone, ...profileValues(await LegalProfile.get(doc.client_id).catch(() => ({})))].filter(Boolean);
+    let left = [];
+    const v = await tagFile(t, version.file_path, {
+      userId: req.user.id, source: 'client', originDocumentId: doc.id, clientValues: values,
+      // also every value the AI replaced (the other people in the document) wherever a copy of it is left
+      extraNotes: async (out, replaced) => {
+        const blocks = await listBlocks(out);
+        left = clientDataLeft(blocks.map((b) => b.text), [...values, ...replaced]).map((k) => blocks[k].i + 1);
+        return ['Desde un documento personalizado',
+          left.length ? `⚠ quedan datos del cliente en el párrafo ${left.join(', ')}: quítalos antes de aprobar` : null];
+      },
+    });
+
+    const { rows: [me] } = await pool.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
+    const who = me?.name || me?.username || 'Un empleado';
+    const admins = (await activeAdminIds()).filter((id) => id !== req.user.id);
+    await notifyUsers(admins, {
+      type: 'approval',
+      title: '🧩 Versión de modelo por aprobar',
+      message: `${who} guardó una nueva versión de «${t.name}» (v${v.version_number}) desde un documento personalizado. Revísala y apruébala para que todos la usen.`,
+      link: `/documents?tab=etiquetas&model=${t.id}`,
+      metadata: { template_id: t.id, version_id: v.id },
+    });
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'etiquetas.from_document', entityType: 'modelo', entityId: t.id,
+      summary: `Guardó «${t.name}» v${v.version_number} desde un documento personalizado`,
+    }));
+    res.status(201).json({ version: v, model_name: t.name, client_data_left: left });
+  } catch (err) {
+    return fail(res, err, 'as-model');
   }
 });
 

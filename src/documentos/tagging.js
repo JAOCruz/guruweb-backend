@@ -150,7 +150,28 @@ function diffSpan(from, to) {
   return span;
 }
 
+// Which texts still hold one of the client's values (name, cédula, phone…): words compare without
+// case or accents; numbers by their digits (the last 10, so a phone matches with or without the 1)
+function clientDataLeft(texts, values) {
+  const words = (s) => ` ${String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()} `;
+  const digits = (s) => String(s).replace(/\D/g, '');
+  const names = [];
+  const numbers = [];
+  for (const v of values) {
+    const d = digits(v);
+    if (d.length >= 7 && !/[a-z]/i.test(String(v))) numbers.push(d.slice(-10));
+    else if (words(v).trim().length >= 5) names.push(words(v));
+  }
+  const found = [];
+  texts.forEach((t, k) => {
+    const w = words(t);
+    const d = digits(t);
+    if (names.some((n) => w.includes(n)) || numbers.some((n) => d.includes(n))) found.push(k);
+  });
+  return found;
+}
+
 module.exports = {
-  cleanTagged, diffSpan,
+  cleanTagged, diffSpan, clientDataLeft,
   alignTagged, normalizeKey, tagsInText, TAG, ROLES, groupOf, labelOf, meta, buildTagging, selectionSpan, EditError,
 };

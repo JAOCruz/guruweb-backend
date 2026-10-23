@@ -24,5 +24,7 @@ const applyOps = (file, out, ops) => run(['apply', file, out], ops);
 const fillTags = (file, out, values) => run(['fill', file, out], values);
 const applySpans = (file, out, spans) => run(['spans', file, out], spans);
 const listTags = async (file) => JSON.parse(await run(['tags', file]));
+// a client's Word without tracked changes, comments, links or author → { outside: [{ where, text }] }
+const sanitizeDocx = async (file, out) => JSON.parse(await run(['sanitize', file, out]));
 
-module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags };
+module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags, sanitizeDocx };
