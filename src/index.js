@@ -127,6 +127,9 @@ const allowedOrigins = [
   "http://100.87.41.106:5174",
 ];
 
+// Public read-only data for the website (any origin, no cookies): mounted before the CORS allow-list
+app.use("/api/public", require("./routes/publicModels"));
+
 app.use(
   cors({
     origin: function (origin, callback) {
