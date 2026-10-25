@@ -78,8 +78,14 @@ async function sendWithRetry(target, filePath, fileName, caption) {
 async function notifyAdmins(message, metadata, title = 'Envío por WhatsApp pendiente') {
   await notifyUsers(await activeAdminIds(), {
     type: 'delivery', title, message,
-    link: metadata.invoice_id && !metadata.document_id ? '/cotizaciones' : '/documents', metadata,
+    link: deliveryLink(metadata), metadata,
   });
+}
+
+// The click opens the client's documents or that quote
+function deliveryLink({ document_id, invoice_id, client_id }) {
+  if (document_id) return client_id ? `/documents?tab=historial&client=${client_id}` : '/documents?tab=historial';
+  return invoice_id ? `/cotizaciones?invoice=${invoice_id}` : '/documents';
 }
 
 // Aviso de "salió": uno por envío que salió bien (cotización o documento).
@@ -281,7 +287,7 @@ async function sendDocument(documentId, { actor } = {}) {
     await pool.query('UPDATE portfolio_documents SET sent_at = NULL, send_error = $2 WHERE id = $1', [doc.id, code]);
     console.error('[delivery] documento', doc.id, code);
     await notifyAdmins(failureText('document', doc.title, doc.client_name, code),
-      { document_id: doc.id, invoice_id: doc.invoice_id || undefined, code });
+      { document_id: doc.id, client_id: doc.client_id, invoice_id: doc.invoice_id || undefined, code });
     return { ok: false, code };
   };
 
@@ -320,7 +326,7 @@ async function sendDocument(documentId, { actor } = {}) {
   }));
   await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(
     `El documento «${doc.title}» de ${doc.client_name || 'cliente sin nombre'} salió por WhatsApp.`,
-    { document_id: doc.id, invoice_id: doc.invoice_id || undefined, sent: true }, sentTitle(doc.title)));
+    { document_id: doc.id, client_id: doc.client_id, invoice_id: doc.invoice_id || undefined, sent: true }, sentTitle(doc.title)));
   return { ok: true };
 }
 
@@ -360,12 +366,12 @@ async function revertWindowClosed(messageId, code = 'WINDOW_CLOSED') {
      SET sent_at = NULL, send_error = $2, delivery_wa_id = NULL, updated_at = NOW()
      FROM clients c
      WHERE d.delivery_wa_id = $1 AND d.sent_at IS NOT NULL AND c.id = d.client_id
-     RETURNING d.id, d.title, d.invoice_id, c.name AS client_name`, [id, sendError]);
+     RETURNING d.id, d.title, d.client_id, d.invoice_id, c.name AS client_name`, [id, sendError]);
   for (const doc of docs) {
     n++;
     console.error('[delivery] documento', doc.id, `${sendError} (aviso tardío)`);
     await afterSend('documento', doc.id, 'aviso', () => notifyAdmins(failureText('document', doc.title, doc.client_name, windowClosed ? 'WINDOW_CLOSED' : 'UNDELIVERABLE'),
-      { document_id: doc.id, invoice_id: doc.invoice_id || undefined, code: sendError }));
+      { document_id: doc.id, client_id: doc.client_id, invoice_id: doc.invoice_id || undefined, code: sendError }));
     await afterSend('documento', doc.id, 'actividad', () => logActivity(null, {
       category: 'documentos', action: 'documento.send_failed', entityType: 'documento', entityId: doc.id,
       summary: `WhatsApp no entregó «${doc.title}» a ${doc.client_name || 'cliente sin nombre'}: ${reason}`,

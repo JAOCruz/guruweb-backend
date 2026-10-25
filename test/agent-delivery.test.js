@@ -454,12 +454,12 @@ test('M1: cada envío que sale avisa a los admins una sola vez, con 📤 y el no
   assert.deepEqual(quote.map((x) => x.user_id).sort(), [adminId, otherAdmin].sort());
   assert.match(quote[0].message, /Juan Pérez/);
   assert.match(quote[0].message, /RD\$ 1,500\.00/);
-  assert.equal(quote[0].link, '/cotizaciones');
+  assert.equal(quote[0].link, `/cotizaciones?invoice=${inv.id}`);
   assert.equal(quote[0].metadata.invoice_id, inv.id);
   const docN = n.filter((x) => x.title === '📤 Enviado por WhatsApp: Poder especial');
   assert.equal(docN.length, 2);
   assert.match(docN[0].message, /Juan Pérez/);
-  assert.equal(docN[0].link, '/documents');
+  assert.equal(docN[0].link, `/documents?tab=historial&client=${clientId}`);
   assert.equal(docN[0].metadata.document_id, doc.id);
 
   // El segundo clic (ALREADY_SENT) no avisa otra vez

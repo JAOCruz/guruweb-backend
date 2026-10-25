@@ -36,7 +36,7 @@ async function processDueReminders(now = new Date()) {
             type: 'case_deadline',
             title: 'Vencimiento de plazo de caso',
             message: baseMessage,
-            link: `/cases/${caseId}`,
+            link: `/cases?case=${caseId}`,
             metadata: { case_id: caseId, reminder_id: reminder.id, client_id: clientId },
           });
           notifiedUserIds.add(assignedUserId);
@@ -51,7 +51,7 @@ async function processDueReminders(now = new Date()) {
             type: 'case_deadline',
             title: 'Vencimiento de plazo de caso',
             message: baseMessage,
-            link: `/cases/${caseId}`,
+            link: `/cases?case=${caseId}`,
             metadata: { case_id: caseId, reminder_id: reminder.id, client_id: clientId },
           });
           notifiedUserIds.add(admin.id);

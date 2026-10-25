@@ -62,6 +62,7 @@ const { getEnabledAvatars, setAvatarEnabled, isToggleable } = require('../servic
 const { AVATAR_KEYS, ADMIN_ONLY_AVATAR, COLOR_KEYS } = require('../config/appearance');
 const { normalizeBirthDate, formatBirthDate } = require('../config/birthDate');
 const { logActivity, listActivity, safeLog } = require('../services/activityLog');
+const { notifyUsers } = require('../agent/tools/notify');
 
 const ROLE_LABEL = { admin: 'Admin', digitador: 'Digitador', auxiliar: 'Auxiliar', employee: 'Digitador' };
 const displayName = (u) => (u && (u.name || u.username)) || 'usuario';
@@ -302,6 +303,22 @@ router.get('/users/:id/assignments', requireRole('admin'), async (req, res) => {
   }
 });
 
+// Whoever receives a deactivated user's chats and cases is told what they got
+async function notifyReassigned(receiverId, from, counts) {
+  const parts = [
+    counts.clients ? `${counts.clients} ${counts.clients === 1 ? 'chat' : 'chats'}` : null,
+    counts.cases ? `${counts.cases} ${counts.cases === 1 ? 'caso' : 'casos'}` : null,
+  ].filter(Boolean);
+  const verb = counts.clients + counts.cases === 1 ? 'era' : 'eran';
+  await notifyUsers([receiverId], {
+    type: 'assignment',
+    title: `💬 Te pasaron los pendientes de ${displayName(from)}`,
+    message: `Ahora tienes ${parts.join(' y ')} que ${verb} de ${displayName(from)}.`,
+    link: counts.clients ? '/bot-messages' : '/cases',
+    metadata: { from_user_id: from.id, clients: counts.clients, cases: counts.cases },
+  });
+}
+
 router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -315,6 +332,7 @@ router.post('/users/:id/deactivate', requireRole('admin'), async (req, res) => {
     const counts = await User.countAssignments(id);
     const user = await User.deactivate(id, reassignTo, req.user.id);
     invalidateUserStatus(id);
+    if (reassignTo && counts.clients + counts.cases > 0) await safeLog(() => notifyReassigned(reassignTo, target, counts));
     await safeLog(async () => {
       const receiver = reassignTo ? await User.findById(reassignTo) : null;
       await logActivity(req, {

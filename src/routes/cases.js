@@ -152,7 +152,7 @@ router.post('/detect-and-create', authenticate, async (req, res) => {
           type: 'complaint',
           title: 'Nueva reclamación',
           message: `Reclamación de ${client.name || phone}: ${analysis.case_type}`,
-          link: `/cases/${caseRecord.id}`,
+          link: `/cases?case=${caseRecord.id}`,
           metadata: { case_id: caseRecord.id, client_id: client.id, phone },
         });
         notifiedUserIds.add(admin.id);
@@ -165,7 +165,7 @@ router.post('/detect-and-create', authenticate, async (req, res) => {
             type: 'complaint',
             title: 'Reclamación de un cliente asignado',
             message: `El cliente ${client.name || phone} ha generado una reclamación: ${analysis.case_type}`,
-            link: `/cases/${caseRecord.id}`,
+            link: `/cases?case=${caseRecord.id}`,
             metadata: { case_id: caseRecord.id, client_id: client.id, phone },
           });
         }
@@ -337,7 +337,7 @@ router.post('/:id/status', async (req, res) => {
               type: 'case_status',
               title,
               message,
-              link: `/cases/${caseRecord.id}`,
+              link: `/cases?case=${caseRecord.id}`,
               metadata: { case_id: caseRecord.id, status, previous_status: previousStatus, client_id: caseRecord.client_id },
             });
             notifiedUserIds.add(admin.id);
@@ -349,7 +349,7 @@ router.post('/:id/status', async (req, res) => {
               type: 'case_status',
               title,
               message,
-              link: `/cases/${caseRecord.id}`,
+              link: `/cases?case=${caseRecord.id}`,
               metadata: { case_id: caseRecord.id, status, previous_status: previousStatus, client_id: caseRecord.client_id },
             });
           }
@@ -473,7 +473,7 @@ router.post('/:id/assign', requireRole('admin'), async (req, res) => {
           type: 'case_assignment',
           title: 'Nuevo caso asignado',
           message: `Se le ha asignado el caso ${caseRecord.case_number}: ${caseRecord.title}`,
-          link: `/cases/${caseRecord.id}`,
+          link: `/cases?case=${caseRecord.id}`,
           metadata: { case_id: caseRecord.id, assigned_by: req.user.id },
         });
       } catch (notifyErr) {

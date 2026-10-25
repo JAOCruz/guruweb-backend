@@ -127,10 +127,10 @@ test('un status failed 131047/131026 revierte el envío de la cotización y del 
   const cotN = n.find((x) => x.metadata.invoice_id === cot.id);
   assert.equal(cotN.message, `La cotización COT-2026-001 de Juan Pérez está aprobada, ${WINDOW_TEXT.replace('Envíelo', 'Envíela')}`);
   assert.equal(cotN.metadata.code, 'WINDOW_CLOSED');
-  assert.equal(cotN.link, '/cotizaciones');
+  assert.equal(cotN.link, `/cotizaciones?invoice=${cot.id}`);
   const docN = n.find((x) => x.metadata.document_id === doc);
   assert.equal(docN.message, `El documento «Contrato de alquiler» de Juan Pérez está aprobado, ${WINDOW_TEXT}`);
-  assert.equal(docN.link, '/documents');
+  assert.equal(docN.link, `/documents?tab=historial&client=${clientId}`);
   const paidN = n.find((x) => x.metadata.invoice_id === paid.id);
   assert.equal(paidN.message, 'No se pudo entregar por WhatsApp la cotización COT-2026-002 de Juan Pérez; revise el número o envíelo por otro medio.');
   assert.equal(paidN.metadata.code, 'SEND_FAILED');

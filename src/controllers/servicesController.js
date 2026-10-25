@@ -1,6 +1,7 @@
 const EmployeeService = require("../models/EmployeeService");
 const User = require("../models/User");
 const { logActivity, rd, safeLog } = require("../services/activityLog");
+const { notifyUsers } = require("../agent/tools/notify");
 
 const servicesController = {
   async getServices(req, res) {
@@ -72,6 +73,16 @@ const servicesController = {
           category: "servicios", action: "service.create", entityType: "service", entityId: service.id,
           summary: `Agregó el servicio "${serviceName}" a ${employee.name || employee.username} por ${rd(earnings)}${client ? ` (cliente: ${client})` : ""}`,
           details: { employee_id: employee.id, service_name: serviceName, earnings: parseFloat(earnings), client: client || null, date: date || null },
+        });
+      });
+      // The digitador learns it was noted down; the click highlights it on their dashboard
+      await safeLog(async () => {
+        await notifyUsers([employee.id], {
+          type: "service",
+          title: "📝 Te anotaron un servicio",
+          message: [serviceName, client ? `cliente ${client}` : null, rd(earnings)].filter(Boolean).join(" · "),
+          link: `/?service=${service.id}`,
+          metadata: { service_id: service.id },
         });
       });
       res.status(201).json(service);

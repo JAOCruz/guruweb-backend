@@ -123,7 +123,7 @@ test('crear_solicitud crea el caso, lo deja al asignado y le avisa', async () =>
   assert.equal(n.length, 1);
   assert.equal(n[0].user_id, digId);
   assert.equal(n[0].type, 'case');
-  assert.equal(n[0].link, '/cases');
+  assert.equal(n[0].link, `/cases?case=${c.id}`);
 });
 
 test('crear_solicitud sin asignado avisa a cada admin activo', async () => {

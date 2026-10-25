@@ -27,7 +27,7 @@ async function crear_solicitud(args, ctx) {
   await notifyUsers(recipients, {
     type: 'case', title: 'Nueva solicitud por WhatsApp',
     message: `${servicio} — ${clientName} (${caso.case_number})`,
-    link: '/cases', metadata: { case_id: caso.id, case_number: caso.case_number },
+    link: `/cases?case=${caso.id}`, metadata: { case_id: caso.id, case_number: caso.case_number },
   });
   return { caso: caso.case_number, estado: caso.status || 'new', asignado_a: asignado };
 }
