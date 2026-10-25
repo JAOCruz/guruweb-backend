@@ -22,13 +22,15 @@ const YA_ETIQUETADO = 'PODER CUOTA LITIS'; // already has a version
 test.beforeEach(async () => {
   await resetDb();
   await runSqlFile('migrations/20260926_user_management.sql');
-  await pool.query('DROP TABLE IF EXISTS template_tag_versions, doc_templates, doc_categories, bot_tool_log, bot_memory, business_info, tramites, invoices, service_catalog CASCADE');
+  await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions, doc_templates, doc_categories, bot_tool_log, bot_memory, business_info, tramites, invoices, service_catalog CASCADE');
   await pool.query(`CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, description TEXT, digitacion_price NUMERIC, notarizacion_price NUMERIC, price_tiers JSONB, unit_type TEXT, active BOOLEAN DEFAULT true)`);
   await pool.query(`CREATE TABLE invoices (id SERIAL PRIMARY KEY)`);
   await runSqlFile('migrations/20261005_bot_agent.sql'); // service_catalog.template_id
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
   await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
   await runSqlFile('migrations/20261002_template_tags.sql');
+  await runSqlFile('migrations/20261022_modelo_desde_documento.sql');
+  await runSqlFile('migrations/20261025_modelos_papelera_correcciones.sql');
   await pool.query(`INSERT INTO doc_categories (name) VALUES ('Modelos')`);
   // the real services from the snapshot (names only) and the 20 models by their exact names
   for (const s of snapshot.service_catalog) await pool.query('INSERT INTO service_catalog (name) VALUES ($1)', [s.name]);

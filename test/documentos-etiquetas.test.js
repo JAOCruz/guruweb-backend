@@ -53,7 +53,7 @@ test.before(async () => {
   await runSqlFile('migrations/20260926_user_management.sql');
   await pool.query('DROP TABLE IF EXISTS activity_log');
   await runSqlFile('migrations/20260927_activity_log.sql');
-  await pool.query('DROP TABLE IF EXISTS template_tag_versions, legal_profiles, portfolio_versions, portfolio_documents, clients, doc_template_variables, doc_variables, doc_templates, doc_categories CASCADE');
+  await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions, legal_profiles, portfolio_versions, portfolio_documents, clients, doc_template_variables, doc_variables, doc_templates, doc_categories CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, email TEXT, address TEXT, notes TEXT, user_id INT, source TEXT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
   await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
@@ -76,6 +76,7 @@ test.before(async () => {
   await runSqlFile('migrations/20261002_template_tags.sql');
   await runSqlFile('migrations/20261002_template_tags.sql'); // idempotent
   await runSqlFile('migrations/20261022_modelo_desde_documento.sql');
+  await runSqlFile('migrations/20261025_modelos_papelera_correcciones.sql');
   await pool.query(`INSERT INTO legal_profiles (client_id, data) VALUES (1, '{"NOMBRE": "JUAN PÉREZ", "DOCUMENTO IDENTIDAD": "402-1111111-2"}')`);
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) tok[u.username] = generateToken(u);
   const app = express();

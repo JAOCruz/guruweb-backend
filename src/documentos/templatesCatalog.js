@@ -48,4 +48,7 @@ function searchTemplates(list, q) {
     .map((x) => x.t);
 }
 
-module.exports = { listModels, searchTemplates, resolveModelPath, templatesBaseDir };
+// a model went to (or came back from) the trash: the next list reads the database
+const clearCache = () => { cache = { at: 0, list: null }; };
+
+module.exports = { clearCache, listModels, searchTemplates, resolveModelPath, templatesBaseDir };

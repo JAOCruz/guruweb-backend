@@ -68,7 +68,7 @@ async function main() {
         await client.query(
           `UPDATE doc_templates
            SET name = $1, file_path = $2, file_name = $3, doc_type = $4,
-               description = $5, is_active = true, updated_at = NOW()
+               description = $5, is_active = (deleted_at IS NULL), updated_at = NOW()
            WHERE id = $6`,
           [name, doc.file_path, doc.name, ext, doc.description || `Plantilla: ${name}`, existing[0].id]
         );

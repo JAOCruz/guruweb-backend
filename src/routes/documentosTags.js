@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const { authenticate, requireRole } = require('../middleware/auth');
 const pool = require('../db/pool');
 const { logActivity, safeLog } = require('../services/activityLog');
-const { resolveModelPath } = require('../documentos/templatesCatalog');
+const { resolveModelPath, clearCache } = require('../documentos/templatesCatalog');
+const Corrections = require('../documentos/templateCorrections');
 const { listBlocks, applySpans, applyOps, fillTags, listTags, sanitizeDocx } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
 const Tags = require('../documentos/templateTags');
@@ -321,11 +322,15 @@ async function bodyEdit(base, ops, temps) {
 // applied to the tag list, and the file gets them in one pass. Each tag keeps the original text of
 // each of its places (in document order), so removing a tag puts back exactly what was there.
 router.post('/models/:id/edit', admin, async (req, res) => {
-  const { base_version_id: baseId, ops = [], notes = null } = req.body || {};
+  const { base_version_id: baseId, ops = [], notes = null, correction_id: correctionId = null } = req.body || {};
   const temps = [];
   try {
     const templateId = Number(req.params.id);
     if (!Array.isArray(ops) || !ops.length) return sendError(res, 400, 'INVALID_EDIT', 'No hay cambios para guardar');
+    const correction = correctionId ? await Corrections.get(correctionId) : null;
+    if (correctionId && (!correction || correction.template_id !== templateId || correction.status !== 'pending')) {
+      return sendError(res, 400, 'INVALID_CORRECTION', 'Esa corrección no está pendiente en este modelo; recarga');
+    }
     const latest = await Tags.latestVersionId(templateId);
     if (!latest) return sendError(res, 404, 'NOT_FOUND', 'Este modelo no tiene etiquetas todavía');
     if (Number(baseId) !== latest) return sendError(res, 409, 'STALE', 'Alguien guardó otra versión mientras editabas; recarga');
@@ -345,7 +350,8 @@ router.post('/models/:id/edit', admin, async (req, res) => {
         category: 'documentos', action: 'etiquetas.edit_text', entityType: 'modelo', entityId: templateId,
         summary: `Cambió el texto de «${model.name}» (v${v.version_number})${notes ? `: ${String(notes).slice(0, 120)}` : ''}`,
       }));
-      return res.status(201).json({ model });
+      if (correction) await applyCorrection(req, correction, v, model.name);
+      return res.status(201).json({ model: correction ? await Tags.getModel(templateId, { admin: true }) : model });
     }
     const examplesOf = (t) => (Array.isArray(t.examples) ? t.examples : t.example != null ? [t.example] : []);
     // fileKey: the name the tag has in the file; key: its name after these edits
@@ -432,7 +438,8 @@ router.post('/models/:id/edit', admin, async (req, res) => {
       category: 'documentos', action: 'etiquetas.edit', entityType: 'modelo', entityId: templateId,
       summary: `Guardó la versión v${v.version_number} de las etiquetas de «${model.name}»`,
     }));
-    res.status(201).json({ model });
+    if (correction) await applyCorrection(req, correction, v, model.name);
+    res.status(201).json({ model: correction ? await Tags.getModel(templateId, { admin: true }) : model });
   } catch (err) {
     return fail(res, err, 'edit');
   } finally {
@@ -531,6 +538,140 @@ router.post('/versions/:id/approve', admin, async (req, res) => {
     res.json({ model });
   } catch (err) {
     return fail(res, err, 'approve');
+  }
+});
+
+// ── Corrections: anyone reports a part of a model that is wrong or could be better; the admin
+// applies it (a text edit or "Cambiar con IA" that saves a version) or dismisses it with a reason.
+async function applyCorrection(req, correction, v, modelName) {
+  await Corrections.resolve(correction.id, { status: 'applied', userId: req.user.id, resultingVersionId: v.id });
+  await safeLog(() => logActivity(req, {
+    category: 'documentos', action: 'etiquetas.correction_applied', entityType: 'modelo', entityId: correction.template_id,
+    summary: `Aplicó la corrección #${correction.id} de «${modelName}» en v${v.version_number}`,
+  }));
+  if (correction.created_by && correction.created_by !== req.user.id) {
+    await notifyUsers([correction.created_by], {
+      type: 'system',
+      title: '✅ Corrección aplicada',
+      message: `Tu corrección de «${modelName}» se aplicó en la versión v${v.version_number}.`,
+      link: '/documents',
+      metadata: { template_id: correction.template_id, correction_id: correction.id, version_id: v.id },
+    });
+  }
+}
+
+const clip = (x, n) => {
+  const t = String(x ?? '').trim();
+  return t ? t.slice(0, n) : null;
+};
+
+router.post('/models/:id/corrections', async (req, res) => {
+  const body = req.body || {};
+  const comment = clip(body.comment, 1000);
+  if (!comment || comment.length < 3) return sendError(res, 400, 'INVALID_CORRECTION', 'Escribe qué está mal o qué se puede mejorar');
+  try {
+    // what the person can see: employees the approved version, admins any version of the model
+    const model = await Tags.getModel(req.params.id, { admin: isAdmin(req) });
+    if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está aprobado');
+    const asked = Number(body.version_id);
+    const version = isAdmin(req) && asked ? model.versions.find((v) => v.id === asked) : (model.approved || model.current);
+    if (!version) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este modelo');
+    const paragraphI = Number.isInteger(body.paragraph_i) && body.paragraph_i >= 0 ? body.paragraph_i : null;
+    const correction = await Corrections.create({
+      templateId: model.id, versionId: version.id, paragraphI, excerpt: clip(body.excerpt, 1000), comment, userId: req.user.id,
+    });
+
+    const { rows: [me] } = await pool.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
+    const who = me?.name || me?.username || 'Un empleado';
+    const admins = (await activeAdminIds()).filter((id) => id !== req.user.id);
+    await notifyUsers(admins, {
+      type: 'approval',
+      title: '✏️ Corrección de modelo',
+      message: `${who} reportó una corrección en «${model.name}» (v${version.version_number}): ${comment.slice(0, 160)}`,
+      link: `/documents?tab=etiquetas&model=${model.id}`,
+      metadata: { template_id: model.id, correction_id: correction.id },
+    });
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'etiquetas.correction', entityType: 'modelo', entityId: model.id,
+      summary: `Reportó una corrección en «${model.name}» (v${version.version_number})`,
+    }));
+    res.status(201).json({ correction });
+  } catch (err) {
+    return fail(res, err, 'correction');
+  }
+});
+
+// Admins see every correction of the model; employees only their own (to follow them)
+router.get('/models/:id/corrections', async (req, res) => {
+  try {
+    const corrections = await Corrections.list(req.params.id, { userId: isAdmin(req) ? null : req.user.id });
+    res.json({ corrections });
+  } catch (err) {
+    return fail(res, err, 'corrections');
+  }
+});
+
+router.post('/corrections/:id/dismiss', admin, async (req, res) => {
+  try {
+    const before = await Corrections.get(req.params.id);
+    if (!before) return sendError(res, 404, 'NOT_FOUND', 'Corrección no encontrada');
+    const note = clip((req.body || {}).note, 500);
+    const c = await Corrections.resolve(before.id, { status: 'dismissed', userId: req.user.id, note });
+    if (!c) return sendError(res, 409, 'NOT_PENDING', 'Esa corrección ya se resolvió');
+    const t = await Tags.getTemplate(c.template_id);
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'etiquetas.correction_dismissed', entityType: 'modelo', entityId: c.template_id,
+      summary: `Descartó la corrección #${c.id} de «${t?.name || 'modelo'}»${note ? `: ${note.slice(0, 120)}` : ''}`,
+    }));
+    if (c.created_by && c.created_by !== req.user.id) {
+      await notifyUsers([c.created_by], {
+        type: 'system',
+        title: 'Corrección descartada',
+        message: `Tu corrección de «${t?.name || 'un modelo'}» se descartó${note ? `: ${note}` : '.'}`,
+        link: '/documents',
+        metadata: { template_id: c.template_id, correction_id: c.id },
+      });
+    }
+    res.json({ correction: c });
+  } catch (err) {
+    return fail(res, err, 'dismiss');
+  }
+});
+
+// ── Trash: "Eliminar" hides the model everywhere (lists, the website, the bot); "Restaurar" brings it back
+router.delete('/models/:id', admin, async (req, res) => {
+  try {
+    const t = await Tags.trash(req.params.id, req.user.id);
+    if (!t) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
+    clearCache();
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'modelo.delete', entityType: 'modelo', entityId: t.id, summary: `Eliminó el modelo «${t.name}» (papelera)`,
+    }));
+    res.json({ ok: true });
+  } catch (err) {
+    return fail(res, err, 'delete');
+  }
+});
+
+router.get('/deleted', admin, async (req, res) => {
+  try {
+    res.json({ models: await Tags.listTrash() });
+  } catch (err) {
+    return fail(res, err, 'deleted');
+  }
+});
+
+router.post('/models/:id/undelete', admin, async (req, res) => {
+  try {
+    const t = await Tags.untrash(req.params.id);
+    if (!t) return sendError(res, 404, 'NOT_FOUND', 'Ese modelo no está en Eliminados');
+    clearCache();
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'modelo.restore', entityType: 'modelo', entityId: t.id, summary: `Restauró el modelo «${t.name}» desde Eliminados`,
+    }));
+    res.json({ ok: true });
+  } catch (err) {
+    return fail(res, err, 'undelete');
   }
 });
 

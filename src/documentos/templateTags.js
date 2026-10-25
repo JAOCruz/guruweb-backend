@@ -20,7 +20,8 @@ const LATEST_JOIN = `
 async function listStatuses() {
   const { rows } = await pool.query(
     `SELECT t.id, t.name, t.file_path, c.name AS category, ${STATUS_SQL} AS status,
-            lv.version_number AS latest_version, t.approved_tag_version_id
+            lv.version_number AS latest_version, t.approved_tag_version_id,
+            (SELECT COUNT(*)::int FROM template_corrections tc WHERE tc.template_id = t.id AND tc.status = 'pending') AS pending_corrections
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id ${LATEST_JOIN}
      WHERE t.is_active = TRUE ORDER BY c.name NULLS LAST, t.name`
   );
@@ -72,12 +73,53 @@ async function getModel(templateId, { admin }) {
     if (!approved) return null;
     return { ...base, status: 'approved', current: employeeVersion(approved), approved: employeeVersion(approved) };
   }
+  // the corrections each version applied
+  const { rows: applied } = await pool.query(
+    `SELECT c.id, c.comment, c.resulting_version_id, COALESCE(NULLIF(u.name, ''), u.username) AS created_by_name
+     FROM template_corrections c LEFT JOIN users u ON u.id = c.created_by
+     WHERE c.template_id = $1 AND c.status = 'applied' ORDER BY c.id`,
+    [t.id]
+  );
+  const withCorrections = (v) => ({
+    ...publicVersion(v),
+    corrections: applied.filter((c) => c.resulting_version_id === v.id).map(({ resulting_version_id, ...c }) => c),
+  });
   return {
     ...base,
-    current: latest && publicVersion(latest),
-    approved: approved && publicVersion(approved),
-    versions: versions.map(publicVersion),
+    current: latest && withCorrections(latest),
+    approved: approved && withCorrections(approved),
+    versions: versions.map(withCorrections),
   };
+}
+
+// ── Trash: a deleted model is inactive (hidden from every list, the website and the bot) and keeps
+// its files and versions; the admin restores it. Only active models go to the trash.
+async function trash(templateId, userId) {
+  const { rows } = await pool.query(
+    `UPDATE doc_templates SET is_active = FALSE, deleted_at = NOW(), deleted_by = $2
+     WHERE id = $1 AND is_active = TRUE RETURNING id, name`,
+    [Number(templateId), userId]
+  );
+  return rows[0] || null;
+}
+
+async function untrash(templateId) {
+  const { rows } = await pool.query(
+    `UPDATE doc_templates SET is_active = TRUE, deleted_at = NULL, deleted_by = NULL
+     WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id, name`,
+    [Number(templateId)]
+  );
+  return rows[0] || null;
+}
+
+async function listTrash() {
+  const { rows } = await pool.query(
+    `SELECT t.id, t.name, c.name AS category, t.deleted_at, COALESCE(NULLIF(u.name, ''), u.username) AS deleted_by_name,
+            (t.approved_tag_version_id IS NOT NULL) AS was_approved
+     FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users u ON u.id = t.deleted_by
+     WHERE t.deleted_at IS NOT NULL ORDER BY t.deleted_at DESC`
+  );
+  return rows;
 }
 
 async function latestVersionId(templateId) {
@@ -143,4 +185,4 @@ async function originAuthor(templateId, documentId) {
 
 const isWord = (filePath) => path.extname(filePath || '').toLowerCase() === '.docx';
 
-module.exports = { listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };
+module.exports = { trash, untrash, listTrash, listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };
