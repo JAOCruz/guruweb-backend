@@ -84,7 +84,7 @@
       "¿El documento lo elaboramos nosotros o ya lo tiene?",
       "¿Para cuándo lo necesita?"
     ],
-    "reglas": "Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría e impuesto del MIREX (por documento). Un documento notarial primero se legaliza en la Procuraduría y después se apostilla en el MIREX. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
+    "reglas": "Los impuestos del Estado se pagan aparte y no son parte de nuestro precio: legalización en Procuraduría e impuesto del MIREX (por documento). Un documento notarial primero se legaliza en la Procuraduría y después se apostilla en el MIREX. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería responde en 8 a 24 horas laborables, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
   },
   {
     "nombre": "Apostilla de certificación",
@@ -101,7 +101,7 @@
       "¿La certificación está legalizada por la institución que la emitió y es reciente?",
       "¿Para cuándo lo necesita?"
     ],
-    "reglas": "El impuesto del MIREX (por documento) se paga aparte y no es parte de nuestro precio. Las certificaciones oficiales (actas, certificados) van directo al MIREX; no pasan por la Procuraduría. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería suele responder en 24 horas o más, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
+    "reglas": "El impuesto del MIREX (por documento) se paga aparte y no es parte de nuestro precio. Las certificaciones oficiales (actas, certificados) van directo al MIREX; no pasan por la Procuraduría. Las certificaciones se agendan con 48 horas de antelación y en horario laboral; la Cancillería responde en 8 a 24 horas laborables, según el estado de los documentos. Si el trámite se cae, solo se reembolsa el 30% de lo pagado."
   },
   {
     "nombre": "Legalización de traducción",

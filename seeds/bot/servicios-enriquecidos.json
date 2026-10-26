@@ -1744,9 +1744,9 @@
   {
     "nombre": "Apostilla en Cancillería",
     "incluye": "Seguimiento diario del estado de la solicitud, copia de los documentos subidos en nuestra base de datos, recordatorios y ayuda de servicio al cliente.",
-    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. Pregunte cuántos documentos son y para qué país van. Un documento notarial primero se legaliza en la Procuraduría; los oficiales van directo al MIREX. El impuesto del MIREX se paga por documento y lo paga el cliente.",
+    "reglas": "Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar. Los documentos subidos son los que suministra el cliente y no garantizan la respuesta de la institución. Los impuestos de la institución los paga el cliente (si los compramos nosotros, hay una tasa de servicio por impuesto). Escriba \"ESTADO DE MI SOLICITUD\" para conocer el avance. Pregunte cuántos documentos son y para qué país van. Un documento notarial primero se legaliza en la Procuraduría; los oficiales van directo al MIREX. El impuesto del MIREX se paga por documento y lo paga el cliente. Es una gestión: solicitamos la apostilla en la Cancillería por el cliente; no elaboramos el documento. Se cotiza uno o varios impuestos según el caso (el del MIREX es por documento y, si el documento es notarial, se suma el de legalización en la Procuraduría). La Cancillería responde en 8 a 24 horas laborables.",
     "notarizacion": "no_aplica",
-    "descripcion": "Solicitud de apostilla en la Cancillería (MIREX) para usar un documento en el extranjero.",
+    "descripcion": "Gestión de la solicitud de apostilla en la Cancillería (MIREX) para usar un documento en el extranjero.",
     "alias": [
       "apostilla",
       "apostillar",
@@ -1760,7 +1760,7 @@
       "min": 250,
       "max": 300
     },
-    "tiempo_entrega": "De 4 a 48 horas en días laborables, según la Cancillería"
+    "tiempo_entrega": "De 8 a 24 horas laborables, lo que tarda la Cancillería en responder"
   },
   {
     "nombre": "Certificación Estatus Jurídico Inmueble",

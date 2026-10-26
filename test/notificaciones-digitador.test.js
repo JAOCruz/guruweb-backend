@@ -54,7 +54,8 @@ test('anotarle un servicio al digitador le avisa con el servicio, el cliente y e
   assert.equal(n[0].type, 'service');
   assert.equal(n[0].title, '📝 Te anotaron un servicio');
   assert.equal(n[0].message, 'Poder notarial · cliente Juan Pérez · RD$ 1,500.00');
-  assert.equal(n[0].link, `/?service=${service.id}`);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santo_Domingo' }).format(new Date());
+  assert.equal(n[0].link, `/?service=${service.id}&date=${today}`);
   assert.equal(n[0].metadata.service_id, service.id);
   assert.equal((await notifs(ids.admin)).length, 0); // quien lo anota no se avisa a sí mismo
 });
@@ -62,6 +63,11 @@ test('anotarle un servicio al digitador le avisa con el servicio, el cliente y e
 test('sin cliente el aviso no lo menciona', async () => {
   await post('/api/services', 'admin', { username: 'hengi', serviceName: 'Copia', earnings: 200 });
   assert.equal((await notifs(ids.hengi))[0].message, 'Copia · RD$ 200.00');
+});
+
+test('un servicio con fecha abre ese día', async () => {
+  const res = await post('/api/services', 'admin', { username: 'hengi', serviceName: 'Copia', earnings: 200, date: '2026-10-20' });
+  assert.equal((await notifs(ids.hengi))[0].link, `/?service=${(await res.json()).id}&date=2026-10-20`);
 });
 
 test('si el servicio no se guarda, no hay aviso', async () => {

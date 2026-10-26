@@ -81,7 +81,7 @@ const servicesController = {
           type: "service",
           title: "📝 Te anotaron un servicio",
           message: [serviceName, client ? `cliente ${client}` : null, rd(earnings)].filter(Boolean).join(" · "),
-          link: `/?service=${service.id}`,
+          link: `/?service=${service.id}&date=${/^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santo_Domingo" }).format(now)}`,
           metadata: { service_id: service.id },
         });
       });
