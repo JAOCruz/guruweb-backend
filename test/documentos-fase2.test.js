@@ -197,3 +197,44 @@ test('hace falta un cambio o el formato auténtico; un cliente que no existe se 
   assert.equal(bad.status, 400);
   assert.equal((await bad.json()).code, 'INVALID_CLIENT');
 });
+
+test('escribir "formato auténtico" en el cuadro lo aplica sin marcar la casilla', { skip: !hasDocx }, async () => {
+  ai = async (parts) => {
+    assert.match(String(parts), /formato/);
+    return '[]';
+  };
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: ids.v1, instructions: 'Dejarlo igual pero darle un formato tipo autentico sin espacios' });
+  assert.equal(res.status, 201);
+  const { document, changes } = await res.json();
+  assert.match(document.versions[0].notes, /Formato auténtico/);
+  assert.deepEqual(changes.map((c) => c.label), ['Formato auténtico: sin espacios, justificado y con rayas hasta el margen']);
+});
+
+test('la IA también da formato: letra, negrita, alineación… de una lista fija', { skip: !hasDocx }, async () => {
+  ai = async (parts) => {
+    assert.match(String(parts), /"op": "font"/);
+    return JSON.stringify({
+      edits: [{ op: 'replace', i: 2, text: 'PRIMERO: El precio es RD$400,000.' }],
+      format: [{ op: 'font', name: 'Times New Roman', size: 12 }, { op: 'bold', i: 0, value: true }, { op: 'spacing', line: 1.5 }, { op: 'autentico' }],
+      no_soportado: [],
+    });
+  };
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: ids.v1, instructions: 'Todo en Times 12, título en negrita, interlineado 1.5 y precio 400 mil' });
+  assert.equal(res.status, 201);
+  const { document, changes } = await res.json();
+  assert.deepEqual(changes.filter((c) => c.op === 'format').map((c) => c.label), [
+    'Letra Times New Roman, 12 pt (todo el documento)', 'Negrita (párrafo 1)', 'Interlineado 1.5 (todo el documento)',
+    'Formato auténtico: sin espacios, justificado y con rayas hasta el margen']);
+  assert.ok(changes.some((c) => c.op === 'replace' && c.after === 'PRIMERO: El precio es RD$400,000.'));
+  assert.match(await fileText(document.versions[0].id), /RD\$400,000\.\t/);
+});
+
+test('lo que la IA no puede hacer se dice claro', { skip: !hasDocx }, async () => {
+  ai = async () => JSON.stringify({ edits: [], format: [], no_soportado: ['poner una marca de agua'] });
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: ids.v1, instructions: 'Ponle una marca de agua con el logo' });
+  assert.equal(res.status, 422);
+  const body = await res.json();
+  assert.equal(body.code, 'UNSUPPORTED');
+  assert.match(body.error, /marca de agua/);
+  assert.match(body.error, /Word/);
+});

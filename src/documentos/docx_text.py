@@ -12,6 +12,10 @@ Documentos · Word engine (separate from MotherBrain's generator).
                             or space between them, justified text and the end of each paragraph filled
                             with dashes up to the margin (right tab with a hyphen leader); centred or
                             right-aligned lines (titles, signatures) and tables are left as they are
+  format <path> <out>     ← JSON ops on stdin → JSON {"applied": n}: layout changes from a fixed list
+                            (font name/size, bold, align, line spacing and space between paragraphs,
+                            margins), each for one paragraph ("i") or the whole document; unknown ops
+                            and out-of-range values are skipped
   sanitize <path> <out>   → JSON {"outside": [{"where": "...", "text": "..."}]}: a copy without what a
                             client's Word carries outside its text (tracked changes accepted, comments,
                             links and content controls flattened, author/title cleared), plus the text
@@ -312,6 +316,113 @@ def cmd_autentico(path, out):
     print(json.dumps({"removed": removed, "filled": filled}))
 
 
+FONT_NAME = re.compile(r"^[A-Za-z0-9 ]{2,40}$")
+
+
+def _num(v, lo, hi):
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return None
+    return n if lo <= n <= hi else None
+
+
+def set_font(run, name, size):
+    from docx.shared import Pt
+    if name:
+        run.font.name = name
+        rpr = run._r.get_or_add_rPr()
+        fonts = rpr.find(qn("w:rFonts"))
+        if fonts is not None:
+            fonts.set(qn("w:eastAsia"), name)
+            fonts.set(qn("w:cs"), name)
+    if size:
+        run.font.size = Pt(size)
+
+
+def cmd_format(path, out, ops):
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Cm, Pt
+
+    doc = Document(path)
+    ps = paragraphs(doc)
+    aligns = {"left": WD_ALIGN_PARAGRAPH.LEFT, "center": WD_ALIGN_PARAGRAPH.CENTER,
+              "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
+
+    def targets(op):
+        if op.get("i") is None:
+            return ps, True
+        i = int(op["i"]) if str(op["i"]).lstrip("-").isdigit() else -1
+        return ([ps[i]] if 0 <= i < len(ps) else []), False
+
+    applied = 0
+    for op in ops if isinstance(ops, list) else []:
+        kind = op.get("op") if isinstance(op, dict) else None
+        if kind == "font":
+            name = str(op.get("name") or "").strip()
+            name = name if FONT_NAME.match(name) else None
+            size = _num(op.get("size"), 6, 72) if op.get("size") is not None else None
+            if not name and not size:
+                continue
+            ts, whole = targets(op)
+            for p in ts:
+                for r in p.runs:
+                    set_font(r, name, size)
+            if whole:
+                st = doc.styles["Normal"].font
+                if name:
+                    st.name = name
+                if size:
+                    st.size = Pt(size)
+            applied += bool(ts)
+        elif kind == "bold":
+            ts, _ = targets(op)
+            for p in ts:
+                for r in p.runs:
+                    r.bold = bool(op.get("value", True))
+            applied += bool(ts)
+        elif kind == "align":
+            value = aligns.get(str(op.get("value") or "").lower())
+            if value is None:
+                continue
+            ts, whole = targets(op)
+            for p in ts:
+                if whole:
+                    # the whole document: titles and signatures keep their own alignment
+                    current = p.alignment if p.alignment is not None else p.style.paragraph_format.alignment
+                    if not text_of(p).strip() or is_signature(p) or current in (WD_ALIGN_PARAGRAPH.CENTER, WD_ALIGN_PARAGRAPH.RIGHT):
+                        continue
+                p.alignment = value
+            applied += bool(ts)
+        elif kind == "spacing":
+            line = _num(op.get("line"), 0.8, 3) if op.get("line") is not None else None
+            before = _num(op.get("before"), 0, 72) if op.get("before") is not None else None
+            after = _num(op.get("after"), 0, 72) if op.get("after") is not None else None
+            if line is None and before is None and after is None:
+                continue
+            ts, _ = targets(op)
+            for p in ts:
+                pf = p.paragraph_format
+                if line is not None:
+                    pf.line_spacing = line
+                if before is not None:
+                    pf.space_before = Pt(before)
+                if after is not None:
+                    pf.space_after = Pt(after)
+            applied += bool(ts)
+        elif kind == "margins":
+            sides = {k: _num(op.get(k), 0.5, 6) for k in ("top", "bottom", "left", "right") if op.get(k) is not None}
+            sides = {k: v for k, v in sides.items() if v is not None}
+            if not sides:
+                continue
+            for sec in doc.sections:
+                for k, v in sides.items():
+                    setattr(sec, f"{k}_margin", Cm(v))
+            applied += 1
+    doc.save(out)
+    print(json.dumps({"applied": applied}))
+
+
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "list":
@@ -326,6 +437,8 @@ if __name__ == "__main__":
         cmd_spans(args[0], args[1], json.load(sys.stdin))
     elif cmd == "fill":
         cmd_fill(args[0], args[1], json.load(sys.stdin))
+    elif cmd == "format":
+        cmd_format(args[0], args[1], json.load(sys.stdin))
     elif cmd == "autentico":
         cmd_autentico(args[0], args[1])
     elif cmd == "sanitize":

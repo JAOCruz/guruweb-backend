@@ -13,7 +13,9 @@ const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
 const os = require('os');
 const pool = require('../db/pool');
-const { listBlocks, hasTags, applyOps, fillTags, formatAutentico } = require('../documentos/docxText');
+const { listBlocks, hasTags, applyOps, fillTags, formatAutentico, applyFormat } = require('../documentos/docxText');
+// "formato auténtico", "tipo auténtico", "sin espacios" written in the box turn the layout on without the checkbox
+const AUTENTICO_WORDS = /aut[eé]ntic|sin espacios/i;
 const aiDocs = require('../documentos/aiDocs');
 const LegalProfile = require('../documentos/legalProfile');
 const Tags = require('../documentos/templateTags');
@@ -477,33 +479,50 @@ router.post('/ai-edit', async (req, res) => {
 
     let file = source.file;
     let changes = [];
+    let autenticoOn = autentico || AUTENTICO_WORDS.test(instructions);
     if (instructions.length >= 5) {
       const blocks = await listBlocks(file);
-      const ops = await aiDocs.planEdits({ blocks, instructions, title: source.title });
-      if (!ops.length && !autentico) return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró qué cambiar; describe el cambio con más detalle');
-      if (ops.length) {
+      const plan = await aiDocs.planChanges({ blocks, instructions, title: source.title });
+      const layout = plan.format.filter((o) => o.op !== 'autentico');
+      if (plan.format.some((o) => o.op === 'autentico')) autenticoOn = true;
+      if (!plan.edits.length && !layout.length && !autenticoOn) {
+        if (plan.unsupported.length) {
+          return sendError(res, 422, 'UNSUPPORTED', `Eso no lo puedo hacer aquí: ${plan.unsupported.join('; ')}. Hazlo directamente en Word.`);
+        }
+        return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró qué cambiar; describe el cambio con más detalle');
+      }
+      // layout first: it keeps the paragraph numbers the wording changes point to
+      if (layout.length) {
+        const formatted = tmpDocx();
+        temps.push(formatted);
+        await applyFormat(file, formatted, layout);
+        file = formatted;
+      }
+      if (plan.edits.length) {
         const edited = tmpDocx();
         temps.push(edited);
-        await applyOps(file, edited, ops);
+        await applyOps(file, edited, plan.edits);
         file = edited;
-        changes = aiDocs.describe(ops, blocks);
       }
+      changes = [...aiDocs.describe(plan.edits, blocks), ...layout.map((o) => ({ op: 'format', label: aiDocs.describeFormat(o) }))];
+      if (plan.unsupported.length) changes.push({ op: 'unsupported', label: `No se pudo: ${plan.unsupported.join('; ')}. Hazlo directamente en Word.` });
     }
-    if (autentico) {
+    if (autenticoOn) {
       const formatted = tmpDocx();
       temps.push(formatted);
       await formatAutentico(file, formatted);
       file = formatted;
+      changes.push({ op: 'format', label: aiDocs.describeFormat({ op: 'autentico' }) });
     }
-    const notes = [instructions, autentico ? 'Formato auténtico' : ''].filter(Boolean).join(' · ').slice(0, 500);
-    const what = autentico && !instructions ? 'Formato auténtico' : 'Cambios con IA';
+    const notes = [instructions, autenticoOn ? 'Formato auténtico' : ''].filter(Boolean).join(' · ').slice(0, 500);
+    const what = autenticoOn && !instructions ? 'Formato auténtico' : 'Cambios con IA';
     const fallback = source.version ? source.title : `${source.title} (personalizado)`;
     const title = String(body.title || fallback).trim().slice(0, 200);
 
     if (!client) {
       await safeLog(() => logActivity(req, {
         category: 'documentos', action: 'documento.ai_edit',
-        summary: `${what} en «${source.title}» (descargado, sin cliente)`, details: { instructions: instructions.slice(0, 500), autentico },
+        summary: `${what} en «${source.title}» (descargado, sin cliente)`, details: { instructions: instructions.slice(0, 500), autentico: autenticoOn },
       }));
       res.attachment(`${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`);
       res.type(DOCX);
@@ -516,7 +535,7 @@ router.post('/ai-edit', async (req, res) => {
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'documento.ai_edit', entityType: 'documento', entityId: id,
       summary: `${what} en «${source.version ? source.title : title}» (${client.name || 'cliente'})`,
-      details: { instructions: instructions.slice(0, 500), autentico },
+      details: { instructions: instructions.slice(0, 500), autentico: autenticoOn },
     }));
     res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes });
   } catch (err) {

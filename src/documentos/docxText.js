@@ -27,6 +27,8 @@ const listTags = async (file) => JSON.parse(await run(['tags', file]));
 // a client's Word without tracked changes, comments, links or author → { outside: [{ where, text }] }
 // authentic-act layout (no gaps, justified, dashes to the margin) → { removed, filled }
 const formatAutentico = async (file, out) => JSON.parse(await run(['autentico', file, out]));
+// layout changes from a fixed list (font, bold, align, spacing, margins) → { applied }
+const applyFormat = async (file, out, ops) => JSON.parse(await run(['format', file, out], ops));
 const sanitizeDocx = async (file, out) => JSON.parse(await run(['sanitize', file, out]));
 
-module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags, formatAutentico, sanitizeDocx };
+module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags, formatAutentico, applyFormat, sanitizeDocx };

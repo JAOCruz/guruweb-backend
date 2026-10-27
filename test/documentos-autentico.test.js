@@ -86,3 +86,75 @@ test('aplicarlo dos veces no agrega más rayas', { skip: !hasDocx }, async () =>
   assert.deepEqual(await formatAutentico(once, twice), { removed: 0, filled: 0 });
   assert.deepEqual(inspect(twice), inspect(once));
 });
+
+// Cambios de formato que la IA elige de una lista fija y aplica el motor de Word (Leandro, 2026-10-27)
+const { applyFormat } = require('../src/documentos/docxText');
+
+function makeSimple(file) {
+  spawnSync(PY, ['-c', `import sys
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+d = Document()
+t = d.add_paragraph("PODER"); t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+d.add_paragraph("Yo, JUAN PEREZ, autorizo.")
+d.add_paragraph("JUAN PEREZ\\t\\tMARIA GOMEZ")
+d.save(sys.argv[1])`, file]);
+}
+
+function look(file) {
+  const r = spawnSync(PY, ['-c', `import sys, json
+from docx import Document
+d = Document(sys.argv[1])
+out = []
+for p in d.paragraphs:
+    pf = p.paragraph_format
+    out.append({"align": str(p.alignment), "fonts": sorted({r.font.name or "" for r in p.runs}), "sizes": sorted({r.font.size.pt if r.font.size else 0 for r in p.runs}),
+                "bold": [bool(r.bold) for r in p.runs], "line": pf.line_spacing, "after": None if pf.space_after is None else pf.space_after.pt})
+s = d.sections[0]
+print(json.dumps({"ps": out, "margins": [round(s.top_margin.cm, 2), round(s.bottom_margin.cm, 2), round(s.left_margin.cm, 2), round(s.right_margin.cm, 2)]}))`, file]);
+  return JSON.parse(r.stdout.toString());
+}
+
+test('formato: letra, tamaño, negrita, alineación, interlineado y márgenes', { skip: !hasDocx }, async () => {
+  const src = path.join(dir, 'fmt.docx');
+  const out = path.join(dir, 'fmt-out.docx');
+  makeSimple(src);
+  await applyFormat(src, out, [
+    { op: 'font', name: 'Times New Roman', size: 12 },
+    { op: 'bold', i: 0, value: true },
+    { op: 'align', value: 'justify' },
+    { op: 'spacing', line: 1.5, after: 0 },
+    { op: 'margins', top: 2.5, bottom: 2.5, left: 3, right: 2 },
+  ]);
+  const { ps, margins } = look(out);
+  for (const p of ps) {
+    assert.deepEqual(p.fonts, ['Times New Roman']);
+    assert.deepEqual(p.sizes, [12]);
+    assert.equal(p.line, 1.5);
+    assert.equal(p.after, 0);
+  }
+  assert.deepEqual(ps[0].bold, [true]);
+  assert.deepEqual(ps[1].bold, [false]);
+  // "todo" justificado: el título centrado y las firmas se quedan como estaban
+  assert.match(ps[0].align, /CENTER/);
+  assert.match(ps[1].align, /JUSTIFY/);
+  assert.equal(ps[2].align, 'None');
+  assert.deepEqual(margins, [2.5, 2.5, 3, 2]);
+});
+
+test('formato: un párrafo en particular y valores fuera de rango se ignoran', { skip: !hasDocx }, async () => {
+  const src = path.join(dir, 'fmt.docx');
+  const out = path.join(dir, 'fmt-out-2.docx');
+  await applyFormat(src, out, [
+    { op: 'align', i: 0, value: 'left' },
+    { op: 'font', i: 1, size: 14 },
+    { op: 'font', size: 300 },
+    { op: 'margins', top: -4 },
+    { op: 'inventado', i: 0 },
+  ]);
+  const { ps, margins } = look(out);
+  assert.match(ps[0].align, /LEFT/);
+  assert.deepEqual(ps[1].sizes, [14]);
+  assert.deepEqual(ps[2].sizes, [0]);
+  assert.deepEqual(margins, look(src).margins);
+});

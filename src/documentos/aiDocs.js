@@ -187,6 +187,64 @@ Responde SOLO JSON: [ ...operaciones ]`);
     .filter((o) => !(o.op === 'replace' && o.text === byI.get(o.i)));
 }
 
+// Specific changes asked in plain words, wording and layout: the AI picks layout changes from a fixed list that
+// the Word engine applies (docx_text.py format / autentico) and says what it can't do instead of guessing.
+const FORMAT_OPS = new Set(['font', 'bold', 'align', 'spacing', 'margins', 'autentico']);
+async function planChanges({ blocks, instructions, title }) {
+  const raw = await ask(`${CONTEXT}
+Documento "${title}". Sus párrafos numerados:
+${numbered(blocks)}
+
+Cambios que pide el digitador: ${String(instructions).slice(0, 3000)}
+
+Aplica SOLO esos cambios. Los de redacción, con redacción legal dominicana y el mismo estilo del documento:
+- {"op": "replace", "i": n, "text": "<párrafo completo nuevo>"}
+- {"op": "insert_after", "i": n, "text": "<párrafo nuevo>"}
+- {"op": "delete", "i": n}
+Los de formato, solo con estas operaciones (sin "i" = todo el documento; con "i" = ese párrafo):
+- {"op": "font", "name": "Times New Roman", "size": 12}   (tipo y/o tamaño de letra, en puntos)
+- {"op": "bold", "i": n, "value": true}
+- {"op": "align", "value": "justify" | "left" | "center" | "right"}
+- {"op": "spacing", "line": 1.5, "before": 0, "after": 0}   (interlineado y espacio antes/después del párrafo, en puntos)
+- {"op": "margins", "top": 2.5, "bottom": 2.5, "left": 3, "right": 2.5}   (en centímetros)
+- {"op": "autentico"}   (formato de acto auténtico: sin espacios entre párrafos, justificado y rayas hasta el margen)
+Para poner un texto en MAYÚSCULAS usa "replace". Si piden algo que no se puede hacer con esto (imágenes, marcas de agua, tablas, colores, encabezados, numeración de páginas…), no lo intentes: descríbelo en "no_soportado".
+Responde SOLO JSON: {"edits": [ ...redacción ], "format": [ ...formato ], "no_soportado": ["<lo que no se pudo>"]}`);
+  // an older-style answer is a plain list of wording changes
+  const text = String(raw);
+  const isList = text.indexOf('[') >= 0 && (text.indexOf('{') < 0 || text.indexOf('[') < text.indexOf('{'));
+  const parsed = isList ? parseJson(text) : parseJson(text, '{', '}');
+  const out = Array.isArray(parsed) ? { edits: parsed } : parsed || {};
+  const byI = new Map(blocks.map((b) => [b.i, b.text]));
+  const edits = (Array.isArray(out.edits) ? out.edits : [])
+    .filter((o) => o && byI.has(Number(o.i)) && ['replace', 'insert_after', 'delete'].includes(o.op))
+    .map((o) => ({ op: o.op, i: Number(o.i), text: o.op === 'delete' ? undefined : String(o.text || '') }))
+    .filter((o) => !(o.op === 'replace' && o.text === byI.get(o.i)));
+  const format = (Array.isArray(out.format) ? out.format : [])
+    .filter((o) => o && FORMAT_OPS.has(o.op) && (o.i == null || byI.has(Number(o.i))));
+  const unsupported = (Array.isArray(out.no_soportado) ? out.no_soportado : []).map(String).filter((t) => t.trim());
+  return { edits, format, unsupported };
+}
+
+// The layout changes in words, for the person to review
+const ALIGN = { justify: 'Texto justificado', left: 'Alineado a la izquierda', center: 'Centrado', right: 'Alineado a la derecha' };
+function describeFormat(op) {
+  const where = op.i == null ? ' (todo el documento)' : ` (párrafo ${Number(op.i) + 1})`;
+  if (op.op === 'autentico') return 'Formato auténtico: sin espacios, justificado y con rayas hasta el margen';
+  if (op.op === 'font') return `Letra ${[op.name, op.size ? `${op.size} pt` : ''].filter(Boolean).join(', ')}${where}`;
+  if (op.op === 'bold') return `${op.value === false ? 'Sin negrita' : 'Negrita'}${where}`;
+  if (op.op === 'align') return `${ALIGN[op.value] || 'Alineación'}${where}`;
+  if (op.op === 'spacing') {
+    const parts = [op.line != null && `Interlineado ${op.line}`, op.before != null && `espacio antes ${op.before} pt`, op.after != null && `espacio después ${op.after} pt`];
+    return `${parts.filter(Boolean).join(', ')}${where}`;
+  }
+  if (op.op === 'margins') {
+    const names = { top: 'arriba', bottom: 'abajo', left: 'izquierda', right: 'derecha' };
+    return `Márgenes: ${Object.keys(names).filter((k) => op[k] != null).map((k) => `${names[k]} ${op[k]} cm`).join(', ')}`;
+  }
+  return op.op;
+}
+
 function toReplaceOps(items, blocks) {
   const byI = new Map(blocks.map((b) => [b.i, b.text]));
   return items
@@ -200,4 +258,4 @@ function describe(ops, blocks) {
   return ops.map((o) => ({ op: o.op, i: o.i, before: o.op === 'insert_after' ? null : byI.get(o.i) ?? null, after: o.op === 'delete' ? null : o.text }));
 }
 
-module.exports = { setGenerator, jsonRequest, claudeContent, routeGenerate, docsProvider, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, describe };
+module.exports = { setGenerator, jsonRequest, claudeContent, routeGenerate, docsProvider, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, planChanges, describeFormat, describe };
