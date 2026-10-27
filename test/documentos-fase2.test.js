@@ -51,7 +51,8 @@ test.before(async () => {
   await pool.query(`INSERT INTO doc_template_variables (template_id, variable_id, sort_order) VALUES (1,1,1),(1,2,2),(1,3,3),(1,4,4)`);
   await pool.query(`INSERT INTO clients (name, phone) VALUES ('Juan Pérez', '18095550001')`);
   await runSqlFile('migrations/20260929_portfolio.sql');
-  await pool.query('CREATE TABLE IF NOT EXISTS invoices (id SERIAL PRIMARY KEY, status TEXT)');
+  await pool.query('DROP TABLE IF EXISTS invoices CASCADE');
+  await pool.query('CREATE TABLE invoices (id SERIAL PRIMARY KEY, status TEXT)');
   await pool.query('DROP TABLE IF EXISTS business_info');
   await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
   await runSqlFile('migrations/20261006_bot_fase2.sql'); // bot fase 2 columns on portfolio_documents
@@ -163,4 +164,36 @@ test("nobody edits or generates from someone else's document", { skip: !hasDocx 
   const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: ids.v1, instructions: 'nada que ver' });
   assert.equal(res.status, 422);
   assert.equal((await res.json()).code, 'NO_CHANGES');
+});
+
+// Leandro, 2026-10-27: "dejarlo igual pero darle un formato tipo auténtico sin espacios", sin elegir cliente
+test('formato auténtico sobre un documento: versión nueva sin llamar a la IA', { skip: !hasDocx }, async () => {
+  ai = async () => { throw new Error('no debe llamar a la IA'); };
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: ids.v1, autentico: true });
+  assert.equal(res.status, 201);
+  const { document } = await res.json();
+  assert.equal(document.versions[0].source, 'ai_edit');
+  assert.equal(document.versions[0].notes, 'Formato auténtico');
+});
+
+test('sin cliente, el Word cambiado se descarga y no se guarda en ningún historial', { skip: !hasDocx }, async () => {
+  const before = (await pool.query('SELECT COUNT(*)::int AS n FROM portfolio_documents')).rows[0].n;
+  ai = async () => JSON.stringify([{ op: 'replace', i: 2, text: 'PRIMERO: El precio es RD$300,000.' }]);
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { model_id: 1, title: 'VENTA', instructions: 'Sube el precio a 300 mil', autentico: true });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /wordprocessingml/);
+  assert.match(res.headers.get('content-disposition'), /attachment; filename="VENTA\.docx"/);
+  const file = path.join(os.tmpdir(), `guru-dl-${Date.now()}.docx`);
+  fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+  assert.match((await listBlocks(file)).map((b) => b.text).join(' | '), /PRIMERO: El precio es RD\$300,000\.\t/);
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM portfolio_documents')).rows[0].n, before);
+});
+
+test('hace falta un cambio o el formato auténtico; un cliente que no existe se rechaza', { skip: !hasDocx }, async () => {
+  const none = await call('POST', '/api/documentos/ai-edit', 'hengi', { model_id: 1, instructions: ' ' });
+  assert.equal(none.status, 400);
+  assert.equal((await none.json()).code, 'INSTRUCTIONS_REQUIRED');
+  const bad = await call('POST', '/api/documentos/ai-edit', 'hengi', { model_id: 1, client_id: 999, autentico: true });
+  assert.equal(bad.status, 400);
+  assert.equal((await bad.json()).code, 'INVALID_CLIENT');
 });

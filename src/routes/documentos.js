@@ -13,7 +13,7 @@ const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
 const os = require('os');
 const pool = require('../db/pool');
-const { listBlocks, hasTags, applyOps, fillTags } = require('../documentos/docxText');
+const { listBlocks, hasTags, applyOps, fillTags, formatAutentico } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
 const LegalProfile = require('../documentos/legalProfile');
 const Tags = require('../documentos/templateTags');
@@ -459,29 +459,70 @@ router.post('/fill/generate', async (req, res) => {
   }
 });
 
+// Specific changes in plain words and/or the authentic-act layout (Formato auténtico: no gaps, justified,
+// dashes to the margin; done by the Word engine, not the AI). With a client (or on a document from a
+// history) it's saved as a draft; without a client the changed Word is downloaded and nothing is stored.
 router.post('/ai-edit', async (req, res) => {
-  const instructions = String((req.body || {}).instructions || '').trim();
-  if (instructions.length < 5) return sendError(res, 400, 'INSTRUCTIONS_REQUIRED', 'Describe el cambio que quieres');
+  const body = req.body || {};
+  const instructions = String(body.instructions || '').trim();
+  const autentico = body.autentico === true;
+  if (instructions.length < 5 && !autentico) return sendError(res, 400, 'INSTRUCTIONS_REQUIRED', 'Describe el cambio que quieres');
+  const temps = [];
   try {
-    const source = await resolveSource(req.user, req.body);
+    const source = await resolveSource(req.user, body);
     if (source.error) return sourceError(res, source);
-    const client = await clientFor(source, req.body.client_id);
-    if (!client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
-    const blocks = await listBlocks(source.file);
-    const ops = await aiDocs.planEdits({ blocks, instructions, title: source.title });
-    if (!ops.length) return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró qué cambiar; describe el cambio con más detalle');
+    const wantsClient = source.version || (body.client_id != null && body.client_id !== '');
+    const client = wantsClient ? await clientFor(source, body.client_id) : null;
+    if (wantsClient && !client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+
+    let file = source.file;
+    let changes = [];
+    if (instructions.length >= 5) {
+      const blocks = await listBlocks(file);
+      const ops = await aiDocs.planEdits({ blocks, instructions, title: source.title });
+      if (!ops.length && !autentico) return sendError(res, 422, 'NO_CHANGES', 'La IA no encontró qué cambiar; describe el cambio con más detalle');
+      if (ops.length) {
+        const edited = tmpDocx();
+        temps.push(edited);
+        await applyOps(file, edited, ops);
+        file = edited;
+        changes = aiDocs.describe(ops, blocks);
+      }
+    }
+    if (autentico) {
+      const formatted = tmpDocx();
+      temps.push(formatted);
+      await formatAutentico(file, formatted);
+      file = formatted;
+    }
+    const notes = [instructions, autentico ? 'Formato auténtico' : ''].filter(Boolean).join(' · ').slice(0, 500);
+    const what = autentico && !instructions ? 'Formato auténtico' : 'Cambios con IA';
+    const fallback = source.version ? source.title : `${source.title} (personalizado)`;
+    const title = String(body.title || fallback).trim().slice(0, 200);
+
+    if (!client) {
+      await safeLog(() => logActivity(req, {
+        category: 'documentos', action: 'documento.ai_edit',
+        summary: `${what} en «${source.title}» (descargado, sin cliente)`, details: { instructions: instructions.slice(0, 500), autentico },
+      }));
+      res.attachment(`${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`);
+      res.type(DOCX);
+      return res.send(fs.readFileSync(file));
+    }
+
     const out = tmpDocx();
-    await applyOps(source.file, out, ops);
-    const title = String(req.body.title || `${source.title} (personalizado)`).trim().slice(0, 200);
-    const id = await saveGenerated(req, source, { clientId: client.id, title, out, sourceKind: 'ai_edit', notes: instructions.slice(0, 500) });
+    fs.copyFileSync(file, out);
+    const id = await saveGenerated(req, source, { clientId: client.id, title, out, sourceKind: 'ai_edit', notes });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'documento.ai_edit', entityType: 'documento', entityId: id,
-      summary: `Cambios con IA en «${source.version ? source.title : title}» (${client.name || 'cliente'})`,
-      details: { instructions: instructions.slice(0, 500) },
+      summary: `${what} en «${source.version ? source.title : title}» (${client.name || 'cliente'})`,
+      details: { instructions: instructions.slice(0, 500), autentico },
     }));
-    res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes: aiDocs.describe(ops, blocks) });
+    res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes });
   } catch (err) {
     return aiError(res, err, 'ai-edit');
+  } finally {
+    for (const t of temps) fs.rm(t, { force: true }, () => {});
   }
 });
 

@@ -8,6 +8,10 @@ Documentos · Word engine (separate from MotherBrain's generator).
   fill <path> <out>       ← JSON {"TAG": "value" | ["1st", "2nd"…]} on stdin: exact {{TAG}} filling (tags without a value stay)
   spans <path> <out>      ← JSON [{"i": n, "start": a, "end": b, "text": "..."}]: replace character spans
   tags <path>             → JSON ["TAG", ...] every {{TAG}} in order (repeats included)
+  autentico <path> <out>  → JSON {"removed": n, "filled": n}: authentic-act layout — no empty paragraphs
+                            or space between them, justified text and the end of each paragraph filled
+                            with dashes up to the margin (right tab with a hyphen leader); centred or
+                            right-aligned lines (titles, signatures) and tables are left as they are
   sanitize <path> <out>   → JSON {"outside": [{"where": "...", "text": "..."}]}: a copy without what a
                             client's Word carries outside its text (tracked changes accepted, comments,
                             links and content controls flattened, author/title cleared), plus the text
@@ -239,6 +243,75 @@ def cmd_sanitize(path, out):
     print(json.dumps({"outside": outside}, ensure_ascii=False))
 
 
+# empty paragraphs that still carry something: a page break, a picture, a field or the section settings
+KEEP_EMPTY = tuple(qn(t) for t in ("w:drawing", "w:pict", "w:object", "w:fldChar", "w:sectPr"))
+
+
+def holds_something(el):
+    for node in el.iter():
+        if node.tag in KEEP_EMPTY:
+            return True
+        if node.tag == qn("w:br") and node.get(qn("w:type")) == "page":
+            return True
+    return False
+
+
+def ends_with_fill(p):
+    last = p.runs[-1] if p.runs else None
+    return last is not None and not last.text.strip() and last._r.find(qn("w:tab")) is not None
+
+
+def is_signature(p):
+    """A signature line: names laid out with tabs, or a line to sign on (____)."""
+    text = text_of(p)
+    return "\t" in text or "___" in text
+
+
+def cmd_autentico(path, out):
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
+    from docx.shared import Emu, Pt
+
+    doc = Document(path)
+    s = doc.sections[-1]
+    stop = Emu(int(s.page_width - s.left_margin - s.right_margin))
+    body = doc.element.body
+    removed = filled = 0
+    ps = [p for p in paragraphs(doc) if p._p.getparent() is body]  # not tables or text boxes
+    for k, p in enumerate(ps):
+        el = p._p
+        if is_signature(p):
+            continue
+        if not text_of(p).strip():
+            prev = el.getprevious()
+            after_table = prev is not None and prev.tag == qn("w:tbl")
+            # the blank lines above the signatures are the space to sign
+            nxt = next((q for q in ps[k + 1:] if text_of(q).strip()), None)
+            to_sign = nxt is not None and is_signature(nxt)
+            if not holds_something(el) and not after_table and not to_sign:
+                body.remove(el)
+                removed += 1
+            continue
+        pf = p.paragraph_format
+        align = p.alignment if p.alignment is not None else p.style.paragraph_format.alignment
+        if align in (WD_ALIGN_PARAGRAPH.CENTER, WD_ALIGN_PARAGRAPH.RIGHT):
+            continue
+        if ends_with_fill(p) or text_of(p).rstrip().endswith("---"):
+            continue
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
+        pf.tab_stops.add_tab_stop(stop, WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DASHES)
+        # the dashes take the font of the last words
+        last = next((r for r in reversed(p.runs) if r.text.strip()), None)
+        run = p.add_run()
+        if last is not None and last._r.rPr is not None:
+            run._r.insert(0, copy.deepcopy(last._r.rPr))
+        run.add_tab()
+        filled += 1
+    doc.save(out)
+    print(json.dumps({"removed": removed, "filled": filled}))
+
+
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "list":
@@ -253,6 +326,8 @@ if __name__ == "__main__":
         cmd_spans(args[0], args[1], json.load(sys.stdin))
     elif cmd == "fill":
         cmd_fill(args[0], args[1], json.load(sys.stdin))
+    elif cmd == "autentico":
+        cmd_autentico(args[0], args[1])
     elif cmd == "sanitize":
         cmd_sanitize(args[0], args[1])
     else:
