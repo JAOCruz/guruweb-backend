@@ -187,7 +187,7 @@
   {
     "nombre": "Pagaré Notarial",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. Precios del pagaré: la redacción + notarización y la notarización sola son precios \"desde\" (en adelante): pueden subir según el volumen, el monto o la extensión de la redacción, y el digitador confirma el monto final. Dé las tres opciones con calcular_precio: redacción + notarización, solo redacción y solo notarización. Si el cliente solo quiere el modelo (plantilla) para llenarlo él mismo, es el servicio \"Pagaré Notarial - Modelo (plantilla)\".",
     "notarizacion": "opcional",
     "descripcion": "Pagaré con firma ante notario para garantizar una deuda.",
     "alias": [
@@ -559,7 +559,7 @@
   {
     "nombre": "Acto de Venta - Vehículo Liviano",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago. Antes de pasar la cuenta o cerrar el pedido, si nadie ha mencionado un apoderado, pregunte si desea incluir uno al contrato: una persona autorizada por si el VENDEDOR o el COMPRADOR no pueden ir a realizar el traspaso. Si ya lo mencionaron o lo agregaron, no lo pregunte. Con apoderado se usa el modelo ACTO DE VENTA DE VEHICULO - CON APODERADO.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un carro, jeepeta o camioneta.",
     "alias": [
@@ -578,7 +578,7 @@
   {
     "nombre": "Acto de Venta - Vehículo Pesado",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago. Antes de pasar la cuenta o cerrar el pedido, si nadie ha mencionado un apoderado, pregunte si desea incluir uno al contrato: una persona autorizada por si el VENDEDOR o el COMPRADOR no pueden ir a realizar el traspaso. Si ya lo mencionaron o lo agregaron, no lo pregunte. Con apoderado se usa el modelo ACTO DE VENTA DE VEHICULO - CON APODERADO.",
     "notarizacion": "opcional",
     "descripcion": "Contrato de venta de un camión, autobús u otro vehículo pesado.",
     "alias": [
@@ -674,7 +674,7 @@
   {
     "nombre": "Acto de Venta Condicional - Vehículo",
     "incluye": "Redacción desde cero con los datos que usted suministra, una copia guardada en nuestra base de datos y una impresión del primer original.",
-    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago.",
+    "reglas": "El documento se redacta con la información que usted suministra; envíe los datos en foto o PDF legible. Si hay que cambiarle muchos puntos (más de 3 modificaciones), conviene una redacción nueva. Incluye 1 original; cada original adicional o duplicado se cobra aparte. La notarización depende del valor del bien: indique el precio de venta. Si el valor pasa de medio millón de pesos aplica la Ley 155-17 (lavado de activos) y se detallan los datos del pago. Antes de pasar la cuenta o cerrar el pedido, si nadie ha mencionado un apoderado, pregunte si desea incluir uno al contrato: una persona autorizada por si el VENDEDOR o el COMPRADOR no pueden ir a realizar el traspaso. Si ya lo mencionaron o lo agregaron, no lo pregunte. Con apoderado se usa el modelo ACTO DE VENTA DE VEHICULO - CON APODERADO.",
     "notarizacion": "opcional",
     "descripcion": "Venta de vehículo a plazos, con condiciones hasta completar el pago.",
     "alias": [

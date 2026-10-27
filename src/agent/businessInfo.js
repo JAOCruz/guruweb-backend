@@ -68,6 +68,9 @@ function formatForPrompt(info = {}) {
     lines.push(`Tiempos de entrega aproximados: ${t.join('; ')}.`);
   }
   if (Array.isArray(info.instituciones) && info.instituciones.length) lines.push(`Certificaciones y trámites solo con: ${info.instituciones.join(', ')}.`);
+  if (Array.isArray(info.politicas) && info.politicas.length) {
+    lines.push(`Políticas del negocio (dígalas con sus palabras cuando vengan al caso; vea la Regla 13):\n${info.politicas.map((p, k) => `${k + 1}. ${p}`).join('\n')}`);
+  }
   return lines.join('\n');
 }
 

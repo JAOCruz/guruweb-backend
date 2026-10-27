@@ -108,6 +108,12 @@ setInterval(async () => {
   }
 }, 60000);
 
+// Seguimiento de cotizaciones y facturas sin respuesta (src/agent/followup.js): cada 10 minutos
+setInterval(() => {
+  require('./agent/followup').processFollowups()
+    .catch((err) => console.error('[seguimiento] error:', err.message));
+}, 10 * 60 * 1000);
+
 // Error handler (API only, frontend on separate port 5174)
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);

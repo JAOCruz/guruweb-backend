@@ -1278,5 +1278,19 @@
     "descripcion": "Portafolio que protege sus documentos de la humedad y el clima.",
     "reglas": "El precio depende del tamaño o del modelo; el digitador confirma.",
     "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Pagaré Notarial - Modelo (plantilla)",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "digitacion_price": 300,
+    "alias": [
+      "modelo de pagare",
+      "plantilla de pagare",
+      "template de pagare"
+    ],
+    "descripcion": "El modelo en Word del pagaré notarial para que el cliente lo llene.",
+    "reglas": "Es solo el modelo: no incluye redacción con los datos del cliente ni notarización.",
+    "notarizacion": "no_aplica"
   }
 ]
