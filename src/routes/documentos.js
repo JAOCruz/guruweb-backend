@@ -177,18 +177,20 @@ router.post('/documents', withUpload(async (req, res) => {
   const mime = checkFile(req.file);
   if (!mime) return sendError(res, 400, 'INVALID_FILE', 'Sube un documento Word (.docx) o PDF');
   const title = String(req.body.title || '').trim().slice(0, 200);
-  const clientId = Number(req.body.client_id);
+  // the client is optional: without one the document goes to «Sin cliente»
+  const hasClient = req.body.client_id != null && req.body.client_id !== '' && Number(req.body.client_id) !== 0;
+  const clientId = hasClient ? Number(req.body.client_id) : null;
   if (!title) return sendError(res, 400, 'TITLE_REQUIRED', 'Ponle un nombre al documento');
   try {
-    const { rows } = await require('../db/pool').query('SELECT id, name FROM clients WHERE id = $1', [clientId]);
-    if (!rows.length) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+    const { rows } = hasClient ? await require('../db/pool').query('SELECT id, name FROM clients WHERE id = $1', [clientId]) : { rows: [{ name: 'sin cliente' }] };
+    if (!rows.length) return sendError(res, 400, 'INVALID_CLIENT', 'Ese cliente no existe; elige otro o déjalo sin cliente');
     const id = await Portfolio.createDocument({
       clientId, title, userId: req.user.id, file: saveUpload(req.file, mime, req.body.notes),
       templateId: req.body.template_id ? Number(req.body.template_id) : null,
     });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'documento.upload', entityType: 'documento', entityId: id,
-      summary: `Subió «${title}» (v1) de ${rows[0].name || 'cliente'}`,
+      summary: hasClient ? `Subió «${title}» (v1) de ${rows[0].name || 'cliente'}` : `Subió «${title}» (v1), sin cliente`,
     }));
     res.status(201).json({ document: await Portfolio.getDocument(req.user, id) });
   } catch (err) {
@@ -380,11 +382,13 @@ async function saveGenerated(req, source, { clientId, title, out, sourceKind, no
   return Portfolio.createDocument({ clientId, title, templateId: source.model.id, userId: req.user.id, file });
 }
 
+// A history document keeps its client; one without a client («Sin cliente») takes the one chosen in the form
 async function clientFor(source, clientId) {
   if (source.version) {
     const { rows } = await pool.query('SELECT client_id FROM portfolio_documents WHERE id = $1', [source.documentId]);
-    clientId = rows[0]?.client_id;
+    clientId = rows[0]?.client_id ?? clientId;
   }
+  if (clientId == null || clientId === '' || !Number.isInteger(Number(clientId))) return null;
   const { rows } = await pool.query('SELECT id, name FROM clients WHERE id = $1', [Number(clientId)]);
   return rows[0] || null;
 }
@@ -473,9 +477,10 @@ router.post('/ai-edit', async (req, res) => {
   try {
     const source = await resolveSource(req.user, body);
     if (source.error) return sourceError(res, source);
-    const wantsClient = source.version || (body.client_id != null && body.client_id !== '');
-    const client = wantsClient ? await clientFor(source, body.client_id) : null;
-    if (wantsClient && !client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+    // a history document always gets the new version (with or without a client); a model needs a client to be saved
+    const chosen = body.client_id != null && body.client_id !== '';
+    const client = source.version || chosen ? await clientFor(source, body.client_id) : null;
+    if (chosen && !source.version && !client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
 
     let file = source.file;
     let changes = [];
@@ -519,7 +524,7 @@ router.post('/ai-edit', async (req, res) => {
     const fallback = source.version ? source.title : `${source.title} (personalizado)`;
     const title = String(body.title || fallback).trim().slice(0, 200);
 
-    if (!client) {
+    if (!client && !source.version) {
       await safeLog(() => logActivity(req, {
         category: 'documentos', action: 'documento.ai_edit',
         summary: `${what} en «${source.title}» (descargado, sin cliente)`, details: { instructions: instructions.slice(0, 500), autentico: autenticoOn },
@@ -531,10 +536,10 @@ router.post('/ai-edit', async (req, res) => {
 
     const out = tmpDocx();
     fs.copyFileSync(file, out);
-    const id = await saveGenerated(req, source, { clientId: client.id, title, out, sourceKind: 'ai_edit', notes });
+    const id = await saveGenerated(req, source, { clientId: client?.id ?? null, title, out, sourceKind: 'ai_edit', notes });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'documento.ai_edit', entityType: 'documento', entityId: id,
-      summary: `${what} en «${source.version ? source.title : title}» (${client.name || 'cliente'})`,
+      summary: `${what} en «${source.version ? source.title : title}» (${client ? client.name || 'cliente' : 'sin cliente'})`,
       details: { instructions: instructions.slice(0, 500), autentico: autenticoOn },
     }));
     res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes });

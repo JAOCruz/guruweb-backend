@@ -59,6 +59,8 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS business_info');
   await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
   await runSqlFile('migrations/20261006_bot_fase2.sql');
+  await runSqlFile('migrations/20261027_documentos_sin_cliente.sql');
+  await runSqlFile('migrations/20261027_documentos_sin_cliente.sql'); // idempotent
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
     tok[u.username] = generateToken(u);
     ids[u.username] = u.id;
@@ -218,4 +220,25 @@ test('without LibreOffice the PDF answers clearly and Word still works', async (
   assert.equal(res.status, 503);
   assert.equal((await res.json()).code, 'PDF_UNAVAILABLE');
   assert.equal((await call('GET', `/api/documentos/versions/${v}/file?format=docx`, 'hengi')).status, 200);
+});
+
+// Leandro, 2026-10-27: al subir un documento, el cliente es opcional
+test('subir sin cliente: queda en «Sin cliente» y solo lo ve quien lo subió (y el admin)', async () => {
+  const res = await upload('/api/documentos/documents', 'hengi', { title: 'Modelo de poder' }, DOCX, 'poder.docx');
+  assert.equal(res.status, 201);
+  const { document } = await res.json();
+  assert.equal(document.client_id, null);
+  assert.equal(document.versions.length, 1);
+  const hengiClients = (await (await call('GET', '/api/documentos/clients', 'hengi')).json()).clients;
+  assert.deepEqual(hengiClients.find((c) => c.id === 0), { id: 0, name: 'Sin cliente', phone: null, documents: 1, last_activity: hengiClients.find((c) => c.id === 0).last_activity });
+  const docs = (await (await call('GET', '/api/documentos/documents?client_id=0', 'hengi')).json()).documents;
+  assert.deepEqual(docs.map((d) => d.title), ['Modelo de poder']);
+  assert.equal((await (await call('GET', '/api/documentos/documents?client_id=0', 'marleni')).json()).documents.length, 0);
+  assert.ok(!(await (await call('GET', '/api/documentos/clients', 'marleni')).json()).clients.some((c) => c.id === 0));
+  // se le pueden subir versiones y abrir como cualquier otro
+  const v2 = await upload(`/api/documentos/documents/${document.id}/versions`, 'hengi', {}, PDF, 'poder-v2.pdf');
+  assert.equal(v2.status, 201);
+  assert.equal((await call('GET', `/api/documentos/versions/${document.versions[0].id}/file?format=docx`, 'hengi')).status, 200);
+  // un cliente que no existe sigue siendo un error
+  assert.equal((await upload('/api/documentos/documents', 'hengi', { client_id: 999, title: 'X' }, PDF, 'a.pdf')).status, 400);
 });

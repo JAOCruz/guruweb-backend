@@ -56,6 +56,7 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS business_info');
   await pool.query('CREATE TABLE business_info (clave TEXT PRIMARY KEY, valor JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
   await runSqlFile('migrations/20261006_bot_fase2.sql'); // bot fase 2 columns on portfolio_documents
+  await runSqlFile('migrations/20261027_documentos_sin_cliente.sql');
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await runSqlFile('migrations/20260929_legal_profiles.sql'); // idempotent
   await pool.query(`INSERT INTO legal_profiles (client_id, data) VALUES (1, '{"NOMBRE": "JUAN PÉREZ", "DOCUMENTO IDENTIDAD": "402-1111111-2"}')`);
@@ -237,4 +238,20 @@ test('lo que la IA no puede hacer se dice claro', { skip: !hasDocx }, async () =
   assert.equal(body.code, 'UNSUPPORTED');
   assert.match(body.error, /marca de agua/);
   assert.match(body.error, /Word/);
+});
+
+test('un documento del historial sin cliente también se cambia: versión nueva en el mismo documento', { skip: !hasDocx }, async () => {
+  const Portfolio = require('../src/documentos/portfolio');
+  const file = path.join(TPL_DIR, 'suelto.docx');
+  makeDocx(file, ['PODER', 'Yo, JUAN, autorizo.']);
+  const docId = await Portfolio.createDocument({ clientId: null, title: 'Poder suelto', userId: ids.hengi,
+    file: { path: file, name: 'suelto.docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: fs.statSync(file).size, source: 'upload' } });
+  const v1 = (await pool.query('SELECT id FROM portfolio_versions WHERE document_id = $1', [docId])).rows[0].id;
+  ai = async () => { throw new Error('no debe llamar a la IA'); };
+  const res = await call('POST', '/api/documentos/ai-edit', 'hengi', { version_id: v1, autentico: true });
+  assert.equal(res.status, 201);
+  const { document } = await res.json();
+  assert.equal(document.id, docId);
+  assert.equal(document.client_id, null);
+  assert.deepEqual(document.versions.map((v) => v.version_number), [2, 1]);
 });

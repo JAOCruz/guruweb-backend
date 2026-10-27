@@ -3,8 +3,10 @@ const { canApproveDocuments, digitadoresAprueban } = require('./permissions');
 
 // Historial del digitador. Employees only reach documents they created; the admin reaches all.
 // With the "digitadores aprueban" switch on, an employee also reaches the bot's drafts
-// (prepared_by_bot) of the clients assigned to them. Every query must join clients as `c`.
+// (prepared_by_bot) of the clients assigned to them. Every query must join clients as `c` (LEFT JOIN: a
+// document can have no client; the history lists those under «Sin cliente», id 0).
 const isAdmin = (user) => user.role === 'admin';
+const NO_CLIENT = 0; // the history's «Sin cliente» group
 const SORTS = {
   recent: 'd.updated_at DESC',
   date: 'd.created_at DESC',
@@ -28,7 +30,7 @@ const DOC_SELECT = `
          (SELECT version_number FROM portfolio_versions v WHERE v.id = d.approved_version_id) AS approved_version,
          (SELECT COUNT(*)::int FROM portfolio_versions v WHERE v.document_id = d.id) AS versions_count
   FROM portfolio_documents d
-  JOIN clients c ON c.id = d.client_id
+  LEFT JOIN clients c ON c.id = d.client_id
   LEFT JOIN users u ON u.id = d.created_by
   LEFT JOIN invoices inv ON inv.id = d.invoice_id`;
 
@@ -41,12 +43,13 @@ async function listClients(user, q) {
   }
   const { rows } = await pool.query(
     `SELECT c.id, c.name, c.phone, COUNT(d.id)::int AS documents, MAX(d.updated_at) AS last_activity
-     FROM portfolio_documents d JOIN clients c ON c.id = d.client_id
+     FROM portfolio_documents d LEFT JOIN clients c ON c.id = d.client_id
      WHERE ${where}
      GROUP BY c.id ORDER BY MAX(d.updated_at) DESC LIMIT 200`,
     params
   );
-  return rows;
+  // documents without a client come back as one group with no id
+  return rows.map((r) => (r.id === null ? { ...r, id: NO_CLIENT, name: 'Sin cliente', phone: null } : r));
 }
 
 // Any client, to pick who a new document belongs to
@@ -67,7 +70,9 @@ async function searchAllClients(q) {
 async function listDocuments(user, { clientId, sort, createdBy } = {}) {
   const params = [];
   let where = await scope(user, params);
-  if (clientId) {
+  if (clientId !== undefined && clientId !== null && clientId !== '' && Number(clientId) === NO_CLIENT) {
+    where += ' AND d.client_id IS NULL';
+  } else if (clientId) {
     params.push(Number(clientId));
     where += ` AND d.client_id = $${params.length}`;
   }
@@ -169,7 +174,7 @@ async function getVersion(user, versionId) {
   const { rows } = await pool.query(
     `SELECT v.*, d.title, d.created_by AS document_owner FROM portfolio_versions v
      JOIN portfolio_documents d ON d.id = v.document_id
-     JOIN clients c ON c.id = d.client_id
+     LEFT JOIN clients c ON c.id = d.client_id
      WHERE v.id = $1 AND ${await scope(user, params)}`,
     params
   );
