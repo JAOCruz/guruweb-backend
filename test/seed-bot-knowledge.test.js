@@ -136,7 +136,7 @@ test('los JSON reales de seeds/bot son válidos: 7 trámites con los nombres del
   for (const n of nuevos) {
     assert.ok(n.nombre && n.categoria, `nuevo sin nombre/categoría: ${JSON.stringify(n)}`);
     assert.ok(categoryNames.has(n.categoria), `categoría desconocida "${n.categoria}" en "${n.nombre}"`);
-    assert.ok(!catalogNames.has(n.nombre), `"${n.nombre}" ya está en el catálogo: no va en nuevos`);
+    // el snapshot es el catálogo de producción, donde los nuevos ya se sembraron: estar ahí no es un error
     assert.ok(!nuevosNames.has(n.nombre), `nuevo duplicado: ${n.nombre}`);
     nuevosNames.add(n.nombre);
     const hasPrice = n.digitacion_price != null || n.notarizacion_price != null || n.precio_rango;
@@ -144,7 +144,9 @@ test('los JSON reales de seeds/bot son válidos: 7 trámites con los nombres del
   }
   const enrNames = new Set();
   for (const e of enriquecidos) {
-    assert.ok(catalogNames.has(e.nombre), `enriquecido no está en el catálogo: "${e.nombre}"`);
+    // 20261009_precios_leandro_1 renombró la mensajería a "Envío al cliente (Uber)"; el seed se aplica antes
+    const renombrados = new Set(['Mensajería Local (Santo Domingo)']);
+    assert.ok(catalogNames.has(e.nombre) || renombrados.has(e.nombre), `enriquecido no está en el catálogo: "${e.nombre}"`);
     assert.ok(!enrNames.has(e.nombre), `enriquecido duplicado: ${e.nombre}`);
     enrNames.add(e.nombre);
     if (e.notarizacion) assert.ok(['opcional', 'obligatoria', 'no_aplica'].includes(e.notarizacion), e.nombre);
