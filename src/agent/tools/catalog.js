@@ -85,17 +85,23 @@ async function calcular_precio(args = {}, ctx) {
   const { rows } = await pool.query(`${SELECT} WHERE s.id = $1 AND s.active = true`, [id]);
   if (!rows.length) return { error: 'servicio no encontrado' };
   const s = rows[0];
-  const p = calculatePrice(s, {
-    assetValue: args.valor_del_bien ?? null,
+  const opts = {
     quantity: args.cantidad ?? 1,
     includeNotarization: args.con_notarizacion !== false,
     fojas: args.fojas, duplicados: args.duplicados,
-  });
+  };
+  const p = calculatePrice(s, { ...opts, assetValue: args.valor_del_bien ?? null });
+  // Sin el valor del bien: el total de cada tramo, para dar la lista de precios como Leandro (captura 03) en un solo paso
+  const tiers = Array.isArray(s.price_tiers) ? s.price_tiers : [];
+  const tramos = p.falta === 'valor_del_bien' && tiers.length
+    ? tiers.map((t) => ({ tramo: t.label || null, total: calculatePrice(s, { ...opts, assetValue: Math.max(Number(t.min) || 0, 1) }).total }))
+    : undefined;
   // fojas y tarifa_por_foja van fuera de desglose: el guardián de precios permite todo número positivo dentro de él.
   return {
     servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
     fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
+    ...(tramos ? { tramos } : {}),
   };
 }
 

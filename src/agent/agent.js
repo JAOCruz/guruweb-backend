@@ -14,7 +14,7 @@ const { priceGuard } = require('./priceGuard');
 
 // Mismo valor que src/conversation/router.js; se repite aquí para no cargar el motor viejo en el agente.
 const AI_DEFERRED = '<<AI_DEFERRED>>';
-const MAX_TOOLS = 6;
+const MAX_TOOLS = 10; // la lista de precios de un poder (3 formatos + solo notarizar) necesita varios pasos
 const TIMEOUT_MS = 25000;
 const DELIVER_TIMEOUT_MS = 20000; // tope para deliver dentro del candado: si el envío se cuelga, la cola del teléfono sigue
 const REPEAT_LIMIT = 3;

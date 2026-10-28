@@ -205,6 +205,15 @@ async function runScenario(sc, index, provider) {
     const at = fixed ? new Date(fixed.getTime() + i * 60000) : new Date();
     const stored = text || media.map((m) => `[📷 ${m.media_type}]`).join(' ');
     await pool.query(`INSERT INTO messages (phone, direction, content, created_at) VALUES ($1,'inbound',$2,$3)`, [phone, stored, at]);
+    // Los archivos inventados se pueden "leer" (leer_documento): cada uno queda en client_media con su análisis,
+    // como en producción, y el bot no dice "no pude abrir su archivo".
+    for (const m of media) {
+      const wa = `eval-${phone}-${m.id}`;
+      await pool.query(`INSERT INTO client_media (id, phone, wa_message_id, media_type, file_path) VALUES ($1,$2,$3,$4,'eval')
+        ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, wa_message_id = EXCLUDED.wa_message_id`, [m.id, phone, wa, m.media_type]);
+      await pool.query(`INSERT INTO messages (phone, direction, content, wa_message_id, created_at) VALUES ($1,'inbound',$2,$3,$4)`,
+        [phone, `[📷 ${m.media_type} analizado]: ${m.analysis || ''}`, wa, new Date(at.getTime() - 1000)]);
+    }
     transcript.push({ quien: 'Cliente', texto: stored });
     try {
       const reply = await respond(phone, text, {

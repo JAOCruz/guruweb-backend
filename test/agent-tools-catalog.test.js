@@ -148,6 +148,14 @@ test('calcular_precio por tramos sin valor del bien: total null y falta valor_de
   assert.equal(r.total, null); assert.equal(r.falta, 'valor_del_bien'); assert.equal(r.por_confirmar, false);
   const con = await calcular_precio({ servicio_id: ids.venta, valor_del_bien: 500000 });
   assert.equal(con.total, 950); assert.equal(con.falta, null);
+  assert.equal(con.tramos, undefined);
+});
+
+test('calcular_precio sin valor del bien trae el total de cada tramo (la lista de Leandro, en un solo paso)', async () => {
+  const r = await calcular_precio({ servicio_id: ids.venta });
+  assert.deepEqual(r.tramos, [{ tramo: null, total: 950 }, { tramo: null, total: null }]); // el segundo tramo es por confirmar
+  const sin = await calcular_precio({ servicio_id: ids.venta, con_notarizacion: false });
+  assert.equal(sin.tramos, undefined, 'sin notarización no depende del valor');
 });
 test('ver_tramite: un paso por tramos (sin valor) queda en faltan_precios y el total es null', async () => {
   await pool.query(`INSERT INTO tramites (nombre, alias, pasos, preguntas_obligatorias, reglas) VALUES ('Venta con acto', ARRAY[]::text[], $1, ARRAY[]::text[], NULL)`,

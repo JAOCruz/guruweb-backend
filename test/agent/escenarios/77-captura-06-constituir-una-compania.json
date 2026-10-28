@@ -6,7 +6,7 @@
     "Bendiciones ustedes redactan todos los documentos para constituir una compañía.."
   ],
   "espera": {
-    "texto_coincide": "compa[nñ][ií]a|constitu",
+    "texto_coincide": "compa[nñ][ií]a|constitu|modelos|agendar",
     "termina_sin_traspaso": true
   },
   "prohibido": {

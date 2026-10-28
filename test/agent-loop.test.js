@@ -92,15 +92,15 @@ test('herramienta desconocida o con argumentos inválidos: el modelo recibe el e
   assert.equal(handler.isManualMode(PHONE), false);
 });
 
-test('más de 6 herramientas pasa a una persona con el mensaje de espera', async () => {
+test('más de 10 herramientas pasa a una persona con el mensaje de espera', async () => {
   const step = (i) => ({ toolCalls: [{ id: String(i), name: 'buscar_servicio', args: { consulta: 'poder' } }] });
-  const p = createFakeProvider([1, 2, 3, 4, 5, 6, 7, 8].map(step));
+  const p = createFakeProvider([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(step));
   assert.equal(await respond(PHONE, 'hola', { provider: p }), WAIT);
-  assert.equal(p.calls.length, 7);
+  assert.equal(p.calls.length, 11);
   assert.equal(handler.isManualMode(PHONE), true);
   const l = await logs();
-  assert.deepEqual(l.map((x) => x.herramienta), [...Array(6).fill('buscar_servicio'), 'pasar_a_humano']);
-  assert.equal(l[6].args.motivo, 'demasiados pasos');
+  assert.deepEqual(l.map((x) => x.herramienta), [...Array(10).fill('buscar_servicio'), 'pasar_a_humano']);
+  assert.equal(l[10].args.motivo, 'demasiados pasos');
 });
 
 test('cuota agotada devuelve AI_DEFERRED', async () => {
@@ -188,12 +188,12 @@ test('un turno reintentado nunca pasa de 6 herramientas en total', async () => {
     this.calls.push(req); n++;
     if (n === 1) return { text: '', toolCalls: tc(1, 4) };
     if (n === 2) throw new Error('boom');
-    return { text: '', toolCalls: tc(5, 3) };
+    return { text: '', toolCalls: tc(5, 7) };
   } };
   assert.equal(await respond(PHONE, 'hola', { provider: p }), WAIT);
   const l = await logs();
-  assert.deepEqual(l.map((x) => x.herramienta), [...Array(6).fill('buscar_servicio'), 'pasar_a_humano']);
-  assert.equal(l[6].args.motivo, 'demasiados pasos');
+  assert.deepEqual(l.map((x) => x.herramienta), [...Array(10).fill('buscar_servicio'), 'pasar_a_humano']);
+  assert.equal(l[10].args.motivo, 'demasiados pasos');
 });
 
 test('tres "si" o tres números seguidos no cuentan como repetición', async () => {
