@@ -87,8 +87,34 @@ async function setupDb() {
   for (const f of JSON.parse(fs.readFileSync(path.join(ROOT, 'seeds', 'bot', 'fojas.json'), 'utf8'))) {
     await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
   }
+  await applySnapshot(snap);
   await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
+}
+
+// El snapshot es el catálogo de producción (scripts/export-catalog.js): al final se le ponen todas sus columnas
+// (reglas, fojas, alias, requisitos…) por encima de lo que dejaron los seeds y las migraciones, y los trámites se reemplazan.
+async function localColumns(table) {
+  const { rows } = await pool.query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`, [table]);
+  return new Map(rows.map((r) => [r.column_name, r.data_type]));
+}
+const asParam = (v, type) => (v !== null && (type === 'jsonb' || type === 'json') ? JSON.stringify(v) : v);
+async function applySnapshot(snap) {
+  const cols = await localColumns('service_catalog');
+  for (const row of snap.service_catalog) {
+    const keys = Object.keys(row).filter((k) => k !== 'id' && cols.has(k));
+    await pool.query(`UPDATE service_catalog SET ${keys.map((k, i) => `"${k}" = $${i + 2}`).join(', ')} WHERE id = $1`,
+      [row.id, ...keys.map((k) => asParam(row[k], cols.get(k)))]);
+  }
+  const tcols = await localColumns('tramites');
+  if (tcols.size && snap.tramites?.length) {
+    await pool.query('DELETE FROM tramites');
+    for (const row of snap.tramites) {
+      const keys = Object.keys(row).filter((k) => tcols.has(k));
+      await pool.query(`INSERT INTO tramites (${keys.map((k) => `"${k}"`).join(', ')}) VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')})`,
+        keys.map((k) => asParam(row[k], tcols.get(k))));
+    }
+  }
 }
 
 // Modelo etiquetado y aprobado para los escenarios de documentos: "Acto de Venta - Vehículo Liviano" con el .docx
