@@ -1311,5 +1311,22 @@
     "descripcion": "Redacción de una demanda (civil, laboral, de familia, inmobiliaria, desalojo, cobro…): documentación motivada.",
     "reglas": "Es documentación motivada: se cobra por foja. El número de fojas depende del caso y lo confirma el digitador al ver la información; dé el precio como \"por foja\" y no prometa un total. Requisitos: tipo de demanda, datos de las partes (demandante y demandado), tribunal si lo sabe, los hechos y los documentos que la sustentan.",
     "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Certificación de Vehículo (Plan Piloto)",
+    "categoria": "Solicitud de Certificaciones",
+    "unit_type": "por vehículo",
+    "digitacion_price": 500,
+    "alias": [
+      "plan piloto",
+      "cita plan piloto",
+      "cita al plan piloto",
+      "certificacion de vehiculo",
+      "certificacion vehiculo plan piloto",
+      "revision plan piloto"
+    ],
+    "descripcion": "Gestión de la cita y la certificación de un vehículo en el Plan Piloto.",
+    "reglas": "El precio es el de la gestión; el impuesto de la certificación va aparte y lo confirma el digitador: dígalo así (\"más el impuesto\"). En el mismo mensaje del precio pida la cédula del propietario del vehículo (de ambos lados), la matrícula del vehículo y cuándo le gustaría la cita para llevar el vehículo; no confirme la cita usted: la agenda el equipo. Solo se reciben solicitudes con 48 horas de antelación y se agendan en horario laboral; las instituciones responden solo en días laborables y pueden tardar.",
+    "notarizacion": "no_aplica"
   }
 ]
