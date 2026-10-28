@@ -89,6 +89,8 @@ async function setupDb() {
     await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
   }
   await applySnapshot(snap);
+  // precios de las capturas de Leandro: van después del snapshot, que todavía tiene los de antes
+  await runSqlFile('migrations/20261028_precios_capturas.sql');
   await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
 }
