@@ -58,13 +58,17 @@ test.before(async () => {
   await pool.query(`INSERT INTO doc_templates (name, file_path, file_name) VALUES
     ('PODER ESPECIAL', 'PODERES/PODER ESPECIAL.docx', 'PODER ESPECIAL.docx'),
     ('INSTANCIA DE JUAN PEREZ', 'INSTANCIAS/INSTANCIA DE JUAN PEREZ.docx', 'x.docx'),
-    ('EN PAPELERA', 'EN PAPELERA.docx', 'EN PAPELERA.docx')`);
+    ('EN PAPELERA', 'EN PAPELERA.docx', 'EN PAPELERA.docx'),
+    ('ACTO DE NOTIFICACION DE SENTENCIA', 'viejo/a.docx', 'a.docx'),
+    ('ACTO DE NOTIFICACION DE SENTENCIA', 'viejo/b.docx', 'b.docx'),
+    ('PODER CUOTA LITIS', 'viejo/cuota.docx', 'cuota.docx')`);
   const v = await Tags.createVersion({ templateId: 1, localFile: path.join(old, 'poder.docx'),
     tags: [{ key: 'NOMBRE_PODERDANTE', label: 'Nombre', group: 'PODERDANTE' }, { key: 'CEDULA_PODERDANTE', label: 'Cédula', group: 'PODERDANTE' }],
     source: 'ai', userId: leandro });
   await Tags.approve(v.id, leandro);
   await pool.query(`UPDATE doc_templates SET deleted_at = NOW(), is_active = FALSE WHERE name = 'EN PAPELERA'`);
-  await pool.query(`INSERT INTO service_catalog (name, template_id) VALUES ('Instancia - Solicitud', '2'), ('Poder', '1')`);
+  await pool.query(`INSERT INTO service_catalog (name, template_id) VALUES ('Instancia - Solicitud', '2'), ('Poder', '1'),
+    ('Notificación', '5'), ('Poder Cuota Litis', '6')`);
 
   // la biblioteca nueva de Leandro
   makeDocx(path.join(LIB, 'CONTRATOS CIVILES', 'PODERES', 'PODER ESPECIAL.docx'),
@@ -72,6 +76,7 @@ test.before(async () => {
   makeDocx(path.join(LIB, 'CONTRATOS CIVILES', 'ACUERDOS', 'ACUERDO RECIBO DE DESCARGO.docx'), ['ACUERDO', 'Las partes acuerdan…']);
   makeDocx(path.join(LIB, 'NOTIFICACIONES', 'ACTO DE NOTIFICACION DE SENTENCIA.docx'), ['ACTO', 'A requerimiento de {{NOMBRE_REQUIRENTE}}, {{NOMBRE_TESTIGO 1}}.']);
   makeDocx(path.join(LIB, 'EN PAPELERA.docx'), ['{{NOMBRE}}']);
+  makeDocx(path.join(LIB, 'CONTRATOS CIVILES', 'PODERES', 'PODER ESPECIAL DE CUOTA LITIS.docx'), ['Yo, {{NOMBRE_PODERDANTE}}.']);
 });
 test.after(async () => { await pool.end(); });
 
@@ -80,21 +85,23 @@ const count = async (sql) => (await pool.query(sql)).rows[0].n;
 test('modo prueba: dice lo que haría y no cambia nada', { skip: !hasDocx }, async () => {
   const before = await count('SELECT COUNT(*)::int n FROM template_tag_versions');
   const s = await importLibrary({ log: quiet });
-  assert.equal(s.modelos, 4);
-  assert.equal(s.actualizados, 1);
+  assert.equal(s.modelos, 5);
+  assert.equal(s.actualizados, 2);
   assert.equal(s.nuevos, 2);
-  assert.equal(s.desactivados, 1);
+  assert.equal(s.desactivados, 3); // el caso viejo, el duplicado sin servicio y el poder cuota litis viejo
   assert.deepEqual(s.en_papelera, ['EN PAPELERA']);
   assert.deepEqual(s.sin_etiquetas, [path.join('CONTRATOS CIVILES', 'ACUERDOS', 'ACUERDO RECIBO DE DESCARGO.docx')]);
   assert.deepEqual(s.servicios_sin_modelo, ['Instancia - Solicitud']);
+  assert.deepEqual(s.servicios_religados, ['Poder Cuota Litis → PODER ESPECIAL DE CUOTA LITIS']);
   assert.equal(await count('SELECT COUNT(*)::int n FROM template_tag_versions'), before);
-  assert.equal(await count('SELECT COUNT(*)::int n FROM doc_templates'), 3);
+  assert.equal(await count('SELECT COUNT(*)::int n FROM doc_templates'), 6);
   assert.equal(await count('SELECT COUNT(*)::int n FROM notifications'), 0);
+  assert.equal(await count(`SELECT COUNT(*)::int n FROM service_catalog WHERE name = 'Poder Cuota Litis' AND template_id = '6'`), 1);
 });
 
 test('--aplicar: reemplaza, aprueba las etiquetas de Leandro y deja para revisar lo que falta, con aviso', { skip: !hasDocx }, async () => {
   const s = await importLibrary({ apply: true, log: quiet });
-  assert.equal(s.versiones, 2); // el de la papelera no se toca
+  assert.equal(s.versiones, 3); // el de la papelera no se toca
 
   // el poder conserva su id (y su enlace con el catálogo) y queda con la versión de la biblioteca aprobada
   const poder = (await pool.query(`SELECT * FROM doc_templates WHERE id = 1`)).rows[0];
@@ -129,15 +136,24 @@ test('--aplicar: reemplaza, aprueba las etiquetas de Leandro y deja para revisar
   // lo viejo se desactiva y lo de la papelera se queda ahí
   const rest = (await pool.query(`SELECT name, is_active, deleted_at IS NOT NULL AS papelera FROM doc_templates WHERE id IN (2, 3) ORDER BY id`)).rows;
   assert.deepEqual(rest, [{ name: 'INSTANCIA DE JUAN PEREZ', is_active: false, papelera: false }, { name: 'EN PAPELERA', is_active: false, papelera: true }]);
+
+  // de los duplicados se queda el ligado al servicio; el servicio del modelo viejo pasa al equivalente nuevo
+  const dup = (await pool.query(`SELECT id, is_active FROM doc_templates WHERE id IN (4, 5) ORDER BY id`)).rows;
+  assert.deepEqual(dup, [{ id: 4, is_active: false }, { id: 5, is_active: true }]);
+  const cuota = (await pool.query(`SELECT id FROM doc_templates WHERE name = 'PODER ESPECIAL DE CUOTA LITIS'`)).rows[0].id;
+  const svc = Object.fromEntries((await pool.query('SELECT name, template_id FROM service_catalog')).rows.map((r) => [r.name, r.template_id]));
+  assert.equal(svc['Notificación'], '5');
+  assert.equal(svc['Poder Cuota Litis'], String(cuota));
+  assert.equal(svc['Instancia - Solicitud'], '2');
 });
 
 test('repetirla no duplica versiones, correcciones ni avisos', { skip: !hasDocx }, async () => {
   const s = await importLibrary({ apply: true, log: quiet });
-  assert.deepEqual([s.versiones, s.saltados], [0, 2], JSON.stringify(s));
+  assert.deepEqual([s.versiones, s.saltados], [0, 3], JSON.stringify(s));
   assert.equal(s.nuevos, 0);
   assert.equal(await count('SELECT COUNT(*)::int n FROM template_corrections'), 2);
   assert.equal(await count('SELECT COUNT(*)::int n FROM notifications'), 4);
-  assert.equal(await count('SELECT COUNT(*)::int n FROM doc_templates'), 5);
+  assert.equal(await count('SELECT COUNT(*)::int n FROM doc_templates'), 8);
 });
 
 test('la migración agrega la demanda como documentación motivada por foja', { skip: !hasDocx }, async () => {

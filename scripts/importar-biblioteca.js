@@ -54,8 +54,17 @@ async function scanLibrary(baseDir) {
   return models;
 }
 
-// Empareja cada modelo con un doc_templates existente: primero por ruta, luego por nombre
-function matchExisting(models, rows) {
+// Servicios cuyo modelo viejo no está en la biblioteca, ligados a su equivalente (Jay, 2026-10-28)
+const RELINK = {
+  'Poder Cuota Litis': 'PODER ESPECIAL DE CUOTA LITIS',
+  'Poder - Viaje de Menor': 'AUTORIZACIÓN PARA VIAJE DE MENOR',
+  'Poder - Guarda y Tutela de Menor': 'PODER DE REPRESENTACION DE GUARDA Y CUSTODIA A MENOR DE EDAD',
+  'Poder - Ampliatorio': 'PODER ESPECIAL DE REPRESENTACIÓN - MULTIUSO',
+};
+
+// Empareja cada modelo con un doc_templates existente: primero por ruta, luego por nombre. Entre filas con el
+// mismo nombre (duplicados) gana la que está ligada a un servicio, luego la aprobada, luego la más vieja.
+function matchExisting(models, rows, linked = new Set()) {
   const byPath = new Map(); const byName = new Map();
   for (const r of rows) {
     byPath.set(fold(r.file_path), r);
@@ -63,6 +72,8 @@ function matchExisting(models, rows) {
     if (!byName.has(k)) byName.set(k, []);
     byName.get(k).push(r);
   }
+  const rank = (r) => (linked.has(r.id) ? 0 : 2) + (r.approved_tag_version_id ? 0 : 1);
+  for (const list of byName.values()) list.sort((a, b) => rank(a) - rank(b) || a.id - b.id);
   const taken = new Set();
   const pick = (r) => (r && !taken.has(r.id) ? (taken.add(r.id), r) : null);
   const matched = models.map((m) => {
@@ -116,7 +127,9 @@ async function importLibrary({ baseDir = templatesBaseDir(), apply = false, log 
   const models = await scanLibrary(baseDir);
   // los de la papelera también se emparejan, para no crearlos de nuevo: se quedan en la papelera
   const { rows } = await pool.query('SELECT id, name, file_path, is_active, approved_tag_version_id, deleted_at FROM doc_templates');
-  const all = matchExisting(models, rows);
+  const { rows: links } = await pool.query(`SELECT id, name, template_id FROM service_catalog WHERE active AND template_id ~ '^[0-9]+$'`);
+  const linked = new Set(links.map((l) => Number(l.template_id)));
+  const all = matchExisting(models, rows, linked);
   const enPapelera = all.matched.filter((x) => x.existing && x.existing.deleted_at);
   const matched = all.matched.filter((x) => !(x.existing && x.existing.deleted_at));
   const deactivate = all.deactivate.filter((r) => !r.deleted_at);
@@ -130,24 +143,33 @@ async function importLibrary({ baseDir = templatesBaseDir(), apply = false, log 
     versiones: 0, saltados: 0, para_revisar: [],
     en_papelera: enPapelera.map((x) => x.existing.name),
   };
-  const deactivatedIds = deactivate.map((r) => String(r.id));
-  const { rows: huerfanos } = deactivatedIds.length
-    ? await pool.query(`SELECT name FROM service_catalog WHERE active AND template_id = ANY($1::text[]) ORDER BY name`, [deactivatedIds])
-    : { rows: [] };
-  summary.servicios_sin_modelo = huerfanos.map((r) => r.name);
+  // servicios ligados a un modelo que se desactiva: al de la biblioteca con el mismo nombre o al equivalente de RELINK
+  const goneById = new Map(deactivate.map((r) => [r.id, r]));
+  const libByName = new Map(matched.map((x) => [fold(x.model.name), x]));
+  const relink = [];
+  for (const l of links) {
+    const old = goneById.get(Number(l.template_id));
+    if (!old) continue;
+    const target = libByName.get(fold(old.name)) || (RELINK[l.name] && libByName.get(fold(RELINK[l.name])));
+    relink.push({ servicio: l, target });
+  }
+  summary.servicios_religados = relink.filter((x) => x.target).map((x) => `${x.servicio.name} → ${x.target.model.name}`);
+  summary.servicios_sin_modelo = relink.filter((x) => !x.target).map((x) => x.servicio.name);
 
   if (!apply) {
     log(`[biblioteca] modo prueba (sin --aplicar no se cambia nada). Carpeta: ${baseDir}`);
-    log(`[biblioteca] ${JSON.stringify({ ...summary, sin_etiquetas: summary.sin_etiquetas.length, servicios_sin_modelo: summary.servicios_sin_modelo.length, en_papelera: summary.en_papelera.length })}`);
+    log(`[biblioteca] ${JSON.stringify({ ...summary, sin_etiquetas: summary.sin_etiquetas.length, servicios_sin_modelo: summary.servicios_sin_modelo.length, servicios_religados: summary.servicios_religados.length, en_papelera: summary.en_papelera.length })}`);
     for (const r of summary.en_papelera) log(`  sigue en la papelera: ${r}`);
     for (const r of summary.sin_etiquetas) log(`  sin etiquetas: ${r}`);
     for (const r of deactivate.slice(0, 300)) log(`  se desactiva: ${r.name}`);
+    for (const s of summary.servicios_religados) log(`  servicio que se liga al modelo nuevo: ${s}`);
     for (const s of summary.servicios_sin_modelo) log(`  servicio que se queda sin modelo: ${s}`);
     return summary;
   }
 
   const approver = await leandroId();
   const admins = await activeAdminIds();
+  const idOf = new Map();
   for (const { model, existing } of matched) {
     const client = await pool.connect();
     let id;
@@ -174,6 +196,7 @@ async function importLibrary({ baseDir = templatesBaseDir(), apply = false, log 
     } finally {
       client.release();
     }
+    idOf.set(model, id);
 
     if (!model.keys.length) {
       if (await flagForReview(id, model.name, SIN_ETIQUETAS, admins)) summary.para_revisar.push(model.name);
@@ -197,6 +220,9 @@ async function importLibrary({ baseDir = templatesBaseDir(), apply = false, log 
       const comment = `La versión de la biblioteca de Leandro no trae estas etiquetas que tenía la versión aprobada anterior: ${perdidas.join(', ')}. Revise si hacen falta y agréguelas.`;
       if (await flagForReview(id, model.name, comment, admins)) summary.para_revisar.push(model.name);
     }
+  }
+  for (const { servicio, target } of relink) {
+    if (target) await pool.query('UPDATE service_catalog SET template_id = $1 WHERE id = $2', [String(idOf.get(target.model)), servicio.id]);
   }
   if (deactivate.length) {
     await pool.query('UPDATE doc_templates SET is_active = FALSE, updated_at = NOW() WHERE id = ANY($1::int[])', [deactivate.map((r) => r.id)]);
