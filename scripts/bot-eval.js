@@ -91,6 +91,7 @@ async function setupDb() {
   await applySnapshot(snap);
   // precios de las capturas de Leandro: van después del snapshot, que todavía tiene los de antes
   await runSqlFile('migrations/20261028_precios_capturas.sql');
+  await runSqlFile('migrations/20261028_notarizacion_contratos.sql');
   await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
 }

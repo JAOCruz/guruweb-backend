@@ -66,3 +66,17 @@ test('capturas 04 y 08: traducción extranjera 800 por página y la factura 250'
   assert.doesNotMatch(f.reglas, /RD\$|\d{3}/);
   assert.equal((await svc('Factura (digitación)')).length, 1);
 });
+
+test('captura 14: notarizar un contrato ya redactado va por el valor del bien; los ejemplares extra son duplicados', async () => {
+  await pool.query(`INSERT INTO service_categories (name) VALUES ('Notarización')`);
+  await pool.query(`ALTER TABLE service_catalog ADD COLUMN IF NOT EXISTS incluye TEXT`);
+  await runSqlFile('migrations/20261028_notarizacion_contratos.sql');
+  await runSqlFile('migrations/20261028_notarizacion_contratos.sql');
+  const rows = await svc('Notarización de Contrato (solo notarizar)');
+  assert.equal(rows.length, 1);
+  const [s] = rows;
+  assert.deepEqual([100000, 400000, 900000, 4000000].map((v) => calculatePrice(s, { assetValue: v }).total), [500, 700, 1000, 4000]);
+  assert.equal(calculatePrice(s, {}).falta, 'valor_del_bien');
+  assert.ok(calculatePrice(s, { assetValue: 400000, duplicados: 2 }).total > 700);
+  assert.doesNotMatch(s.reglas + s.incluye, /RD\$|\d{3}/);
+});
