@@ -6,6 +6,7 @@ const { fillAndStore } = require('../../documentos/fillDocument');
 const { digitadoresAprueban } = require('../../documentos/permissions');
 const { fold } = require('../text');
 const { ensureClient } = require('./client');
+const { groupOf: tagGroup } = require('../../documentos/tagging');
 const { activeAdminIds, notifyUsers } = require('./notify');
 
 // ver_modelo / preparar_documento: el bot solo usa modelos etiquetados y aprobados en Documentos → Etiquetas
@@ -51,7 +52,14 @@ async function approvedByName(nombre) {
   return { template: best[0] };
 }
 
-const rolesOf = (tags) => [...new Set(tags.map((t) => t.group).filter((g) => g && g !== 'DOCUMENTO'))];
+// Lo llena siempre el equipo, nunca se le pide al cliente (Jay, 2026-10-28): los datos del notario y del alguacil,
+// y el lugar y la fecha de la firma. En el borrador quedan como {{ETIQUETA}} para que el digitador los complete.
+const STAFF_GROUPS = new Set(['NOTARIO', 'ALGUACIL']);
+const STAFF_KEY = /^(CIUDAD_FIRMA|DIA_TEXTO|DIA_NUMERO|MES_TEXTO|MES_NUMERO|AÑO_TEXTO|AÑO_NUMERO)$/;
+const isStaff = (key, group) => STAFF_GROUPS.has(group) || STAFF_KEY.test(key);
+const forClient = (tags) => tags.filter((t) => !isStaff(t.key, t.group));
+
+const rolesOf = (tags) => [...new Set(tags.map((t) => t.group).filter((g) => g && g !== 'DOCUMENTO' && !STAFF_GROUPS.has(g)))];
 
 // El rol del cliente en el modelo: el que se pasó (tiene que ser uno de los del modelo); si no, el único que hay;
 // con varios y sin decir cuál → null. Un modelo sin roles no usa rol.
@@ -91,7 +99,8 @@ async function ver_modelo(args, ctx) {
 
   const version = await Tags.getVersion(template.approved_tag_version_id);
   if (!version) return SIN_MODELO;
-  const tags = Array.isArray(version.tags) ? version.tags : [];
+  const all = Array.isArray(version.tags) ? version.tags : [];
+  const tags = forClient(all);
   const roles = rolesOf(tags);
   const tercero = forThirdParty(args);
   const role = tercero ? null : clientRole(roles, args.rol_cliente);
@@ -107,6 +116,7 @@ async function ver_modelo(args, ctx) {
     etiquetas: tags.map((t) => ({ clave: t.key, etiqueta: t.label || t.key, rol: t.group })),
     ya_tenemos: yaTenemos,
     faltan: tags.map((t) => t.key).filter((k) => !yaTenemos[k]),
+    ...(all.length > tags.length ? { las_llena_el_equipo: all.filter((t) => !tags.includes(t)).map((t) => t.key) } : {}),
   };
 }
 
@@ -140,7 +150,8 @@ async function preparar_documento(args, ctx) {
   const client = await ensureClient(ctx);
   if (!client?.id) return { error: 'cliente no encontrado' };
 
-  const tags = Array.isArray(version.tags) ? version.tags : [];
+  const all = Array.isArray(version.tags) ? version.tags : [];
+  const tags = forClient(all);
   const roles = rolesOf(tags);
   const tercero = forThirdParty(args);
   const role = tercero ? null : clientRole(roles, args.rol_cliente);
@@ -148,7 +159,8 @@ async function preparar_documento(args, ctx) {
   if (!tercero && roles.length > 1 && !role) return { error: 'falta rol_cliente', roles };
 
   // Claves tal como las devolvió ver_modelo; se toleran mayúsculas/espacios distintos ("nombre_comprador")
-  const keys = [...new Set(await listTags(version.file_path))];
+  const groupOf = new Map(all.map((t) => [t.key, t.group]));
+  const keys = [...new Set(await listTags(version.file_path))].filter((k) => !isStaff(k, groupOf.get(k) || tagGroup(k)));
   const byNorm = new Map([...keys, ...tags.map((t) => t.key)].map((k) => [LegalProfile.norm(k), k]));
   const clean = {};
   for (const [k, v] of Object.entries(valores)) {

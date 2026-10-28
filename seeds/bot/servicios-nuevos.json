@@ -1292,5 +1292,24 @@
     "descripcion": "El modelo en Word del pagaré notarial para que el cliente lo llene.",
     "reglas": "Es solo el modelo: no incluye redacción con los datos del cliente ni notarización.",
     "notarizacion": "no_aplica"
+  },
+  {
+    "nombre": "Demanda",
+    "categoria": "Redactar o digitar un documento",
+    "unit_type": "por documento",
+    "digitacion_price": 300,
+    "alias": [
+      "demanda",
+      "demandar",
+      "redactar una demanda",
+      "demanda laboral",
+      "demanda de divorcio",
+      "demanda en cobro",
+      "demanda de desalojo",
+      "demanda civil"
+    ],
+    "descripcion": "Redacción de una demanda (civil, laboral, de familia, inmobiliaria, desalojo, cobro…): documentación motivada.",
+    "reglas": "Es documentación motivada: se cobra por foja. El número de fojas depende del caso y lo confirma el digitador al ver la información; dé el precio como \"por foja\" y no prometa un total. Requisitos: tipo de demanda, datos de las partes (demandante y demandado), tribunal si lo sabe, los hechos y los documentos que la sustentan.",
+    "notarizacion": "no_aplica"
   }
 ]

@@ -1564,5 +1564,14 @@
     "fuente": "Leandro (2026-10-17): 150 la foja; de 3 fojas en adelante, rango 100–150",
     "precio_anterior": 100,
     "precio_nuevo": 150
+  },
+  {
+    "nombre": "Demanda",
+    "categoria": "Redactar o digitar un documento",
+    "foja_tipo": "carta_motivada",
+    "fojas": 1,
+    "fuente": "Leandro 2026-10-28: documentación motivada, por foja",
+    "precio_anterior": null,
+    "precio_nuevo": 300
   }
 ]

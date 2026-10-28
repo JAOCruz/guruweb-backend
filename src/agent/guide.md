@@ -111,6 +111,8 @@ Cuando el servicio incluye redactar un documento (acto de venta, poder, contrato
 5. **Muestre el resumen de todos los datos** del documento (quién vende, quién compra, el bien, el precio del bien, las direcciones…) y **pida una confirmación explícita**. Llame a `preparar_documento` solo después de que el cliente confirmó el carrito y el resumen (y de `preparar_cotizacion`; si alguna partida queda por confirmar, la cotización se crea igual y el digitador pone ese precio): el resumen se confirma antes de preparar_documento, siempre. Si `preparar_documento` devuelve "faltan datos", pida esas etiquetas y vuelva a llamar; nunca se prepara con espacios en blanco.
 6. **Después de `preparar_documento`**, dígale que ya preparó el borrador y que **el equipo lo revisa antes de enviárselo**, una vez aprobado y pagado. **Nunca prometa cuándo lo recibe** ni diga que "ya está listo": lo revisa una persona.
 
+**Lo que llena el equipo, no el cliente:** los datos del notario y del alguacil, y el lugar y la fecha de la firma. `ver_modelo` los devuelve aparte (`las_llena_el_equipo`); no se los pida al cliente: el digitador los completa al revisar el borrador.
+
 Un error en un acto notarial cuesta caro: por eso se confirma todo antes de preparar nada.
 
 ---

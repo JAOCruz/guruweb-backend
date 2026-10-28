@@ -379,3 +379,33 @@ test('invoiceFor: un invoice_id explícito rechazado o en borrador se ignora (y 
   const viva = await mkInv('approved', 2);
   assert.equal(await invoiceFor(clientId, rechazada), viva);
 });
+
+// Biblioteca de Leandro: los datos del notario y del alguacil, y el lugar y la fecha de la firma, los llena
+// siempre el equipo. El bot no se los pide al cliente y el borrador sale con esas etiquetas para el digitador.
+test('las etiquetas del notario, el alguacil y la firma no se le piden al cliente', needsDocx, async () => {
+  const file = path.join(fs.mkdtempSync(path.join(require('os').tmpdir(), 'guru-notario-')), 'poder.docx');
+  spawnSync(PY, ['-c', `import sys\nfrom docx import Document\nd = Document()\nfor t in sys.argv[2:]: d.add_paragraph(t)\nd.save(sys.argv[1])`, file,
+    'Yo, {{NOMBRE_PODERDANTE}}, otorgo poder.', 'Ante mí, {{NOMBRE_NOTARIO}}, matrícula {{MATRICULA_NOTARIO}}, alguacil {{NOMBRE_ALGUACIL}}.',
+    'En {{CIUDAD_FIRMA}}, a los {{DIA_TEXTO}} días del mes de {{MES_TEXTO}} del año {{AÑO_TEXTO}}.']);
+  const id = (await pool.query(`INSERT INTO doc_templates (name, file_path, file_name) VALUES ('PODER ESPECIAL', 'p.docx', 'p.docx') RETURNING id`)).rows[0].id;
+  const tags = ['NOMBRE_PODERDANTE', 'NOMBRE_NOTARIO', 'MATRICULA_NOTARIO', 'NOMBRE_ALGUACIL', 'CIUDAD_FIRMA', 'DIA_TEXTO', 'MES_TEXTO', 'AÑO_TEXTO']
+    .map((key) => ({ key, label: key, group: /_NOTARIO$/.test(key) ? 'NOTARIO' : /_ALGUACIL$/.test(key) ? 'ALGUACIL' : /_PODERDANTE$/.test(key) ? 'PODERDANTE' : 'DOCUMENTO' }));
+  const { rows: [v] } = await pool.query(
+    `INSERT INTO template_tag_versions (template_id, version_number, file_path, tags, source) VALUES ($1, 1, $2, $3, 'ai') RETURNING id`,
+    [id, file, JSON.stringify(tags)]);
+  await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [v.id, id]);
+
+  const r = await ver_modelo({ nombre: 'poder especial' }, ctx);
+  assert.deepEqual(r.roles, ['PODERDANTE']);
+  assert.deepEqual(r.ya_tenemos, { NOMBRE_PODERDANTE: 'ANA CLIENTE' }); // de la ficha
+  assert.deepEqual(r.faltan, []); // nada del notario, el alguacil ni la firma
+  assert.deepEqual(r.las_llena_el_equipo, ['NOMBRE_NOTARIO', 'MATRICULA_NOTARIO', 'NOMBRE_ALGUACIL', 'CIUDAD_FIRMA', 'DIA_TEXTO', 'MES_TEXTO', 'AÑO_TEXTO']);
+
+  const p = await preparar_documento({ modelo_id: id, valores: {} }, ctx);
+  assert.ok(p.documento_id, JSON.stringify(p));
+  const [out] = (await pool.query('SELECT file_path FROM portfolio_versions WHERE document_id = $1', [p.documento_id])).rows;
+  const text = (await listBlocks(out.file_path)).map((b) => b.text).join('\n');
+  assert.match(text, /Yo, ANA CLIENTE, otorgo poder/);
+  assert.match(text, /\{\{NOMBRE_NOTARIO\}\}/);
+  assert.match(text, /\{\{DIA_TEXTO\}\}/);
+});
