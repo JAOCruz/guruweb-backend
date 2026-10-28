@@ -118,3 +118,14 @@ test('si WhatsApp falla queda anotado y no se reintenta', async () => {
   assert.equal(sent.length, 1, 'solo el intento fallido');
   assert.equal((await pool.query(`SELECT COUNT(*)::int n FROM messages WHERE direction = 'outbound'`)).rows[0].n, 0);
 });
+
+test('el punto de entrada real (src/index.js) arranca el seguimiento', () => {
+  // server.js no se usa en producción: el seguimiento estuvo ahí y nunca corrió (2026-10-28)
+  const pkg = require('../package.json');
+  assert.equal(pkg.main, 'src/index.js');
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'src', 'index.js'), 'utf8');
+  assert.match(src, /require\("\.\/agent\/followup"\)\.startFollowups\(\)/);
+  const timer = followup.startFollowups(60 * 60 * 1000);
+  assert.ok(timer);
+  clearInterval(timer);
+});

@@ -364,6 +364,12 @@ app.listen(PORT, "0.0.0.0", () => {
   } catch (err) {
     console.error("[Asignación] revisión no iniciada:", err.message);
   }
+  // Seguimiento de cotizaciones y facturas sin respuesta (src/agent/followup.js): cada 10 minutos
+  try {
+    require("./agent/followup").startFollowups();
+  } catch (err) {
+    console.error("[seguimiento] no iniciado:", err.message);
+  }
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API: http://localhost:${PORT}`);

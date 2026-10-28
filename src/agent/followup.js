@@ -1,7 +1,7 @@
 // Seguimiento de cotizaciones (Leandro, 2026-10-27): si al cliente se le envió la cotización o la factura y
 // pasa un día (business_info.seguimiento_cotizaciones.horas) sin que escriba ni pague, el bot le escribe una
 // sola vez, en horario de atención, como lo hace Leandro. El mensaje queda en el chat (el bot lo ve en su
-// contexto si el cliente responde) y se avisa a los admins. Lo llama el planificador de server.js.
+// contexto si el cliente responde) y se avisa a los admins. Lo arranca src/index.js (startFollowups).
 // Solo se miran envíos de hasta 2 días después del plazo: nada viejo recibe un seguimiento de golpe.
 // Cada factura se marca (followup_at) antes de enviar; si WhatsApp falla queda followup_error y no se reintenta.
 const pool = require('../db/pool');
@@ -90,4 +90,10 @@ async function processFollowups(now = new Date()) {
   return { sent };
 }
 
-module.exports = { processFollowups, followupText, _setSender };
+// Lo arranca src/index.js (el punto de entrada real) cada 10 minutos
+function startFollowups(intervalMs = 10 * 60 * 1000) {
+  const run = () => processFollowups().catch((err) => console.error('[seguimiento] error:', err.code || err.message));
+  return setInterval(run, intervalMs);
+}
+
+module.exports = { processFollowups, followupText, startFollowups, _setSender };
