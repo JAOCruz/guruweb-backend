@@ -80,3 +80,10 @@ test('captura 14: notarizar un contrato ya redactado va por el valor del bien; l
   assert.ok(calculatePrice(s, { assetValue: 400000, duplicados: 2 }).total > 700);
   assert.doesNotMatch(s.reglas + s.incluye, /RD\$|\d{3}/);
 });
+
+test('captura 07: la redacción de la declaración de mejora es fija (500), aunque el documento tenga 1 foja', async () => {
+  await runSqlFile('migrations/20261028_declaracion_mejora_fija.sql');
+  const [d] = await svc('Declaración Jurada - Mejora Const. Particulares');
+  assert.equal(calculatePrice(d, { fojas: 1 }).total, 1500);
+  assert.equal(calculatePrice(d, { fojas: 1, includeNotarization: false }).total, 500);
+});
