@@ -1,0 +1,20 @@
+{
+  "nombre": "captura 14 - notaria por su nombre y promesa de venta",
+  "captura": "14-notarizacion-promesa-de-venta-tarifas.jpeg",
+  "leandro": "Dice que sí la usan para algunos casos (ventas de bienes, pagarés). Pregunta qué documento. Manda la tabla de solo notarización de contratos de venta por valor del bien y explica: revisión extensiva, notario sin tachas, un solo original y los demás son duplicados.",
+  "turnos": [
+    "Notarizas con la LICDA ROSA MARTE?",
+    "Es un contrato de promesa de venta, necesito sellar tres ejemplares.",
+    "Dímelo en cuánto me salen"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

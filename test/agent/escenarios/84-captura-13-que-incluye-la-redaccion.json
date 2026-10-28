@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 13 - qué incluye la redacción",
+  "captura": "13-entrega-documento-redactado.jpeg",
+  "leandro": "El servicio de redacción incluye una impresión física del documento y garantía contra errores nuestros de 24 horas.",
+  "turnos": [
+    "Buenas, si ustedes me redactan el documento, eso qué incluye?"
+  ],
+  "espera": {
+    "texto_coincide": "impresi|garant",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

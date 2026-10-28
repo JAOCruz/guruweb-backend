@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 12 - crió a un hijo no biológico (notoriedad)",
+  "captura": "12-identificar-contrato-notoriedad.jpeg",
+  "leandro": "Recomienda una NOTORIEDAD: una declaración jurada en la que 7 testigos firman sobre la situación; se puede hacer con su información.",
+  "turnos": [
+    "Hello. Es posible hacer un documento que hable que una persona crió a un hijo no biológico, un poco tipo \"determinación de herederos\""
+  ],
+  "espera": {
+    "texto_coincide": "notoriedad",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

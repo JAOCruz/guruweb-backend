@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 06 - constituir una compañía",
+  "captura": "06-no-sabe-que-necesita-constituir-compania.jpeg",
+  "leandro": "Dice que sí, que tienen todos los modelos disponibles, y ofrece agendar (por ejemplo, para el lunes).",
+  "turnos": [
+    "Bendiciones ustedes redactan todos los documentos para constituir una compañía.."
+  ],
+  "espera": {
+    "texto_coincide": "compa[nñ][ií]a|constitu",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

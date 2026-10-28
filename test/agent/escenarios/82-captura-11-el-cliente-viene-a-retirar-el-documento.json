@@ -1,0 +1,22 @@
+{
+  "nombre": "captura 11 - el cliente viene a retirar el documento",
+  "captura": "11-caso-cliente-viene-a-retirar.jpeg",
+  "leandro": "Saluda, dice que coordina con el digitador encargado para revisar e imprimir, y pregunta a qué hora pasa o si ya está de camino.",
+  "turnos": [
+    "Hola",
+    "Voy a pasar a buscar el documento"
+  ],
+  "espera": {
+    "herramientas_o_texto": {
+      "herramientas": [
+        "pasar_a_humano",
+        "estado_solicitud"
+      ],
+      "texto": "hora|camino"
+    }
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

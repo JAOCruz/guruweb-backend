@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 20a - políticas: error después de aprobar",
+  "captura": "20-politicas-del-negocio.png",
+  "leandro": "Política 1: trabajamos con la información del cliente; un error no reportado antes de la aprobación requiere RE-PROCESAMIENTO de la notarización, con costo adicional.",
+  "turnos": [
+    "Si después que apruebo el documento encuentro un error en mi nombre, me lo corrigen gratis?"
+  ],
+  "espera": {
+    "texto_coincide": "procesamiento|costo|cargo|antes de (la )?aprobaci",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

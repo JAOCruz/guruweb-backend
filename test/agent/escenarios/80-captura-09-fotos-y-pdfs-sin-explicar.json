@@ -1,0 +1,35 @@
+{
+  "nombre": "captura 09 - fotos y PDFs sin explicar",
+  "captura": "09-fotos-sin-explicar.jpeg",
+  "leandro": "(La captura solo muestra el envío.) Lo esperado: preguntar qué necesita hacer con esos documentos.",
+  "turnos": [
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 205,
+          "media_type": "image",
+          "analysis": "Foto de un documento legal escrito a mano, varias páginas."
+        },
+        {
+          "id": 206,
+          "media_type": "image",
+          "analysis": "Foto de una certificación del registro de títulos."
+        },
+        {
+          "id": 207,
+          "media_type": "image",
+          "analysis": "Foto de una cédula dominicana. Nombre: ANA RAMIREZ. Cédula: 001-3333333-3."
+        }
+      ]
+    }
+  ],
+  "espera": {
+    "texto_coincide": "\\?",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

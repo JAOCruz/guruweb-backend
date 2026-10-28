@@ -80,6 +80,8 @@ async function setupDb() {
   await runSqlFile('migrations/20261017_reglas_atencion.sql');
   await runSqlFile('migrations/20261018_partidas_por_confirmar.sql');
   await runSqlFile('migrations/20261019_tiempos_entrega.sql');
+  await runSqlFile('migrations/20261026_apostilla_cancilleria.sql');
+  await runSqlFile('migrations/20261027_politicas_seguimiento.sql'); // políticas del negocio, pagaré, apoderado
   for (const f of JSON.parse(fs.readFileSync(path.join(ROOT, 'seeds', 'bot', 'fojas.json'), 'utf8'))) {
     await pool.query('UPDATE service_catalog SET foja_tipo = $1, fojas = $2 WHERE name = $3', [f.foja_tipo, f.fojas, f.nombre]);
   }
@@ -209,6 +211,28 @@ async function judge(judgeProvider, transcript) {
   } catch { return null; }
 }
 
+// ---------- comparación con Leandro ----------
+
+// Escenarios sacados de las capturas de Leandro (docs/bot-ia/ejemplos-leandro): `leandro` resume cómo respondió él.
+const COMPARE = 'Comparas la respuesta del asistente de Gurú Soluciones con la de Leandro, el dueño, en la misma situación de WhatsApp. ' +
+  'Recibes cómo respondió Leandro y la conversación del asistente. Califica de 1 a 5 si el asistente da la MISMA información y hace ' +
+  'las MISMAS preguntas que Leandro (no importa la redacción ni el orden). 5 = lo mismo; 3 = la mitad; 1 = nada de lo de Leandro. ' +
+  'Si el asistente dice un precio distinto al de Leandro, menciónalo. ' +
+  'Responda únicamente con JSON, sin texto extra: {"nota": <1-5>, "motivo": "<qué le faltó o qué dijo distinto, una o dos frases en español>"}';
+
+async function compareWithLeandro(judgeProvider, sc, transcript) {
+  if (!sc.leandro) return null;
+  try {
+    const text = `Cómo respondió Leandro: ${sc.leandro}\n\nConversación del asistente:\n${transcript.map((m) => `${m.quien}: ${m.texto}`).join('\n')}`;
+    const out = await judgeProvider.chat({ system: COMPARE, messages: [{ role: 'user', text }], tools: [], timeoutMs: 25000 });
+    const m = String(out.text || '').match(/\{[\s\S]*\}/);
+    const j = JSON.parse(m ? m[0] : out.text);
+    const nota = Number(j.nota);
+    if (!(nota >= 1 && nota <= 5)) return null;
+    return { nota, motivo: String(j.motivo || '').slice(0, 300) };
+  } catch { return null; }
+}
+
 // ---------- reporte ----------
 
 const fmt = (n, d = 0) => (Number.isFinite(n) ? n.toFixed(d) : 'n/d');
@@ -244,7 +268,22 @@ function buildReport(providerName, date, results, stats, info, judgeName) {
     const why = [...(r.bloqueos ? [`ADVERTENCIA: ${r.bloqueos} bloqueo(s) del filtro`] : []), ...r.violaciones.map((v) => `PROHIBIDO: ${v}`), ...r.fallas].join('; ').replace(/\|/g, '/');
     L.push(`| ${i + 1} | ${r.sc.nombre} | ${res} | ${r.tono ? r.tono.nota : 'n/d'} | ${r.ms} | ${why} |`);
   });
-  const bad = results.filter((r) => r.fallas.length || r.violaciones.length);
+  const caps = results.filter((r) => r.sc.leandro);
+  if (caps.length) {
+    const cn = caps.map((r) => r.comparacion?.nota).filter((n) => Number.isFinite(n));
+    L.push('', `## Comparación con Leandro (capturas) — parecido medio ${fmt(cn.length ? cn.reduce((a, b) => a + b, 0) / cn.length : NaN, 2)} de 5`, '');
+    L.push('| Captura | Resultado | Parecido | Qué faltó o cambió |', '|---|---|---|---|');
+    for (const r of caps) {
+      const res = r.violaciones.length ? 'VIOLA PROHIBIDO' : r.fallas.length ? 'FALLA' : 'OK';
+      L.push(`| ${r.sc.nombre} | ${res} | ${r.comparacion ? r.comparacion.nota : 'n/d'} | ${(r.comparacion?.motivo || '').replace(/\|/g, '/')} |`);
+    }
+    for (const r of caps) {
+      L.push('', `### ${r.sc.nombre}`, '', `Captura: \`docs/bot-ia/ejemplos-leandro/${r.sc.captura}\``, '', `**Leandro:** ${r.sc.leandro}`, '');
+      for (const m of r.transcript) L.push(`- **${m.quien}:** ${String(m.texto).replace(/\n/g, ' / ')}`);
+      if (r.fallas.length || r.violaciones.length) L.push(`- _Motivos: ${[...r.violaciones, ...r.fallas].join('; ')}_`);
+    }
+  }
+  const bad = results.filter((r) => (r.fallas.length || r.violaciones.length) && !r.sc.leandro);
   if (bad.length) {
     L.push('', '## Conversaciones con problemas', '');
     for (const r of bad) {
@@ -267,6 +306,7 @@ async function runProvider(name, scenarios, judgeName, date) {
   for (let i = 0; i < scenarios.length; i++) {
     const r = await runScenario(scenarios[i], i, inst);
     r.tono = await judge(judgeProvider, r.transcript);
+    r.comparacion = await compareWithLeandro(judgeProvider, r.sc, r.transcript);
     results.push(r);
     console.log(`[eval] ${name} ${String(i + 1).padStart(2)}/${scenarios.length} ${r.violaciones.length ? 'VIOLA' : r.fallas.length ? 'falla' : 'ok'} ${r.sc.nombre}`);
   }

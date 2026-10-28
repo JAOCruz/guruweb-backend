@@ -1,0 +1,18 @@
+{
+  "nombre": "captura 18b - acto de venta de vehículo con apoderado ya dicho",
+  "captura": "18-acto-venta-vehiculo-preguntar-apoderado.png",
+  "leandro": "Si el apoderado ya se mencionó, no se vuelve a preguntar si quiere incluir uno.",
+  "turnos": [
+    "Buenas, necesito un acto de venta de un Kia Sportage, vale 750 mil pesos, con apoderado",
+    "El vendedor es Martín Cuesta, el comprador Ramón Díaz y el apoderado Pedro Gómez",
+    "Envíeme la cuenta"
+  ],
+  "espera": {
+    "texto_no_coincide": "desea incluir.{0,20}apoderad|gustar[ií]a incluir.{0,20}apoderad",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "nombre": "captura 01 - documento sin explicar (poder)",
+  "captura": "01-documento-sin-explicar-poder.jpeg",
+  "leandro": "Pregunta si lo quiere notarizar, si todos los datos están confirmados (nombres, cédulas, numeraciones) y cuántos originales o duplicados quiere.",
+  "turnos": [
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 201,
+          "media_type": "document",
+          "analysis": "Documento Word \"PODER ESPECIAL PEREZ-GOMEZ.doc\": poder especial en el que MARIO PEREZ (cédula 001-1111111-1) autoriza a LUIS GOMEZ (cédula 001-2222222-2) a realizar trámites en su nombre. Sin notarizar."
+        }
+      ]
+    },
+    "Hola"
+  ],
+  "espera": {
+    "texto_coincide": "notari",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

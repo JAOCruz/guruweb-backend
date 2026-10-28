@@ -1,0 +1,27 @@
+{
+  "nombre": "captura 04 - precio de traducción de un PDF sin explicar",
+  "captura": "04-precio-traduccion-pdf-sin-explicar.jpeg",
+  "leandro": "Identifica el documento (libro de matrimonio en sueco), cuenta las hojas (5), dice el formato (extensivo) y que el precio es desde RD$800 por página; ofrece la transcripción fiel y exacta.",
+  "turnos": [
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 202,
+          "media_type": "document",
+          "analysis": "PDF de 5 páginas: \"Matrimonio y libro de familia\", escrito en sueco. Formato extensivo."
+        }
+      ]
+    },
+    "Precio de esta traducción",
+    "Por favor"
+  ],
+  "espera": {
+    "texto_coincide": "traduc",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "nombre": "captura 17 - pagaré notarial: requisitos y precio",
+  "captura": "17-pagare-notarial-requisitos-y-precios.png",
+  "leandro": "Envía los requisitos: identidad del deudor y del acreedor, monto adeudado, en qué tiempo lo pagará, interés o penalidad, bien en garantía. Precio: redacción + notarización RD$1,500 en adelante; solo redacción RD$500; solo notarización RD$1,000 en adelante; el modelo o plantilla RD$300.",
+  "turnos": [
+    "Querido",
+    "Como yo hago un pagaré notarial",
+    "Entiendo",
+    "Y el costo",
+    "Cuanto cuesta"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "texto_coincide": "deudor|acreedor",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

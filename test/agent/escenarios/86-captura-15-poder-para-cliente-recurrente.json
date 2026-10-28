@@ -1,0 +1,21 @@
+{
+  "nombre": "captura 15 - poder para cliente recurrente",
+  "captura": "15-precio-poder-cliente-recurrente.jpeg",
+  "leandro": "Da los tres precios del poder (sencillo RD$1,000, extensivo RD$1,500, avanzado desde RD$2,000; redacción + notario) y pregunta para qué fines es el poder.",
+  "turnos": [
+    "Necesito hacer un poder",
+    "A ver en cuanto me saldría.",
+    "Soy cliente de ustedes"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "texto_coincide": "fin|para qu[eé]",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

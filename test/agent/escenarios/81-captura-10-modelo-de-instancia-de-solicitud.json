@@ -1,0 +1,20 @@
+{
+  "nombre": "captura 10 - modelo de instancia de solicitud",
+  "captura": "10-caso-indagar-tipo-de-documento-instancia.jpeg",
+  "leandro": "Dice que sí, ofrece tipos concretos (cancelación de hipoteca, inscripción de inmueble, solicitud IPI) y pregunta cuál. Cuando el cliente dice estado jurídico, da el precio de la carta de solicitud (RD$150).",
+  "turnos": [
+    "Buenas",
+    "Ustedes tienen un modelo de instancia de solicitud de las que se usan en registro inmobiliario?",
+    "Sería de Estado Jurídico del Inmueble"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

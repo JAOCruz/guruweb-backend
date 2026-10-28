@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 20b - políticas: representación en tribunales",
+  "captura": "20-politicas-del-negocio.png",
+  "leandro": "Política 3: no somos un bufete de abogados litigantes y no ofrecemos representación legal ante los tribunales.",
+  "turnos": [
+    "Ustedes me pueden representar en el tribunal por un problema con mi casero?"
+  ],
+  "espera": {
+    "texto_coincide": "no somos|bufete|no (ofrecemos|damos|hacemos).{0,30}representaci",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "nombre": "captura 07 - declaración jurada: el cliente dice que está caro",
+  "captura": "07-reclama-precio-declaracion-jurada.jpeg",
+  "leandro": "Pregunta si quiere la fecha actualizada y ofrece notarizarla. Da los precios separados: solo redacción RD$500, redacción + notarización RD$1,500. Ante \"está caro\" no baja el precio.",
+  "turnos": [
+    {
+      "texto": "",
+      "media": [
+        {
+          "id": 203,
+          "media_type": "document",
+          "analysis": "PDF de 1 página: \"DECLARACIÓN JURADA DE MEJORA\" con fecha vieja, sin notarizar."
+        }
+      ]
+    },
+    "Para que lo hagan",
+    "Esa declaración jurada",
+    "Eso está caro."
+  ],
+  "espera": {
+    "texto_no_coincide": "le (hago|dejo|rebajo)|descuento de",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

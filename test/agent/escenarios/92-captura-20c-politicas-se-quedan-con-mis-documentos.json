@@ -1,0 +1,16 @@
+{
+  "nombre": "captura 20c - políticas: se quedan con mis documentos",
+  "captura": "20-politicas-del-negocio.png",
+  "leandro": "Política 4: confidencialidad estricta; no conservamos documentación personal (cédulas, actas, títulos) ni retenemos originales más de lo necesario.",
+  "turnos": [
+    "Si les mando copia de mi cédula y mi acta, ustedes se quedan con eso guardado?"
+  ],
+  "espera": {
+    "texto_coincide": "no (conservamos|guardamos|retenemos)|confidencial",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

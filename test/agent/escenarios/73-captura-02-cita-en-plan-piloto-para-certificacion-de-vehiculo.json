@@ -1,0 +1,17 @@
+{
+  "nombre": "captura 02 - cita en plan piloto para certificación de vehículo",
+  "captura": "02-precio-certificacion-vehiculo-plan-piloto.jpeg",
+  "leandro": "Da el precio (RD$500 + el impuesto) y en el mismo mensaje pide: cédula del propietario del vehículo (ambos lados), matrícula del vehículo y cuándo quiere la cita para llevar el vehículo.",
+  "turnos": [
+    "Quiero hacer una cita al plan piloto",
+    "Para una certificación de un vehículo"
+  ],
+  "espera": {
+    "texto_coincide": "c[eé]dula|matr[ií]cula",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

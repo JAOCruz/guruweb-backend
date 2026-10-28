@@ -1,0 +1,20 @@
+{
+  "nombre": "captura 05 - precio de poder para gestión bancaria",
+  "captura": "05-precio-poder-gestion-bancaria.jpeg",
+  "leandro": "Saluda. Da el precio del poder (RD$700) y pregunta si lo tiene digital o ya impreso y firmado, para entregárselo listo.",
+  "turnos": [
+    "Hola!",
+    "Para saber el costo de un poder para aprobar una gestión bancaria"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "texto_coincide": "digital|impreso|firmad",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

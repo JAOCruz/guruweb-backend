@@ -1,0 +1,18 @@
+{
+  "nombre": "captura 18 - acto de venta de vehículo: preguntar por apoderado",
+  "captura": "18-acto-venta-vehiculo-preguntar-apoderado.png",
+  "leandro": "Revisa que todo esté correcto y, antes de pasar la cuenta, pregunta si quiere incluir un apoderado al contrato (una persona autorizada por si el vendedor o el comprador no pueden ir al traspaso).",
+  "turnos": [
+    "Buenas, necesito un acto de venta de un Kia Sportage, vale 750 mil pesos",
+    "El vendedor es Martín Cuesta y el comprador Ramón Díaz",
+    "Envíeme la cuenta"
+  ],
+  "espera": {
+    "texto_coincide": "apoderad",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

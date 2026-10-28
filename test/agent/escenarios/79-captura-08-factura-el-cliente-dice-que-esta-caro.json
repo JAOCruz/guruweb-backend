@@ -1,0 +1,28 @@
+{
+  "nombre": "captura 08 - factura: el cliente dice que está caro",
+  "captura": "08-reclama-precio-factura.jpeg",
+  "leandro": "Hace la factura por RD$250. Ante \"caro\" explica lo que incluye la digitación: las modificaciones pedidas, revisión extensiva de errores e inconsistencias, una impresión, y hecho por un profesional. No baja el precio.",
+  "turnos": [
+    {
+      "texto": "Quiero me hagas esta factura pero en la fecha en vez de mes 07 debe ser 08",
+      "media": [
+        {
+          "id": 204,
+          "media_type": "image",
+          "analysis": "Foto de una factura comercial de una página con fecha 07/2026; el cliente quiere el mismo formato."
+        }
+      ]
+    },
+    "Después todo es igual",
+    "No",
+    "Me lo encuentro caro"
+  ],
+  "espera": {
+    "texto_coincide": "inclu|revis|impresi|profesional",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

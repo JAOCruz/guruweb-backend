@@ -1,0 +1,20 @@
+{
+  "nombre": "captura 03 - precio de acto de venta de vehículo",
+  "captura": "03-precio-acto-de-venta-vehiculo.jpeg",
+  "leandro": "Confirma que sí redactan contratos de venta de bienes con notario. Da la lista de precios redacción + notarización según el formato (sencillo, extensivo, avanzado) y el valor del bien (hasta 500 mil, 500 mil a 1 millón, 1 a 3 millones, 3 a 5 millones).",
+  "turnos": [
+    "Ustedes hacen acto de venta de vehículos?",
+    "En cuanto saldría?",
+    "Ustedes redactando"
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "buscar_servicio"
+    ],
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}
