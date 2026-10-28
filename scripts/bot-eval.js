@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Batería de escenarios del bot con un modelo real (o el falso, con --provider fake).
-//   node scripts/bot-eval.js [--provider gemini|claude|both|fake] [--solo texto] [--judge gemini|claude]
+//   node scripts/bot-eval.js [--provider gemini|claude|both|fake] [--solo texto] [--judge gemini|claude] [--pausa segundos]
+// --pausa espera entre turnos para no pasar el límite por minuto del proveedor.
 // Corre cada escenario de test/agent/escenarios/*.json contra el agente real, sobre tablas nuevas en la base
 // LOCAL guru_test (el catálogo sale de test/agent/catalog-snapshot.json), revisa `espera` y `prohibido` con
 // scripts/bot-eval-checks.js, pide una nota de tono a un segundo modelo y escribe
@@ -40,11 +41,12 @@ const PRICES = {
 };
 
 function parseArgs(argv) {
-  const a = { provider: 'gemini', solo: null, judge: null };
+  const a = { provider: 'gemini', solo: null, judge: null, pausa: 0 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--provider') a.provider = argv[++i];
     else if (argv[i] === '--solo') a.solo = argv[++i];
     else if (argv[i] === '--judge') a.judge = argv[++i];
+    else if (argv[i] === '--pausa') a.pausa = Number(argv[++i]) || 0;
   }
   if (!['gemini', 'claude', 'both', 'fake'].includes(a.provider)) throw new Error('--provider debe ser gemini, claude, both o fake');
   return a;
@@ -154,6 +156,8 @@ function makeProvider(name) {
 
 // ---------- un escenario ----------
 
+let PAUSA_MS = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const turnText = (t) => (typeof t === 'string' ? t : t.texto || '');
 const turnMedia = (t) => (typeof t === 'string' ? [] : t.media || []);
 
@@ -166,6 +170,7 @@ async function runScenario(sc, index, provider) {
   let error = null;
   const t0 = Date.now();
   for (let i = 0; i < sc.turnos.length; i++) {
+    if (PAUSA_MS) await sleep(PAUSA_MS);
     const text = turnText(sc.turnos[i]); const media = turnMedia(sc.turnos[i]);
     const at = fixed ? new Date(fixed.getTime() + i * 60000) : new Date();
     const stored = text || media.map((m) => `[📷 ${m.media_type}]`).join(' ');
@@ -320,6 +325,7 @@ async function runProvider(name, scenarios, judgeName, date) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  PAUSA_MS = args.pausa * 1000;
   const scenarios = loadScenarios(args.solo);
   if (!scenarios.length) throw new Error('Ningún escenario coincide con --solo');
   const date = new Date().toISOString().slice(0, 10);
