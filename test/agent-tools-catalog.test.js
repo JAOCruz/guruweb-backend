@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buscar_servicio, calcular_precio } = require('../src/agent/tools/catalog');
 const { ver_tramite } = require('../src/agent/tools/tramites');
+const { collectAmounts } = require('../src/agent/agent');
 
 let ids = {};
 test.beforeEach(async () => {
@@ -156,6 +157,17 @@ test('calcular_precio sin valor del bien trae el total de cada tramo (la lista d
   assert.deepEqual(r.tramos, [{ tramo: null, total: 950 }, { tramo: null, total: null }]); // el segundo tramo es por confirmar
   const sin = await calcular_precio({ servicio_id: ids.venta, con_notarizacion: false });
   assert.equal(sin.tramos, undefined, 'sin notarización no depende del valor');
+});
+test('calcular_precio por tramos con duplicados y sin valor: cada tramo con su precio solo y los duplicados aparte (captura 14)', async () => {
+  const r = await calcular_precio({ servicio_id: ids.venta, duplicados: 2 });
+  const dup = r.desglose.duplicados;
+  assert.ok(dup > 0);
+  assert.deepEqual(r.tramos[0], { tramo: null, precio: 950, total: 950 + dup });
+  assert.deepEqual(r.duplicados, { total: dup }, 'el monto de los duplicados se puede decir aunque falte el valor');
+  const s = collectAmounts(r, new Set());
+  assert.ok(s.has(950) && s.has(dup) && s.has(950 + dup));
+  const sinDup = await calcular_precio({ servicio_id: ids.venta });
+  assert.equal(sinDup.duplicados, undefined);
 });
 test('ver_tramite: un paso por tramos (sin valor) queda en faltan_precios y el total es null', async () => {
   await pool.query(`INSERT INTO tramites (nombre, alias, pasos, preguntas_obligatorias, reglas) VALUES ('Venta con acto', ARRAY[]::text[], $1, ARRAY[]::text[], NULL)`,

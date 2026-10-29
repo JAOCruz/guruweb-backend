@@ -93,8 +93,14 @@ async function calcular_precio(args = {}, ctx) {
   const p = calculatePrice(s, { ...opts, assetValue: args.valor_del_bien ?? null });
   // Sin el valor del bien: el total de cada tramo, para dar la lista de precios como Leandro (captura 03) en un solo paso
   const tiers = Array.isArray(s.price_tiers) ? s.price_tiers : [];
+  // Con duplicados, cada tramo trae también su precio solo (la tarifa) y los duplicados van aparte (captura 14):
+  // sin valor del bien el desglose no cuenta para el guardián, y el bot decía "(se lo confirmo)" en vez del monto.
+  const dup = p.falta === 'valor_del_bien' && p.breakdown.duplicados > 0 ? p.breakdown.duplicados : 0;
+  const tierTotal = (t, o) => calculatePrice(s, { ...o, assetValue: Math.max(Number(t.min) || 0, 1) }).total;
   const tramos = p.falta === 'valor_del_bien' && tiers.length
-    ? tiers.map((t) => ({ tramo: t.label || null, total: calculatePrice(s, { ...opts, assetValue: Math.max(Number(t.min) || 0, 1) }).total }))
+    ? tiers.map((t) => (dup
+      ? { tramo: t.label || null, precio: tierTotal(t, { ...opts, duplicados: 0 }), total: tierTotal(t, opts) }
+      : { tramo: t.label || null, total: tierTotal(t, opts) }))
     : undefined;
   // fojas y tarifa_por_foja van fuera de desglose: el guardián de precios permite todo número positivo dentro de él.
   return {
@@ -102,6 +108,7 @@ async function calcular_precio(args = {}, ctx) {
     fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
     ...(tramos ? { tramos } : {}),
+    ...(dup ? { duplicados: { total: dup } } : {}),
   };
 }
 
