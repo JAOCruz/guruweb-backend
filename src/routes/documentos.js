@@ -433,8 +433,10 @@ router.post('/fill/generate', async (req, res) => {
   try {
     const source = await resolveSource(req.user, req.body);
     if (source.error) return sourceError(res, source);
-    const client = await clientFor(source, req.body.client_id);
-    if (!client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
+    // without a client (from a model) the filled Word is downloaded and nothing is stored
+    const chosen = req.body.client_id != null && req.body.client_id !== '';
+    const client = source.version || chosen ? await clientFor(source, req.body.client_id) : null;
+    if (chosen && !client) return sendError(res, 400, 'INVALID_CLIENT', 'Elige un cliente');
     const title = String(req.body.title || source.title).trim().slice(0, 200);
     const fields = await fieldsFor(source);
     const clean = Object.fromEntries(Object.entries(values).filter(([, v]) => v != null && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
@@ -450,14 +452,24 @@ router.post('/fill/generate', async (req, res) => {
       await applyOps(source.file, out, ops);
       changes = aiDocs.describe(ops, blocks);
     }
+    if (!client && !source.version) {
+      await safeLog(() => logActivity(req, {
+        category: 'documentos', action: 'documento.generate',
+        summary: `Llenó «${title}» (descargado, sin cliente)${exact ? '' : ' con IA'}`,
+      }));
+      res.attachment(`${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`);
+      res.type(DOCX);
+      res.send(fs.readFileSync(out));
+      return fs.rm(out, { force: true }, () => {});
+    }
     const id = await saveGenerated(req, source, {
-      clientId: client.id, title, out, sourceKind: 'generated',
+      clientId: client?.id ?? null, title, out, sourceKind: 'generated',
       notes: exact ? 'Llenado exacto por etiquetas' : 'Personalizado con IA',
     });
-    await LegalProfile.merge(client.id, LegalProfile.updatesFrom(fields, clean, role), req.user.id);
+    if (client) await LegalProfile.merge(client.id, LegalProfile.updatesFrom(fields, clean, role), req.user.id);
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'documento.generate', entityType: 'documento', entityId: id,
-      summary: `Personalizó «${title}» para ${client.name || 'cliente'}${exact ? '' : ' con IA'}`,
+      summary: `Personalizó «${title}» para ${client ? client.name || 'cliente' : 'sin cliente'}${exact ? '' : ' con IA'}`,
     }));
     res.status(201).json({ document: await Portfolio.getDocument(req.user, id), changes, exact });
   } catch (err) {

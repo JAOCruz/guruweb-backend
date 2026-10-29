@@ -177,6 +177,24 @@ test('formato auténtico sobre un documento: versión nueva sin llamar a la IA',
   assert.equal(document.versions[0].notes, 'Formato auténtico');
 });
 
+test('generar sin cliente descarga el Word llenado y no guarda nada; un cliente que no existe se rechaza', { skip: !hasDocx }, async () => {
+  ai = async () => { throw new Error('the AI must not be used for tagged models'); };
+  const before = (await pool.query('SELECT COUNT(*)::int AS n FROM portfolio_documents')).rows[0].n;
+  const res = await call('POST', '/api/documentos/fill/generate', 'hengi', {
+    model_id: 2, title: 'Poder María', values: { NOMBRE_COMPRADOR: 'MARÍA GÓMEZ', 'DOCUMENTO IDENTIDAD_COMPRADOR': '001-2222222-3' },
+  });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-type'), /wordprocessingml/);
+  assert.match(res.headers.get('content-disposition'), /attachment; filename="Poder Mar/);
+  const file = path.join(os.tmpdir(), `guru-gen-${Date.now()}.docx`);
+  fs.writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+  assert.match((await listBlocks(file)).map((b) => b.text).join(' | '), /Comprador: MARÍA GÓMEZ, cédula 001-2222222-3\./);
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM portfolio_documents')).rows[0].n, before);
+  const bad = await call('POST', '/api/documentos/fill/generate', 'hengi', { model_id: 2, client_id: 999, title: 'x', values: {} });
+  assert.equal(bad.status, 400);
+  assert.equal((await bad.json()).code, 'INVALID_CLIENT');
+});
+
 test('sin cliente, el Word cambiado se descarga y no se guarda en ningún historial', { skip: !hasDocx }, async () => {
   const before = (await pool.query('SELECT COUNT(*)::int AS n FROM portfolio_documents')).rows[0].n;
   ai = async () => JSON.stringify([{ op: 'replace', i: 2, text: 'PRIMERO: El precio es RD$300,000.' }]);
