@@ -134,7 +134,8 @@ async function seedModeloAprobado() {
   await pool.query(`DROP TABLE IF EXISTS template_tag_versions, portfolio_versions, portfolio_documents, doc_templates, doc_categories CASCADE`);
   await pool.query('CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)');
   await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
-  for (const f of ['20260929_portfolio.sql', '20261002_template_tags.sql', '20261006_bot_fase2.sql']) {
+  for (const f of ['20260929_portfolio.sql', '20261002_template_tags.sql', '20261006_bot_fase2.sql',
+    '20261022_modelo_desde_documento.sql', '20261025_modelos_papelera_correcciones.sql']) {
     await pool.query(fs.readFileSync(path.join(ROOT, 'migrations', f), 'utf8'));
   }
   const { rows: [tpl] } = await pool.query(
