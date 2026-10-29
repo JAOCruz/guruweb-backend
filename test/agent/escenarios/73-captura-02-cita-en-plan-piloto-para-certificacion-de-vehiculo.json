@@ -1,7 +1,7 @@
 {
   "nombre": "captura 02 - cita en plan piloto para certificación de vehículo",
   "captura": "02-precio-certificacion-vehiculo-plan-piloto.jpeg",
-  "leandro": "Da el precio (RD$500 + el impuesto) y en el mismo mensaje pide: cédula del propietario del vehículo (ambos lados), matrícula del vehículo y cuándo quiere la cita para llevar el vehículo.",
+  "leandro": "Pregunta cuál de las dos quiere: solo la certificación por verificación en la Policía Nacional o el CERNAVE (RD$500 + el impuesto), o la Verificación de Vehículo para fines de Traspaso ante la DGII (RD$1,000 + impuestos, opcional y más avanzada). Con la básica pide en el mismo mensaje: cédula del propietario del vehículo (ambos lados), matrícula del vehículo y cuándo quiere la cita para llevar el vehículo (de 24 a 48 horas, no literal: basta con tener la cita hecha).",
   "turnos": [
     "Quiero hacer una cita al plan piloto",
     "Para una certificación de un vehículo"

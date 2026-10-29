@@ -1,0 +1,18 @@
+{
+  "nombre": "captura 02b - certificación de vehículo para un traspaso",
+  "captura": "02-precio-certificacion-vehiculo-plan-piloto.jpeg",
+  "leandro": "El cliente quiere la certificación para hacer un traspaso: pregunta si solo quiere la verificación básica en la Policía Nacional o el CERNAVE (RD$500 + impuestos, sirve para el traspaso en la DGII) o el proceso más avanzado, la Verificación de Vehículo para fines de Traspaso (RD$1,000 + impuestos, opcional: seguimiento en línea subiendo los documentos y se concluye yendo a la DGII; igual hay que llevar el vehículo). La cita se pide de 24 a 48 horas, no literal: se puede pasar a partir de las 12 o la 1, o a la hora acordada.",
+  "turnos": [
+    "Necesito la certificación del vehículo para hacer el traspaso en la DGII",
+    "¿Y cuál me conviene?",
+    "Ok, la básica. ¿Para cuándo me la sacan?"
+  ],
+  "espera": {
+    "texto_coincide": "CERNAVE|Polic[ií]a|b[aá]sica|est[aá]ndar",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true
+  }
+}

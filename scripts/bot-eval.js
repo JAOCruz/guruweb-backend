@@ -94,6 +94,7 @@ async function setupDb() {
   await runSqlFile('migrations/20261028_notarizacion_contratos.sql');
   await runSqlFile('migrations/20261028_declaracion_mejora_fija.sql');
   await runSqlFile('migrations/20261029_traduccion_varias_paginas.sql');
+  await runSqlFile('migrations/20261029_verificacion_vehiculo.sql');
   await seedModeloAprobado();
   return { servicios: snap.service_catalog.length, seed: r };
 }
