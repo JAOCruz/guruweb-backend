@@ -309,6 +309,7 @@ async function processSingleMessage(message, value) {
         mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
         waJid: remoteJid,
         pushName,
+        status: msgTs > 0 && Date.now() - msgTs > 23 * 3600 * 1000 ? 'old' : 'sent', // the delay apology skips it
       });
       console.log(`[WA Cloud] ✅ Mensaje guardado en BD: inbound | phone=${phone} | jid=${remoteJid}`);
       if (client) {

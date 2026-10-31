@@ -66,6 +66,7 @@ function bufferMessage(phone, payload, sock) {
 // When the AI is temporarily rate-limited by Google, we do NOT answer with the
 // robotic error fallback. We hold the message (with its context) and retry once
 // the AI is available again, so the client still gets a proper answer.
+const OLD_MS = 23 * 3600 * 1000; // inbound older than this when it arrives is saved with status 'old'
 const pendingAIRetries = new Map(); // phone → { text, savedMedia, media, remoteJid, sock, client, attempts, timer }
 const MAX_AI_RETRY_ATTEMPTS = 6; // ~3 min total before giving up gracefully
 let aiRetryDelayOverrideMs = null; // solo pruebas: acorta la espera del reintento
@@ -750,6 +751,8 @@ async function processMessage(msg, sock, isHistory) {
         mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
         waJid: remoteJid,  // store real JID (may be @lid for privacy accounts)
         pushName: !isFromMe ? pushName : null,  // contact's WhatsApp display name
+        // 'old': history sync, or sent more than 23 h before it arrived; the delay apology skips it (agent/recovery)
+        status: !isFromMe && (isHistory || (msgTs > 0 && Date.now() - msgTs > OLD_MS)) ? 'old' : 'sent',
       });
       console.log(`[WA] ✅ Mensaje guardado en BD: ${isHistory ? 'HISTORY ' : ''}${isFromMe ? 'outbound' : 'inbound'} | phone=${phone} | jid=${remoteJid}`);
       // Notify the assigned employee about the new client message (drives the bell badge)
@@ -799,5 +802,6 @@ module.exports = {
   setChatEnabled, isChatEnabled, getEnabledPhones,
   setManualMode, isManualMode, getManualPhones, clearManualPhones,
   shouldBotRespond,
+  hasPendingRetry: (phone) => pendingAIRetries.has(phone), // a deferred AI retry will still answer this chat
   chatBotOn, toggleChatBot,
 };

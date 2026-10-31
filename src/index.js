@@ -364,6 +364,12 @@ app.listen(PORT, "0.0.0.0", () => {
   } catch (err) {
     console.error("[Asignación] revisión no iniciada:", err.message);
   }
+  // Disculpa por demora: chats que el bot dejó sin responder 30 min (src/agent/recovery.js): cada 5 minutos
+  try {
+    require("./agent/recovery").startRecovery();
+  } catch (err) {
+    console.error("[demora] no iniciado:", err.message);
+  }
   // Seguimiento de cotizaciones y facturas sin respuesta (src/agent/followup.js): cada 10 minutos
   try {
     require("./agent/followup").startFollowups();
