@@ -249,6 +249,24 @@ test('switch encendido: el digitador asignado aprueba; otro digitador recibe 403
   assert.equal(r.status, 403);
 });
 
+// Jay, 2026-10-31: los digitadores envían sus documentos sin el admin (lo que aprueba el admin son los modelos).
+// Con el switch encendido, quien hizo el documento a mano lo aprueba y lo envía aunque el cliente no sea suyo;
+// el borrador del bot de ese cliente sigue siendo del digitador asignado.
+test('switch encendido: la digitadora que hizo el documento lo aprueba y lo envía aunque el cliente no sea suyo', async () => {
+  assert.equal((await setSwitch(true)).status, 200);
+  const mine = await makeDoc({ createdBy: ids.marleni, bot: false }); // Juan está asignado a Hengi
+  let r = await call('GET', `/api/documentos/documents/${mine.id}`, 'marleni');
+  assert.equal((await r.json()).document.can_approve, true);
+  r = await call('POST', `/api/documentos/documents/${mine.id}/approve`, 'marleni', { version_id: mine.versionId, send_mode: 'ya' });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).sent, true);
+  assert.equal(sent.length, 1);
+  // El de otra digitadora no
+  const otro = await makeDoc({ createdBy: ids.hengi, bot: false });
+  r = await call('POST', `/api/documentos/documents/${otro.id}/approve`, 'marleni', { version_id: otro.versionId, send_mode: 'ya' });
+  assert.ok([403, 404].includes(r.status));
+});
+
 test('switch encendido: el digitador asignado ve el borrador del bot de su cliente', async () => {
   const bot = await makeDoc({ title: 'Borrador del bot' });                       // Juan, creado por el admin
   const manual = await makeDoc({ title: 'Subido por el admin', bot: false });     // Juan, pero no es del bot
