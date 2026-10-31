@@ -13,13 +13,15 @@ const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
 const os = require('os');
 const pool = require('../db/pool');
-const { listBlocks, hasTags, applyOps, fillTags, formatAutentico, applyFormat } = require('../documentos/docxText');
+const { listBlocks, hasTags, applyOps, fillTags, formatAutentico, applyFormat, createDocx, listTags } = require('../documentos/docxText');
 // "formato auténtico", "tipo auténtico", "sin espacios" written in the box turn the layout on without the checkbox
 const AUTENTICO_WORDS = /aut[eé]ntic|sin espacios/i;
 const aiDocs = require('../documentos/aiDocs');
 const LegalProfile = require('../documentos/legalProfile');
 const Tags = require('../documentos/templateTags');
 const delivery = require('../agent/delivery');
+const { isStaff } = require('../agent/tools/documents');
+const { groupOf } = require('../documentos/tagging');
 
 // Documentos (Fase 1): "Buscar por nombre" in our selection of models + "Historial del digitador".
 // Separate from MotherBrain: it only reads the models; tags are edited there.
@@ -198,6 +200,64 @@ router.post('/documents', withUpload(async (req, res) => {
     res.status(500).json({ error: 'No se pudo guardar el documento' });
   }
 }));
+
+// ── Crear desde cero ──
+// A new document that comes from no model: the AI drafts the whole Word from what the digitador asks for
+// (missing data stays as {{ETIQUETAS}}, never invented), or a blank Word with just the title. Saved as v1
+// in Mis documentos (the chosen client's, or «Sin cliente»), so it can be reviewed, changed and approved.
+// body { title?, client_id?, request?, blank?: true }
+// → 201 { document, placeholders: [client data still missing], staff_placeholders: [what the team fills: notario, fecha y ciudad de firma] }
+router.post('/documents/new', async (req, res) => {
+  const body = req.body || {};
+  const blank = body.blank === true;
+  const request = String(body.request || '').trim();
+  let title = String(body.title || '').trim().slice(0, 200);
+  if (blank && !title) return sendError(res, 400, 'TITLE_REQUIRED', 'Ponle un nombre al documento');
+  if (!blank && request.length < 15) return sendError(res, 400, 'REQUEST_REQUIRED', 'Cuenta qué documento necesitas, con un poco más de detalle');
+  const hasClient = body.client_id != null && body.client_id !== '' && Number(body.client_id) !== 0;
+  let client = null;
+  if (hasClient) {
+    const { rows } = await pool.query('SELECT id, name, phone FROM clients WHERE id = $1', [Number(body.client_id)]);
+    if (!rows.length) return sendError(res, 400, 'INVALID_CLIENT', 'Ese cliente no existe; elige otro o déjalo sin cliente');
+    client = rows[0];
+  }
+  let spec;
+  if (blank) {
+    spec = { title, paragraphs: [] };
+  } else {
+    try {
+      spec = await aiDocs.draftDocument({ request, title, client });
+    } catch (err) {
+      return aiError(res, err, 'new');
+    }
+    title = title || spec.title || 'Documento nuevo';
+  }
+  const out = tmpDocx();
+  try {
+    await createDocx(out, { ...spec, title });
+    const tags = blank ? [] : [...new Set(await listTags(out))];
+    const placeholders = tags.filter((k) => !isStaff(k, groupOf(k)));
+    const staffPlaceholders = tags.filter((k) => isStaff(k, groupOf(k)));
+    const name = `${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 100) || 'documento'}.docx`;
+    const stored = storage.saveLocalFile(out, 'portfolio', `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${name}`);
+    const notes = blank ? 'Documento en blanco' : `Redactado desde cero con IA: ${request}`.slice(0, 500);
+    const id = await Portfolio.createDocument({
+      clientId: client?.id ?? null, title, userId: req.user.id,
+      file: { path: stored, name, mime: DOCX, size: fs.statSync(stored).size, source: 'generated', notes },
+    });
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'documento.new', entityType: 'documento', entityId: id,
+      summary: `${blank ? 'Creó en blanco' : 'Redactó desde cero con IA'} «${title}» (${client ? client.name || 'cliente' : 'sin cliente'})`,
+      details: blank ? {} : { request: request.slice(0, 500), placeholders, staff_placeholders: staffPlaceholders },
+    }));
+    res.status(201).json({ document: await Portfolio.getDocument(req.user, id), placeholders, staff_placeholders: staffPlaceholders });
+  } catch (err) {
+    console.error('[documentos] new error:', err.message);
+    res.status(500).json({ error: 'No se pudo crear el documento' });
+  } finally {
+    fs.rm(out, { force: true }, () => {});
+  }
+});
 
 router.post('/documents/:id/versions', withUpload(async (req, res) => {
   const doc = await Portfolio.getDocument(req.user, req.params.id).catch(() => null);

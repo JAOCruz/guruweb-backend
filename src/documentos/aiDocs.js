@@ -226,6 +226,49 @@ Responde SOLO JSON: {"edits": [ ...redacción ], "format": [ ...formato ], "no_s
   return { edits, format, unsupported };
 }
 
+// Crear desde cero: a whole new document from what the digitador asks for, in the office's style. Data the
+// request does not give is never invented: it goes as {{ETIQUETA}} placeholders (DATO_ROL, like the models).
+const DRAFT_ALIGNS = new Set(['left', 'center', 'right', 'justify']);
+async function draftDocument({ request, title = '', client = null }) {
+  const raw = await ask(`${CONTEXT}
+Un digitador te pide redactar un documento NUEVO, completo, desde cero (no existe modelo). Lo que pide: ${String(request).slice(0, 4000)}
+${title ? `Título que quiere: ${title}` : 'Ponle tú el título.'}
+${client ? `Cliente de la oficina para este documento: ${client.name || 'sin nombre'}${client.phone ? ` (tel. ${client.phone})` : ''}. Úsalo como una de las partes solo si el pedido lo deja claro; su cédula, nacionalidad, estado civil y domicilio NO se conocen.` : ''}
+
+Reglas:
+- Redacción legal formal de República Dominicana, como los actos y contratos que se usan aquí: encabezado/título, comparecencia de las partes (nombre, nacionalidad, mayor de edad, estado civil, profesión u ocupación, cédula de identidad y electoral, domicilio), cláusulas numeradas en MAYÚSCULAS (PRIMERO:, SEGUNDO:…), cláusula de elección de domicilio/derecho común, lugar y fecha, y firmas. Montos en letras y en números (RD$). Ajusta la estructura al tipo de documento (una declaración jurada o un poder no llevan cláusulas de contrato).
+- NUNCA inventes datos personales ni cifras que no estén en el pedido: nombres, cédulas, direcciones, matrículas, fechas, montos. En su lugar pon una etiqueta {{NOMBRE_DE_ETIQUETA}} en MAYÚSCULAS con formato DATO_ROL (p. ej. {{NOMBRE_ARRENDADOR}}, {{DOCUMENTO IDENTIDAD_ARRENDATARIO}}, {{DIRECCION O DOMICILIO_VENDEDOR}}, {{CIUDAD_FIRMA}}, {{DIA_TEXTO}}, {{MES_TEXTO}}, {{AÑO_TEXTO}}, {{PRECIO_VENTA_LETRAS}}, {{PRECIO_VENTA_NUMEROS}}). El mismo dato de la misma persona lleva siempre la misma etiqueta. Nunca dos etiquetas seguidas sin texto entre ellas.
+- Lo que sí viene en el pedido (lugar, plazo, monto, objeto, nombres si los dan) va escrito tal cual, en el texto.
+- Texto plano: sin tablas, viñetas ni Markdown. Cada cláusula es un párrafo. Las líneas de firma van como párrafos centrados con el nombre (o su etiqueta) y debajo el papel (Arrendador, Vendedor…).
+Responde SOLO JSON: {"title": "<título en mayúsculas>", "paragraphs": [{"text": "<párrafo>", "align": "justify" | "center" | "left" | "right", "bold": false}]}. Máximo 60 párrafos.`);
+  const out = parseJson(raw, '{', '}');
+  const finalTitle = String(out.title || title || '').trim().slice(0, 200);
+  // a heading that repeats the title: short, and most of its words are in the title ("CONTRATO DE ALQUILER DE LOCAL
+  // COMERCIAL" vs "Contrato de alquiler local Piantini")
+  const words = (t) => new Set(t.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[A-ZÑ0-9]{3,}/g) || []);
+  const same = (a, b) => {
+    if (a.length > 120) return false;
+    const wa = words(a);
+    const wb = words(b);
+    const shared = [...wa].filter((w) => wb.has(w)).length;
+    return wa.size > 0 && shared >= Math.ceil(wa.size / 2) && shared >= 2;
+  };
+  const paragraphs = (Array.isArray(out.paragraphs) ? out.paragraphs : [])
+    .map((p) => (typeof p === 'string' ? { text: p } : p))
+    .filter((p) => p && typeof p.text === 'string')
+    .slice(0, 60)
+    .map((p) => ({
+      text: p.text.replace(/\r?\n+/g, ' ').trim(),
+      align: DRAFT_ALIGNS.has(String(p.align || '').toLowerCase()) ? String(p.align).toLowerCase() : 'justify',
+      // the model tends to mark whole clauses bold; only short lines (headings, signatures) can be
+      bold: p.bold === true && String(p.text).length <= 120,
+    }));
+  // the Word gets the title on its own; the model often repeats it as the first paragraph
+  while (paragraphs.length && (!paragraphs[0].text || same(paragraphs[0].text, finalTitle) || (title && same(paragraphs[0].text, title)))) paragraphs.shift();
+  if (!paragraphs.some((p) => p.text)) throw new Error('La IA no devolvió un documento');
+  return { title: finalTitle, paragraphs };
+}
+
 // The layout changes in words, for the person to review
 const ALIGN = { justify: 'Texto justificado', left: 'Alineado a la izquierda', center: 'Centrado', right: 'Alineado a la derecha' };
 function describeFormat(op) {
@@ -258,4 +301,4 @@ function describe(ops, blocks) {
   return ops.map((o) => ({ op: o.op, i: o.i, before: o.op === 'insert_after' ? null : byI.get(o.i) ?? null, after: o.op === 'delete' ? null : o.text }));
 }
 
-module.exports = { setGenerator, jsonRequest, claudeContent, routeGenerate, docsProvider, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, planChanges, describeFormat, describe };
+module.exports = { setGenerator, jsonRequest, claudeContent, routeGenerate, docsProvider, parseJson, planTags, deriveFields, extractValues, planFill, planEdits, planChanges, draftDocument, describeFormat, describe };

@@ -16,6 +16,8 @@ Documentos · Word engine (separate from MotherBrain's generator).
                             (font name/size, bold, align, line spacing and space between paragraphs,
                             margins), each for one paragraph ("i") or the whole document; unknown ops
                             and out-of-range values are skipped
+  create <out>            ← JSON {"title", "paragraphs": [{"text", "align", "bold"}]} on stdin → JSON {"paragraphs": n}:
+                            a new Word from nothing with the office's usual layout (Crear desde cero)
   sanitize <path> <out>   → JSON {"outside": [{"where": "...", "text": "..."}]}: a copy without what a
                             client's Word carries outside its text (tracked changes accepted, comments,
                             links and content controls flattened, author/title cleared), plus the text
@@ -423,6 +425,49 @@ def cmd_format(path, out, ops):
     print(json.dumps({"applied": applied}))
 
 
+def cmd_create(out, spec):
+    """A new Word from nothing (Crear desde cero): the office's usual layout — letter size, 2.54 cm margins,
+    Times New Roman 12, justified text — with the title centred in bold and each paragraph as given
+    ({"text", "align": "center"|"justify"|"left"|"right", "bold"}). An empty text is a blank line."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Cm, Inches, Pt
+
+    aligns = {"left": WD_ALIGN_PARAGRAPH.LEFT, "center": WD_ALIGN_PARAGRAPH.CENTER,
+              "right": WD_ALIGN_PARAGRAPH.RIGHT, "justify": WD_ALIGN_PARAGRAPH.JUSTIFY}
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width, sec.page_height = Inches(8.5), Inches(11)
+    for side in ("top", "bottom", "left", "right"):
+        setattr(sec, f"{side}_margin", Cm(2.54))
+    normal = doc.styles["Normal"]
+    normal.font.name = "Times New Roman"
+    normal.font.size = Pt(12)
+    normal.paragraph_format.space_after = Pt(6)
+    normal.paragraph_format.line_spacing = 1.15
+    title = str(spec.get("title") or "").strip()
+    if title:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(title.upper())
+        r.bold = True
+        set_font(r, "Times New Roman", 12)
+        doc.add_paragraph("")
+    n = 0
+    for item in spec.get("paragraphs") or []:
+        if not isinstance(item, dict):
+            item = {"text": str(item)}
+        text = str(item.get("text") or "")
+        p = doc.add_paragraph()
+        p.alignment = aligns.get(str(item.get("align") or "justify").lower(), WD_ALIGN_PARAGRAPH.JUSTIFY)
+        if text:
+            r = p.add_run(text)
+            r.bold = bool(item.get("bold"))
+            set_font(r, "Times New Roman", 12)
+            n += 1
+    doc.save(out)
+    print(json.dumps({"paragraphs": n}))
+
+
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "list":
@@ -443,5 +488,7 @@ if __name__ == "__main__":
         cmd_autentico(args[0], args[1])
     elif cmd == "sanitize":
         cmd_sanitize(args[0], args[1])
+    elif cmd == "create":
+        cmd_create(args[0], json.load(sys.stdin))
     else:
         sys.exit(f"unknown command {cmd}")

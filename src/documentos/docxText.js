@@ -30,5 +30,7 @@ const formatAutentico = async (file, out) => JSON.parse(await run(['autentico', 
 // layout changes from a fixed list (font, bold, align, spacing, margins) → { applied }
 const applyFormat = async (file, out, ops) => JSON.parse(await run(['format', file, out], ops));
 const sanitizeDocx = async (file, out) => JSON.parse(await run(['sanitize', file, out]));
+// a new Word from nothing: { title, paragraphs: [{ text, align, bold }] } → { paragraphs }
+const createDocx = async (out, spec) => JSON.parse(await run(['create', out], spec));
 
-module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags, formatAutentico, applyFormat, sanitizeDocx };
+module.exports = { listBlocks, hasTags, applyOps, fillTags, applySpans, listTags, formatAutentico, applyFormat, sanitizeDocx, createDocx };
