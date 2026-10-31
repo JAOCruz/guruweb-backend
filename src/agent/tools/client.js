@@ -1,6 +1,7 @@
 const pool = require('../../db/pool');
 const legalProfile = require('../../documentos/legalProfile');
 const Client = require('../../models/Client');
+const { isSimulatorPhone, getSource } = require('../../utils/simulator');
 
 // Inyectable para pruebas; por defecto se carga el análisis real de forma perezosa.
 let analyzer = null;
@@ -14,11 +15,12 @@ async function ensureClient(ctx) {
   if (ctx.client?.id) return ctx.client;
   const phone = String(ctx.phone || '').trim();
   const digits = phone.replace(/\D/g, '');
-  if (!digits) return null;
+  const simulator = isSimulatorPhone(phone); // chat del simulador del panel: cliente de prueba
+  if (!digits && !simulator) return null;
   let client = await Client.findByPhone(phone);
   if (!client) {
     try {
-      client = await Client.create({ name: digits, phone, userId: ctx.botUserId || null, source: 'whatsapp' });
+      client = await Client.create({ name: simulator ? 'Cliente de prueba (simulador)' : digits, phone, userId: ctx.botUserId || null, source: getSource(phone) });
     } catch (err) {
       if (err.code !== '23505') throw err; // otro turno lo creó al mismo tiempo
       client = await Client.findByPhone(phone);

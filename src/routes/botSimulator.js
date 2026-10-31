@@ -5,6 +5,8 @@ const fs = require('fs');
 const { authenticate, requireRole } = require('../middleware/auth');
 const storage = require('../utils/storage');
 const { routeMessage } = require('../conversation/router');
+const { engineFor } = require('../agent/engine');
+const { simulatorTurn } = require('../agent/simulator');
 const { withList } = require('../whatsapp/interactive');
 const { analyzeDocument, transcribeAudio } = require('../llm/mediaAnalysis');
 const ClientMedia = require('../models/ClientMedia');
@@ -129,15 +131,18 @@ router.post('/simulate', authenticate, requireRole('admin'), upload.single('file
       mediaAnalysis: savedMedia?.analysis,
     });
 
-    // Route through the same logic used by the real WhatsApp bot.
-    const response = await routeMessage(phone, textMessage, null, savedMedia);
-
-    // withList returns an object when interactive lists are used; normalize to string for the UI.
+    // Same engine as the real WhatsApp bot: the AI agent (default) or the old router (BOT_ENGINE=legacy).
     let text = '';
-    if (typeof response === 'string') {
-      text = response;
-    } else if (response && typeof response === 'object') {
-      text = response.text || response.body || JSON.stringify(response);
+    if (engineFor(phone) === 'agent') {
+      text = await simulatorTurn(phone, textMessage, savedMedia);
+    } else {
+      const response = await routeMessage(phone, textMessage, null, savedMedia);
+      // withList returns an object when interactive lists are used; normalize to string for the UI.
+      if (typeof response === 'string') {
+        text = response;
+      } else if (response && typeof response === 'object') {
+        text = response.text || response.body || JSON.stringify(response);
+      }
     }
 
     // Save bot response

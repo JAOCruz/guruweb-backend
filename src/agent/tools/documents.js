@@ -55,7 +55,8 @@ async function approvedByName(nombre) {
 // Lo llena siempre el equipo, nunca se le pide al cliente (Jay, 2026-10-28): los datos del notario y del alguacil,
 // y el lugar y la fecha de la firma. En el borrador quedan como {{ETIQUETA}} para que el digitador los complete.
 const STAFF_GROUPS = new Set(['NOTARIO', 'ALGUACIL']);
-const STAFF_KEY = /^(CIUDAD_FIRMA|DIA_TEXTO|DIA_NUMERO|MES_TEXTO|MES_NUMERO|AÑO_TEXTO|AÑO_NUMERO)$/;
+// Variantes de la biblioteca: AÑO o ANIO, y DIA/MES/AÑO_FIRMA_… (2026-10-31).
+const STAFF_KEY = /^(CIUDAD_FIRMA(_CARTA)?|(DIA|MES|AÑO|ANIO)_(TEXTO|NUMERO)|(DIA|MES|AÑO|ANIO)_FIRMA_(TEXTO|NUMERO|LETRAS))$/;
 const isStaff = (key, group) => STAFF_GROUPS.has(group) || STAFF_KEY.test(key);
 const forClient = (tags) => tags.filter((t) => !isStaff(t.key, t.group));
 
@@ -204,4 +205,4 @@ async function preparar_documento(args, ctx) {
   return { documento_id: id, titulo: title, estado: 'por_aprobar' };
 }
 
-module.exports = { ver_modelo, preparar_documento, invoiceFor };
+module.exports = { ver_modelo, preparar_documento, invoiceFor, isStaff };

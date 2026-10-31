@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const cloudApi = require('./cloudApi');
 const { getAnyConnection, sendMessage } = require('./connection');
+const { isSimulatorPhone } = require('../utils/simulator');
+const simulatorOutbox = require('./simulatorOutbox');
 
 function isCloudEnabled() {
   return cloudApi.isCloudEnabled();
@@ -21,12 +23,15 @@ function isUrl(str) {
   return /^https?:\/\//i.test(str);
 }
 
-function isAvailable() {
+// Simulador del panel (sim_…): siempre "disponible"; lo enviado queda en su chat (simulatorOutbox).
+function isAvailable(phoneOrJid) {
+  if (phoneOrJid && isSimulatorPhone(phoneOrJid)) return true;
   if (cloudApi.isCloudEnabled()) return true;
   return !!getAnyConnection();
 }
 
 async function sendText(phoneOrJid, text) {
+  if (isSimulatorPhone(phoneOrJid)) return simulatorOutbox.send(phoneOrJid, { text });
   if (cloudApi.isCloudEnabled()) {
     return cloudApi.sendTextMessage(toCloudPhone(phoneOrJid), text);
   }
@@ -38,6 +43,9 @@ async function sendText(phoneOrJid, text) {
 }
 
 async function sendDocument(phoneOrJid, filePath, fileName, caption = '') {
+  if (isSimulatorPhone(phoneOrJid)) {
+    return simulatorOutbox.send(phoneOrJid, { text: caption, filePath, fileName, mimeType: cloudApi.getMimeFromPath(filePath) });
+  }
   if (cloudApi.isCloudEnabled()) {
     return cloudApi.sendDocumentMessage(toCloudPhone(phoneOrJid), filePath, fileName, caption);
   }
@@ -58,6 +66,10 @@ async function sendDocument(phoneOrJid, filePath, fileName, caption = '') {
 }
 
 async function sendImage(phoneOrJid, filePathOrUrl, caption = '') {
+  if (isSimulatorPhone(phoneOrJid)) {
+    return simulatorOutbox.send(phoneOrJid, isUrl(filePathOrUrl) ? { text: `${caption}\n${filePathOrUrl}`.trim() }
+      : { text: caption, filePath: filePathOrUrl, mediaType: 'image' });
+  }
   if (cloudApi.isCloudEnabled()) {
     return cloudApi.sendImageMessage(toCloudPhone(phoneOrJid), filePathOrUrl, caption);
   }
@@ -76,6 +88,9 @@ async function sendImage(phoneOrJid, filePathOrUrl, caption = '') {
 }
 
 async function sendMedia(phoneOrJid, filePath, { mimeType, fileName, caption = '', mediaType }) {
+  if (isSimulatorPhone(phoneOrJid)) {
+    return simulatorOutbox.send(phoneOrJid, { text: caption, filePath, fileName, mimeType, mediaType: mediaType || 'document' });
+  }
   if (cloudApi.isCloudEnabled()) {
     // Cloud API natively supports image messages; everything else is sent as a document attachment.
     if (mediaType === 'image') {

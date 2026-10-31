@@ -8,7 +8,7 @@ const { spawnSync } = require('child_process');
 const legalProfile = require('../src/documentos/legalProfile');
 const { listBlocks } = require('../src/documentos/docxText');
 const { clearCache } = require('../src/agent/businessInfo');
-const { ver_modelo, preparar_documento, invoiceFor } = require('../src/agent/tools/documents');
+const { ver_modelo, preparar_documento, invoiceFor, isStaff } = require('../src/agent/tools/documents');
 
 // El llenado del Word pasa por docx_text.py (python-docx); sin él, esas pruebas se saltan como en documentos-etiquetas.
 const PY = process.env.PYTHON_BIN || 'python3';
@@ -408,4 +408,13 @@ test('las etiquetas del notario, el alguacil y la firma no se le piden al client
   assert.match(text, /Yo, ANA CLIENTE, otorgo poder/);
   assert.match(text, /\{\{NOMBRE_NOTARIO\}\}/);
   assert.match(text, /\{\{DIA_TEXTO\}\}/);
+});
+
+// Variantes de la fecha y el lugar de la firma en la biblioteca de Leandro (2026-10-31): FIRMA_ (33 modelos),
+// CIUDAD_FIRMA_CARTA (16) y ANIO_ (3) también las llena el equipo. Las de audiencia, mensura o pago son del caso.
+test('las variantes de la fecha y el lugar de la firma tampoco se le piden al cliente', () => {
+  for (const k of ['CIUDAD_FIRMA', 'CIUDAD_FIRMA_CARTA', 'DIA_TEXTO', 'DIA_NUMERO', 'MES_TEXTO', 'MES_NUMERO', 'AÑO_TEXTO', 'AÑO_NUMERO',
+    'ANIO_TEXTO', 'ANIO_NUMERO', 'DIA_FIRMA_NUMERO', 'MES_FIRMA_LETRAS', 'AÑO_FIRMA_NUMERO']) assert.equal(isStaff(k, 'DOCUMENTO'), true, k);
+  for (const k of ['DIA_AUDIENCIA_TEXTO', 'MES_AUDIENCIA', 'AÑO_AUDIENCIA', 'AÑO_MENSURA', 'DIA_PAGO_ALQUILER', 'AÑO_MATRIMONIO', 'NOMBRE_VENDEDOR'])
+    assert.equal(isStaff(k, 'DOCUMENTO'), false, k);
 });
