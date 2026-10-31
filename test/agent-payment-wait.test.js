@@ -113,60 +113,85 @@ test.describe('espera del lote', () => {
     }
   });
 
-  test('las constantes son 8 s, 30 s y 3 s', () => {
-    assert.deepEqual(handler.BUFFER_TIMING, { AGENT_BUFFER_MS: 8000, AGENT_BUFFER_MAX_MS: 30000, MESSAGE_BUFFER_MS: 3000 });
+  // Jay, 2026-10-31: bajar la espera del bot. 4 s después del último mensaje y tope de 15 s; se puede cambiar en
+  // Railway con BOT_ESPERA_MS y BOT_ESPERA_MAX_MS.
+  test('por defecto son 4 s, 15 s y 3 s', () => {
+    assert.deepEqual(handler.BUFFER_TIMING, { AGENT_BUFFER_MS: 4000, AGENT_BUFFER_MAX_MS: 15000, MESSAGE_BUFFER_MS: 3000 });
   });
 
-  test('chat con agente: tres fotos en 20 s y un texto → un solo lote con las tres', (t) => {
+  test('chat con agente: tres fotos seguidas y un texto → un solo lote con las tres', (t) => {
     const timers = clock(t);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 1, media_type: 'image' }), sock);
-    timers.tick(7000);
+    timers.tick(3000);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 2, media_type: 'image' }), sock);
-    timers.tick(7000);
+    timers.tick(3000);
     handler.bufferMessage(AGENT, payload(AGENT, '', { id: 3, media_type: 'image' }), sock);
-    timers.tick(6000); // 20 s después de la primera foto
-    assert.equal(batches.length, 0, 'cada medio reinicia la espera: a los 7 s no se había cerrado');
+    timers.tick(3000); // 9 s después de la primera foto
+    assert.equal(batches.length, 0, 'cada medio reinicia la espera: a los 3 s no se había cerrado');
     handler.bufferMessage(AGENT, payload(AGENT, 'quiero un acto de venta'), sock);
-    timers.tick(7999);
+    timers.tick(3999);
     assert.equal(batches.length, 0, 'el texto también reinicia la espera');
     timers.tick(1);
     assert.equal(batches.length, 1);
     assert.equal(batches[0].phone, AGENT);
     assert.deepEqual(batches[0].batch.map((b) => b.savedMedia?.id || b.text), [1, 2, 3, 'quiero un acto de venta']);
-    assert.equal(at(batches[0]), 28000, 'se procesa 8 s después del último mensaje');
+    assert.equal(at(batches[0]), 13000, 'se procesa 4 s después del último mensaje');
     timers.tick(60000);
     assert.equal(batches.length, 1, 'un solo lote');
   });
 
-  test('el lote nunca espera más de 30 s desde el primer mensaje', (t) => {
+  test('el lote nunca espera más de 15 s desde el primer mensaje', (t) => {
     const timers = clock(t);
-    // Un mensaje cada 5 s: sin tope, el lote se seguiría corriendo para siempre.
-    for (let i = 1; i <= 6; i++) {
+    // Un mensaje cada 3 s: sin tope, el lote se seguiría corriendo para siempre.
+    for (let i = 1; i <= 5; i++) {
       handler.bufferMessage(AGENT, payload(AGENT, `m${i}`), sock);
-      if (i < 6) timers.tick(5000);
+      if (i < 5) timers.tick(3000);
     }
-    // El sexto llegó a los 25 s: sin tope se procesaría a los 33 s; con el tope, a los 30 s.
-    timers.tick(4999);
+    // El quinto llegó a los 12 s: sin tope se procesaría a los 16 s; con el tope, a los 15 s.
+    timers.tick(2999);
     assert.equal(batches.length, 0);
     timers.tick(1);
     assert.equal(batches.length, 1);
-    assert.equal(at(batches[0]), 30000, 'el tope cierra el lote a los 30 s del primer mensaje');
-    assert.deepEqual(batches[0].batch.map((b) => b.text), ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
-    // Lo que llega después abre otro lote, con su propia espera de 8 s y su propio tope.
+    assert.equal(at(batches[0]), 15000, 'el tope cierra el lote a los 15 s del primer mensaje');
+    assert.deepEqual(batches[0].batch.map((b) => b.text), ['m1', 'm2', 'm3', 'm4', 'm5']);
+    // Lo que llega después abre otro lote, con su propia espera de 4 s y su propio tope.
+    handler.bufferMessage(AGENT, payload(AGENT, 'm6'), sock);
+    timers.tick(3000);
     handler.bufferMessage(AGENT, payload(AGENT, 'm7'), sock);
-    timers.tick(5000);
-    handler.bufferMessage(AGENT, payload(AGENT, 'm8'), sock);
-    timers.tick(7999);
+    timers.tick(3999);
     assert.equal(batches.length, 1);
     timers.tick(1);
     assert.equal(batches.length, 2);
-    assert.deepEqual(batches[1].batch.map((b) => b.text), ['m7', 'm8']);
-    assert.equal(at(batches[1]), 30000 + 5000 + 8000);
+    assert.deepEqual(batches[1].batch.map((b) => b.text), ['m6', 'm7']);
+    assert.equal(at(batches[1]), 15000 + 3000 + 4000);
     timers.tick(60000);
     assert.equal(batches.length, 2, 'ningún mensaje se pierde ni se repite');
   });
 
-  test('chat legacy sigue con 3 s: no se reinicia a 8 s ni espera el tope', (t) => {
+  test('BOT_ESPERA_MS y BOT_ESPERA_MAX_MS cambian la espera; un valor inválido usa el de siempre', (t) => {
+    const timers = clock(t);
+    const keep = { a: process.env.BOT_ESPERA_MS, b: process.env.BOT_ESPERA_MAX_MS };
+    try {
+      process.env.BOT_ESPERA_MS = '2000';
+      process.env.BOT_ESPERA_MAX_MS = '5000';
+      handler.bufferMessage(AGENT, payload(AGENT, 'a'), sock);
+      timers.tick(1999);
+      assert.equal(batches.length, 0);
+      timers.tick(1);
+      assert.equal(at(batches[0]), 2000);
+      process.env.BOT_ESPERA_MS = 'rápido';
+      handler.bufferMessage(AGENT, payload(AGENT, 'b'), sock);
+      timers.tick(3999);
+      assert.equal(batches.length, 1);
+      timers.tick(1);
+      assert.equal(batches.length, 2, 'valor inválido: 4 s');
+    } finally {
+      if (keep.a === undefined) delete process.env.BOT_ESPERA_MS; else process.env.BOT_ESPERA_MS = keep.a;
+      if (keep.b === undefined) delete process.env.BOT_ESPERA_MAX_MS; else process.env.BOT_ESPERA_MAX_MS = keep.b;
+    }
+  });
+
+  test('chat legacy sigue con 3 s: no usa la espera del agente ni su tope', (t) => {
     const timers = clock(t);
     handler.bufferMessage(LEGACY, payload(LEGACY, 'hola'), sock);
     timers.tick(2000);
@@ -177,7 +202,7 @@ test.describe('espera del lote', () => {
     assert.equal(batches.length, 1);
     assert.equal(batches[0].phone, LEGACY);
     assert.deepEqual(batches[0].batch.map((b) => b.text), ['hola', 'buenas']);
-    assert.equal(at(batches[0]), 5000, '3 s después del último mensaje, no 8');
+    assert.equal(at(batches[0]), 5000, '3 s después del último mensaje, no 4');
   });
 });
 

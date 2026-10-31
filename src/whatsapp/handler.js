@@ -18,13 +18,20 @@ const { notifyUrgentAfterHandoff, URGENT_ACK } = require('../agent/tools/handoff
 // When a user sends multiple images at once, WhatsApp fires them as separate
 // message events within ~1s. We buffer them and process as one logical turn.
 // Motor viejo: 3 s después del último mensaje.
-// Chats del agente (engineFor === 'agent'): 8 s después del último mensaje, y cada mensaje (texto, foto,
-// documento o audio) reinicia la espera; pero el lote nunca espera más de 30 s desde su primer mensaje:
+// Chats del agente (engineFor === 'agent'): 4 s después del último mensaje, y cada mensaje (texto, foto,
+// documento o audio) reinicia la espera; pero el lote nunca espera más de 15 s desde su primer mensaje:
 // al llegar al tope se procesa aunque sigan llegando mensajes (los que lleguen después abren otro lote).
-// Así el bot recibe todo lo que el cliente manda de golpe y responde una sola vez.
+// Así el bot recibe todo lo que el cliente manda de golpe y responde una sola vez. Antes eran 8 y 30 s
+// (Jay, 2026-10-31: bajar la espera). En Railway: BOT_ESPERA_MS y BOT_ESPERA_MAX_MS.
 const MESSAGE_BUFFER_MS = 3000;
-const AGENT_BUFFER_MS = 8000;
-const AGENT_BUFFER_MAX_MS = 30000;
+const AGENT_BUFFER_MS = 4000;
+const AGENT_BUFFER_MAX_MS = 15000;
+const msFromEnv = (name, fallback) => {
+  const raw = String(process.env[name] ?? '').trim();
+  if (!raw) return fallback; // vacía: como si no estuviera
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
 const phoneBuffers = new Map(); // phone → { messages: [], timer, sock, firstAt }
 
 let batchProcessorOverride = null; // solo pruebas: reemplaza processBatch para ver los lotes sin correr el motor
@@ -33,7 +40,9 @@ function _setBatchProcessor(fn) { batchProcessorOverride = typeof fn === 'functi
 // Cuánto espera el lote de este teléfono después del mensaje que acaba de llegar.
 function bufferDelayMs(phone, buf) {
   if (engineFor(phone) !== 'agent') return MESSAGE_BUFFER_MS;
-  return Math.max(0, Math.min(AGENT_BUFFER_MS, buf.firstAt + AGENT_BUFFER_MAX_MS - Date.now()));
+  const wait = msFromEnv('BOT_ESPERA_MS', AGENT_BUFFER_MS);
+  const max = msFromEnv('BOT_ESPERA_MAX_MS', AGENT_BUFFER_MAX_MS);
+  return Math.max(0, Math.min(wait, buf.firstAt + max - Date.now()));
 }
 
 function bufferMessage(phone, payload, sock) {
@@ -776,7 +785,7 @@ function handleHistoryMessage(msg) {
 
 module.exports = {
   bufferMessage,
-  processBatch, // exportado para las pruebas (bufferMessage espera 3 s, o de 8 a 30 s con el agente)
+  processBatch, // exportado para las pruebas (bufferMessage espera 3 s, o de 4 a 15 s con el agente)
   BUFFER_TIMING: { MESSAGE_BUFFER_MS, AGENT_BUFFER_MS, AGENT_BUFFER_MAX_MS },
   _setAIRetryDelayMs, // solo pruebas
   _setMediaAnalysis, // solo pruebas
