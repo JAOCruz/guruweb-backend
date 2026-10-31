@@ -11,7 +11,7 @@ const { generateToken } = require('../src/middleware/auth');
 const { createFakeProvider, setFakeProvider } = require('../src/agent/provider');
 const { clearCache } = require('../src/agent/businessInfo');
 const { _resetBotUserCache } = require('../src/agent/agent');
-const { pasar_a_humano } = require('../src/agent/tools/handoff');
+const { pasar_a_humano, URGENT_ACK } = require('../src/agent/tools/handoff');
 const { engineFor } = require('../src/agent/engine');
 const handler = require('../src/whatsapp/handler');
 
@@ -159,7 +159,9 @@ test('si el lote no debe responderse, el agente no corre y no se manda nada', as
   assert.deepEqual(await outbound(AGENT), []);
 });
 
-test('chat en manual después de un traspaso: "urgente" fuera de horario avisa al admin una vez y el bot no responde', async () => {
+// Jay, 2026-10-31: el mensaje de espera dice "escriba 'urgente'"; si nadie contesta, el cliente no sabe si llegó.
+// El primer "urgente" se confirma una vez; el bot sigue sin atender el chat.
+test('chat en manual después de un traspaso: "urgente" fuera de horario avisa al admin y se le confirma al cliente una vez', async () => {
   await closeBusiness();
   // El agente pasó el chat a una persona (como lo haría la herramienta en un turno anterior).
   const client = (await pool.query('SELECT * FROM clients WHERE phone=$1', [AGENT])).rows[0];
@@ -172,13 +174,14 @@ test('chat en manual después de un traspaso: "urgente" fuera de horario avisa a
   let n = await notifs('handoff');
   assert.equal(n.length, before + 1);
   assert.match(n[n.length - 1].title, /^🚨 URGENTE /);
-  assert.deepEqual(sent, []);
-  assert.deepEqual(await outbound(AGENT), []);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].text, URGENT_ACK);
+  assert.deepEqual((await outbound(AGENT)).map((m) => m.content), [URGENT_ACK]);
 
-  // Un segundo "urgente" no repite el aviso.
+  // Un segundo "urgente" no repite el aviso ni la confirmación.
   await handler.processBatch(AGENT, batch(AGENT, 'urgente!!', false), sock);
   assert.equal((await notifs('handoff')).length, before + 1);
-  assert.deepEqual(sent, []);
+  assert.equal(sent.length, 1);
 });
 
 test('un "urgente" viejo (ráfaga tras reconectar) no avisa', async () => {

@@ -18,7 +18,10 @@ function withTimeout(promise, timeoutMs = 25000) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-function getProvider(name = process.env.BOT_AI_PROVIDER || 'gemini') {
+// Sin BOT_AI_PROVIDER: Claude si está su clave (Gemini se quedaba sin cuota en producción), si no Gemini.
+const defaultProvider = () => process.env.BOT_AI_PROVIDER || (process.env.ANTHROPIC_API_KEY ? 'claude' : 'gemini');
+
+function getProvider(name = defaultProvider()) {
   if (name === 'fake') {
     if (!fakeProvider) throw new Error('No hay proveedor fake registrado (use setFakeProvider)');
     return fakeProvider;

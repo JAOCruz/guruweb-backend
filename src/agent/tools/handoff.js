@@ -43,6 +43,9 @@ async function pasar_a_humano(args, ctx) {
 // Chat ya en manual: si el cliente escribe "urgente" fuera de horario, avisa una sola vez.
 // El "una sola vez" lo garantiza la base: un UPDATE atómico reclama el aviso y solo quien lo reclamó avisa
 // (dos lotes a la vez no avisan dos veces).
+// Confirmación al cliente del primer "urgente" (el mensaje de espera le pide escribirlo; Jay, 2026-10-31).
+const URGENT_ACK = '🚨 Recibido. Avisé al equipo que su caso es urgente; le escribirán lo antes posible.';
+
 async function notifyUrgentAfterHandoff(phone, text, now = new Date()) {
   if (!isUrgent(text)) return false;
   const info = await getBusinessInfo();
@@ -58,4 +61,4 @@ async function notifyUrgentAfterHandoff(phone, text, now = new Date()) {
   return true;
 }
 
-module.exports = { pasar_a_humano, notifyUrgentAfterHandoff };
+module.exports = { pasar_a_humano, notifyUrgentAfterHandoff, URGENT_ACK };

@@ -73,3 +73,22 @@ test('gemini y claude exponen search', () => {
   assert.equal(typeof getProvider('gemini').search, 'function');
   assert.equal(typeof getProvider('claude').search, 'function');
 });
+
+// Sin BOT_AI_PROVIDER: Claude si hay clave de Anthropic (producción no tenía la variable y usaba Gemini, que se
+// quedaba sin cuota; Jay, 2026-10-31). BOT_AI_PROVIDER sigue mandando.
+test('proveedor por defecto: Claude con clave de Anthropic, Gemini sin ella, y la variable manda', () => {
+  const keep = { p: process.env.BOT_AI_PROVIDER, k: process.env.ANTHROPIC_API_KEY };
+  try {
+    delete process.env.BOT_AI_PROVIDER;
+    process.env.ANTHROPIC_API_KEY = 'x';
+    assert.equal(getProvider().name, 'claude');
+    delete process.env.ANTHROPIC_API_KEY;
+    assert.equal(getProvider().name, 'gemini');
+    process.env.ANTHROPIC_API_KEY = 'x';
+    process.env.BOT_AI_PROVIDER = 'gemini';
+    assert.equal(getProvider().name, 'gemini');
+  } finally {
+    if (keep.p === undefined) delete process.env.BOT_AI_PROVIDER; else process.env.BOT_AI_PROVIDER = keep.p;
+    if (keep.k === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = keep.k;
+  }
+});

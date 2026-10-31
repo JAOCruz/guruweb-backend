@@ -12,7 +12,7 @@ const pool = require('../db/pool');
 // mismo valor que el del router, así que un solo chequeo sirve para los dos motores.
 const { respond: agentRespond, runSerial } = require('../agent/agent');
 const { engineFor } = require('../agent/engine');
-const { notifyUrgentAfterHandoff } = require('../agent/tools/handoff');
+const { notifyUrgentAfterHandoff, URGENT_ACK } = require('../agent/tools/handoff');
 
 // ── Per-phone message buffer (debounce for multi-image bursts) ──
 // When a user sends multiple images at once, WhatsApp fires them as separate
@@ -461,7 +461,10 @@ async function processBatchNow(phone, batch, sock, { agent, cutoff = null }) {
   const fresh = batch.some((b) => b.isStale !== true);
   if (fresh && combinedText && isManualMode(phone)) {
     try {
-      await notifyUrgentAfterHandoff(phone, combinedText);
+      // Primer "urgente" avisado: se le confirma al cliente (una vez); el chat sigue con la persona
+      if (await notifyUrgentAfterHandoff(phone, combinedText)) {
+        await sendResponse(sock, remoteJid, URGENT_ACK, firstMsg, phone, await Client.findByPhone(phone));
+      }
     } catch (err) {
       console.error(`[WA] Urgent-after-handoff notice failed for ${phone}:`, err.code || err.name || 'error');
     }

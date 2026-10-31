@@ -5,6 +5,7 @@ const pool = require('../db/pool');
 const Message = require('../models/Message');
 const Client = require('../models/Client');
 const { respond, AI_DEFERRED } = require('./agent');
+const { notifyUrgentAfterHandoff, URGENT_ACK } = require('./tools/handoff');
 
 const DEFERRED_TEXT = '🦉 (La IA no tiene cuota en este momento. En WhatsApp el cliente recibiría la respuesta en unos minutos.)';
 const MANUAL_TEXT = '(El chat está con una persona: el bot no responde. Devuélvalo al bot en Mensajes para seguir probando.)';
@@ -59,7 +60,10 @@ async function simulatorTurn(phone, text, savedMedia = null, opts = {}) {
     },
   });
   if (reply === AI_DEFERRED) return DEFERRED_TEXT;
-  return reply || MANUAL_TEXT;
+  if (reply) return reply;
+  // Como en WhatsApp: con el chat en una persona, el primer "urgente" fuera de horario avisa y se confirma
+  if (isManual(phone) && await notifyUrgentAfterHandoff(phone, text)) return URGENT_ACK;
+  return MANUAL_TEXT;
 }
 
 module.exports = { simulatorTurn, DEFERRED_TEXT, MANUAL_TEXT };
