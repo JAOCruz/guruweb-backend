@@ -155,7 +155,13 @@ router.get('/models/:id/thumbnail', async (req, res) => {
     const model = (await listModelsFor(req.user)).find((m) => m.id === Number(req.params.id));
     const file = model && resolveModelPath(model.file_path);
     if (!file || !fs.existsSync(file)) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
-    const thumb = await modelThumbnail(model.id, file);
+    // a published model shows its reviewed version: the library's originals may carry names from a real case
+    const { rows: [approved] } = await pool.query(
+      `SELECT v.file_path FROM doc_templates t JOIN template_tag_versions v ON v.id = t.approved_tag_version_id WHERE t.id = $1`,
+      [model.id]
+    );
+    const source = approved && fs.existsSync(approved.file_path) ? approved.file_path : file;
+    const thumb = await modelThumbnail(model.id, source);
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('Vary', 'Authorization');
     res.type('png').sendFile(path.resolve(thumb));
