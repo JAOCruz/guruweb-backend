@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
+const { modelThumbnail } = require('../documentos/thumbnails');
 const storage = require('../utils/storage');
 const Client = require('../models/Client');
 const { logActivity, safeLog } = require('../services/activityLog');
@@ -77,6 +78,19 @@ function pdfError(res, err) {
   return sendError(res, 500, 'PDF_FAILED', 'No se pudo convertir a PDF');
 }
 
+// The shared models people use most: the «Más usado» mark on the library's cards
+const MOST_USED_LIMIT = 8;
+const MOST_USED_MIN_DOCUMENTS = 2;
+async function mostUsedIds() {
+  const { rows } = await pool.query(
+    `SELECT d.template_id FROM portfolio_documents d JOIN doc_templates t ON t.id = d.template_id
+     WHERE t.is_active = TRUE AND t.is_private = FALSE
+     GROUP BY d.template_id HAVING COUNT(*) >= $1 ORDER BY COUNT(*) DESC, d.template_id LIMIT $2`,
+    [MOST_USED_MIN_DOCUMENTS, MOST_USED_LIMIT]
+  );
+  return rows.map((r) => r.template_id);
+}
+
 // ── Nuestra selección ──
 router.get('/models', async (req, res) => {
   try {
@@ -86,8 +100,15 @@ router.get('/models', async (req, res) => {
     const admin = req.user.role === 'admin';
     const status = new Map((await Tags.listStatuses().catch(() => []))
       .map((m) => [m.id, admin ? m.status : m.approved_tag_version_id ? 'approved' : 'untagged']));
-    const models = searchTemplates(all, req.query.q || '').map(({ file_path, created_by, status: own, ...m }) => ({
+    const mostUsed = await mostUsedIds().catch(() => []);
+    const q = String(req.query.q || '').trim();
+    const rank = (m) => (m.is_private ? -1 : mostUsed.includes(m.id) ? mostUsed.indexOf(m.id) : mostUsed.length);
+    const found = searchTemplates(all, q);
+    // without a search: my private models, then the most used; a search keeps its own ranking
+    const ordered = q ? found : [...found].sort((a, b) => rank(a) - rank(b));
+    const models = ordered.map(({ file_path, created_by, status: own, ...m }) => ({
       ...m,
+      most_used: mostUsed.includes(m.id),
       is_private: m.is_private === true,
       can_manage: admin || m.is_private === true, // a private model only reaches this list for its owner or an admin
       tag_status: m.is_private ? own : status.get(m.id) || 'untagged',
@@ -125,6 +146,22 @@ router.get('/models/:id/file', async (req, res) => {
     return sendFile(res, file, `${baseName}.docx`, false);
   } catch (err) {
     return pdfError(res, err);
+  }
+});
+
+// First page of the model, for its card in the library. Same access as opening the model.
+router.get('/models/:id/thumbnail', async (req, res) => {
+  try {
+    const model = (await listModelsFor(req.user)).find((m) => m.id === Number(req.params.id));
+    const file = model && resolveModelPath(model.file_path);
+    if (!file || !fs.existsSync(file)) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
+    const thumb = await modelThumbnail(model.id, file);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Vary', 'Authorization');
+    res.type('png').sendFile(path.resolve(thumb));
+  } catch (err) {
+    if (err.code !== 'PDF_UNAVAILABLE') console.error('[documentos] thumbnail error:', err.message);
+    sendError(res, 503, 'THUMB_UNAVAILABLE', 'La vista previa no está disponible ahora');
   }
 });
 

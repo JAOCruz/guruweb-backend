@@ -4,6 +4,7 @@ const path = require('path');
 const pool = require('../db/pool');
 const storage = require('../utils/storage');
 const { isUploadedModel } = require('./templatesCatalog');
+const { removeThumbnails } = require('./thumbnails');
 
 // Documentos · Etiquetas: tagged copies of the models, with versions and the admin's approval.
 // Status of a model: untagged (no version), pending (latest version not approved), approved.
@@ -36,7 +37,7 @@ async function listStatuses({ requested = false } = {}) {
 // The private models this user can see: an admin all of them, anyone else only their own. Never cached.
 async function listPrivate(user) {
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.file_path, t.file_name, c.name AS category, ${STATUS_SQL} AS status,
+    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, c.name AS category, ${STATUS_SQL} AS status,
             t.created_by, t.publish_requested_at, COALESCE(NULLIF(ou.name, ''), ou.username) AS owner_name
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users ou ON ou.id = t.created_by ${LATEST_JOIN}
      WHERE t.is_active = TRUE AND t.is_private AND ($1::boolean OR t.created_by = $2)
@@ -209,6 +210,7 @@ async function approve(versionId, adminId) {
     fs.copyFileSync(v.file_path, tmp);
     fs.renameSync(tmp, t.file_path);
     fs.rmSync(storage.getFilePath('template_pdf', `${t.id}.pdf`), { force: true });
+    removeThumbnails(t.id);
   }
   await pool.query('UPDATE template_tag_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [adminId, v.id]);
   // one statement: a private model can never be published (the database refuses it)

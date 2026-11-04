@@ -434,3 +434,115 @@ test('publicar un modelo de la biblioteca no toca su archivo', { skip: !hasDocx 
   await publish({ id: t.id });
   assert.ok(antes.equals(fs.readFileSync(path.join(TPL_DIR, t.file_path))));
 });
+
+// Cuadros de la Biblioteca: miniatura de la primera página y «Más usado»
+const pdf = require('../src/documentos/pdf');
+const thumbnails = require('../src/documentos/thumbnails');
+const fakeThumbnails = () => {
+  const counts = { converted: 0, rendered: 0 };
+  pdf.setConverter(async (input, outDir) => {
+    counts.converted++;
+    const out = path.join(outDir, 'documento.pdf');
+    fs.copyFileSync(input, out);
+    return out;
+  });
+  thumbnails.setRenderer(async (pdfFile, target) => {
+    counts.rendered++;
+    fs.writeFileSync(target, Buffer.concat([Buffer.from('PNG:'), fs.readFileSync(pdfFile)]));
+  });
+  return counts;
+};
+const thumb = (id, who) => call('GET', `/api/documentos/models/${id}/thumbnail`, who);
+test.afterEach(() => { pdf.setConverter(null); thumbnails.setRenderer(null); });
+
+test('la miniatura respeta el acceso del modelo y no se genera dos veces', { skip: !hasDocx }, async () => {
+  const counts = fakeThumbnails();
+  const m = await ownModel('Con miniatura');
+  const r = await thumb(m.id, 'hengi');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /image\/png/);
+  assert.match(r.headers.get('cache-control'), /private/);
+  assert.match(r.headers.get('vary'), /Authorization/i);
+  assert.equal((await thumb(m.id, 'admin')).status, 200);
+  assert.equal(counts.rendered, 1);
+  assert.equal((await thumb(m.id, 'otro')).status, 404);
+  assert.equal((await thumb(m.id, 'aux')).status, 404);
+});
+
+test('al publicar no queda ninguna miniatura del Word original', { skip: !hasDocx }, async () => {
+  const counts = fakeThumbnails();
+  const m = await ownModel('Miniatura limpia');
+  const original = Buffer.from(await (await thumb(m.id, 'hengi')).arrayBuffer());
+  await publish(m);
+  const dir = thumbnails.thumbnailsDir();
+  assert.ok(!fs.readdirSync(dir).some((f) => f.startsWith(`${m.id}-`) && fs.readFileSync(path.join(dir, f)).equals(original)));
+  const nueva = Buffer.from(await (await thumb(m.id, 'otro')).arrayBuffer());
+  assert.equal(counts.rendered, 2);
+  assert.ok(!nueva.equals(original));
+});
+
+test('una miniatura que no se pudo generar responde 503 y no se reintenta en cada cuadro', { skip: !hasDocx }, async () => {
+  const m = await ownModel('Sin LibreOffice');
+  let tries = 0;
+  pdf.setConverter(async () => {
+    tries++;
+    throw Object.assign(new Error('no soffice'), { code: 'PDF_UNAVAILABLE' });
+  });
+  assert.equal((await thumb(m.id, 'hengi')).status, 503);
+  assert.equal((await thumb(m.id, 'hengi')).status, 503);
+  assert.equal(tries, 1);
+});
+
+test('las miniaturas se generan de una en una', { skip: !hasDocx }, async () => {
+  fakeThumbnails();
+  const [a, b] = [await ownModel('Uno'), await ownModel('Dos')];
+  let running = 0, peak = 0;
+  thumbnails.setRenderer(async (pdfFile, target) => {
+    peak = Math.max(peak, ++running);
+    await new Promise((ok) => setTimeout(ok, 20));
+    fs.writeFileSync(target, 'PNG');
+    running--;
+  });
+  await Promise.all([thumb(a.id, 'hengi'), thumb(b.id, 'hengi')]);
+  assert.equal(peak, 1);
+});
+
+test('los modelos más usados salen primero, marcados, y solo sin búsqueda se reordena', { skip: !hasDocx }, async () => {
+  const { rows: [t] } = await pool.query(`INSERT INTO doc_templates (name, slug, file_path, file_name, category_id, description) VALUES ('ZZ MUY USADO', 'zz', 'oficial.docx', 'oficial.docx', 1, 'Para vender un vehículo') RETURNING id`);
+  clearCache();
+  for (const title of ['a', 'b', 'c']) {
+    await pool.query('INSERT INTO portfolio_documents (client_id, title, template_id, created_by) VALUES (1, $1, $2, $3)', [title, t.id, users.hengi]);
+  }
+  const { models } = await (await call('GET', '/api/documentos/models', 'otro')).json();
+  assert.equal(models[0].id, t.id);
+  assert.equal(models[0].most_used, true);
+  assert.equal(models[0].description, 'Para vender un vehículo');
+  assert.equal(models.find((m) => m.name === 'MODELO OFICIAL').most_used, false);
+  assert.equal(JSON.stringify(models).includes('usage_count'), false);
+  const buscados = (await (await call('GET', '/api/documentos/models?q=modelo', 'otro')).json()).models;
+  assert.equal(buscados[0].name, 'MODELO OFICIAL');
+});
+
+test('un modelo usado una sola vez no es «Más usado»', { skip: !hasDocx }, async () => {
+  const { rows: [t] } = await pool.query(`SELECT id FROM doc_templates WHERE name = 'MODELO OFICIAL'`);
+  await pool.query(`INSERT INTO portfolio_documents (client_id, title, template_id, created_by) VALUES (1, 'x', $1, $2)`, [t.id, users.hengi]);
+  const { models } = await (await call('GET', '/api/documentos/models', 'otro')).json();
+  assert.equal(models.find((m) => m.id === t.id).most_used, false);
+});
+
+const hasPoppler = spawnSync('pdftoppm', ['-v']).error === undefined;
+test('pdftoppm convierte de verdad la primera página en una imagen PNG', { skip: !hasPoppler }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'thumb-real-'));
+  const objs = ['<</Type/Catalog/Pages 2 0 R>>', '<</Type/Pages/Kids[3 0 R]/Count 1>>', '<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>'];
+  let body = '%PDF-1.4\n';
+  const offsets = objs.map((o, i) => { const at = body.length; body += `${i + 1} 0 obj${o}endobj\n`; return at; });
+  const xref = body.length;
+  body += `xref\n0 4\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}trailer<</Size 4/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF`;
+  fs.writeFileSync(path.join(dir, 'a.pdf'), body);
+  fs.copyFileSync(path.join(dir, 'a.pdf'), path.join(dir, 'c.pdf'));
+  const thumbPath = await thumbnails.modelThumbnail(999999, path.join(dir, 'c.pdf'));
+  const png = fs.readFileSync(thumbPath);
+  assert.equal(png.subarray(1, 4).toString(), 'PNG');
+  assert.equal(png.readUInt32BE(16), 480, 'ancho de la miniatura');
+  thumbnails.removeThumbnails(999999);
+});

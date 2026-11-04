@@ -9,6 +9,9 @@ RUN pip3 install --no-cache-dir --break-system-packages weasyprint python-docx
 # Documentos: Word → PDF with LibreOffice; Liberation/Carlito keep Word's fonts (Times, Arial, Calibri) metrics
 RUN apk add --no-cache libreoffice-writer font-liberation font-carlito
 
+# Documentos: first page of a model as an image, for the library's cards (pdftoppm)
+RUN apk add --no-cache poppler-utils
+
 COPY package*.json ./
 
 RUN npm install

@@ -27,7 +27,7 @@ let cache = { at: 0, list: null };
 async function listModels() {
   if (cache.list && Date.now() - cache.at < 60_000) return cache.list;
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.file_path, t.file_name, c.name AS category
+    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, c.name AS category
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id
      WHERE t.is_active = TRUE AND t.is_private = FALSE
      ORDER BY c.name NULLS LAST, t.name`
