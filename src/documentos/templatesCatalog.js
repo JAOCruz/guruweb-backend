@@ -20,6 +20,9 @@ function resolveModelPath(filePath) {
   return full.startsWith(base + path.sep) || full.startsWith(uploadsDir() + path.sep) ? full : null;
 }
 
+// An uploaded model (not one of the library's own files)
+const isUploadedModel = (filePath) => Boolean(filePath) && path.resolve(filePath).startsWith(uploadsDir() + path.sep);
+
 let cache = { at: 0, list: null };
 async function listModels() {
   if (cache.list && Date.now() - cache.at < 60_000) return cache.list;
@@ -62,4 +65,4 @@ function searchTemplates(list, q) {
 // a model went to (or came back from) the trash: the next list reads the database
 const clearCache = () => { cache = { at: 0, list: null }; };
 
-module.exports = { UPLOADS_SUBDIR, clearCache, listModels, listModelsFor, searchTemplates, resolveModelPath, templatesBaseDir };
+module.exports = { UPLOADS_SUBDIR, isUploadedModel, clearCache, listModels, listModelsFor, searchTemplates, resolveModelPath, templatesBaseDir };

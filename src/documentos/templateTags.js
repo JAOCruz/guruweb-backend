@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const pool = require('../db/pool');
 const storage = require('../utils/storage');
+const { isUploadedModel } = require('./templatesCatalog');
 
 // Documentos · Etiquetas: tagged copies of the models, with versions and the admin's approval.
 // Status of a model: untagged (no version), pending (latest version not approved), approved.
@@ -201,6 +202,14 @@ async function approve(versionId, adminId) {
   const v = await getVersion(versionId);
   if (!v) return null;
   const t = await getTemplate(v.template_id);
+  // an uploaded Word may carry a real client's data: everyone gets the reviewed version, and the original is gone.
+  // Before the publish, so a failed copy leaves the model unpublished.
+  if (isUploadedModel(t?.file_path)) {
+    const tmp = `${t.file_path}.${crypto.randomBytes(4).toString('hex')}.tmp`;
+    fs.copyFileSync(v.file_path, tmp);
+    fs.renameSync(tmp, t.file_path);
+    fs.rmSync(storage.getFilePath('template_pdf', `${t.id}.pdf`), { force: true });
+  }
   await pool.query('UPDATE template_tag_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [adminId, v.id]);
   // one statement: a private model can never be published (the database refuses it)
   await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1, is_private = FALSE, publish_requested_at = NULL WHERE id = $2', [v.id, v.template_id]);

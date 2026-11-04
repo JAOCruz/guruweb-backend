@@ -394,3 +394,43 @@ t('importar la biblioteca no desactiva ni reutiliza privados', async () => {
   assert.match(reseed, /SET is_active = false WHERE is_private = FALSE/);
   assert.match(reseed, /slug = \$1 AND category_id = \$2 AND is_private = FALSE/);
 });
+
+// Lo que se publica es la versión revisada: el Word original que subió el dueño puede traer datos reales de un cliente
+const docxText = (buffer) => {
+  const f = path.join(os.tmpdir(), `leer-${process.pid}-${Date.now()}.docx`);
+  fs.writeFileSync(f, buffer);
+  const r = spawnSync(PY, ['-c', 'import sys\nfrom docx import Document\nprint("\\n".join(p.text for p in Document(sys.argv[1]).paragraphs))', f]);
+  fs.rmSync(f);
+  return r.stdout.toString();
+};
+const publish = async (m) => {
+  const v = (await (await call('GET', `/api/documentos/tags/models/${m.id}`, 'admin')).json()).model.versions[0];
+  assert.equal((await call('POST', `/api/documentos/tags/versions/${v.id}/approve`, 'admin')).status, 200);
+};
+
+test('al publicar, los demás reciben la versión revisada y no el Word original con datos del cliente', { skip: !hasDocx }, async () => {
+  const m = await ownModel('Con datos reales');
+  const antes = await call('GET', `/api/documentos/models/${m.id}/file`, 'hengi');
+  assert.match(docxText(Buffer.from(await antes.arrayBuffer())), /ANA RUIZ/, 'el dueño ve su original mientras es privado');
+  await publish(m);
+  const r = await call('GET', `/api/documentos/models/${m.id}/file`, 'otro');
+  assert.equal(r.status, 200);
+  const texto = docxText(Buffer.from(await r.arrayBuffer()));
+  assert.doesNotMatch(texto, /ANA RUIZ/);
+  assert.match(texto, /NOMBRE_PODERDANTE/);
+});
+
+test('el Word original subido no queda en el disco después de publicar', { skip: !hasDocx }, async () => {
+  const m = await ownModel('Sin rastro');
+  await publish(m);
+  const { rows: [t] } = await pool.query('SELECT file_path FROM doc_templates WHERE id = $1', [m.id]);
+  assert.doesNotMatch(docxText(fs.readFileSync(resolveModelPath(t.file_path))), /ANA RUIZ/);
+});
+
+test('publicar un modelo de la biblioteca no toca su archivo', { skip: !hasDocx }, async () => {
+  const { rows: [t] } = await pool.query(`SELECT id, file_path FROM doc_templates WHERE name = 'MODELO OFICIAL'`);
+  const antes = fs.readFileSync(path.join(TPL_DIR, t.file_path));
+  assert.equal((await call('POST', `/api/documentos/tags/models/${t.id}/ai`, 'admin')).status, 201);
+  await publish({ id: t.id });
+  assert.ok(antes.equals(fs.readFileSync(path.join(TPL_DIR, t.file_path))));
+});
