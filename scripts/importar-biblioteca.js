@@ -126,7 +126,7 @@ async function flagForReview(templateId, name, comment, admins) {
 async function importLibrary({ baseDir = templatesBaseDir(), apply = false, log = console.log } = {}) {
   const models = await scanLibrary(baseDir);
   // los de la papelera también se emparejan, para no crearlos de nuevo: se quedan en la papelera
-  const { rows } = await pool.query('SELECT id, name, file_path, is_active, approved_tag_version_id, deleted_at FROM doc_templates');
+  const { rows } = await pool.query('SELECT id, name, file_path, is_active, approved_tag_version_id, deleted_at FROM doc_templates WHERE is_private = FALSE');
   const { rows: links } = await pool.query(`SELECT id, name, template_id FROM service_catalog WHERE active AND template_id ~ '^[0-9]+$'`);
   const linked = new Set(links.map((l) => Number(l.template_id)));
   const all = matchExisting(models, rows, linked);

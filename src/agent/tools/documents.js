@@ -205,4 +205,4 @@ async function preparar_documento(args, ctx) {
   return { documento_id: id, titulo: title, estado: 'por_aprobar' };
 }
 
-module.exports = { ver_modelo, preparar_documento, invoiceFor, isStaff };
+module.exports = { ver_modelo, preparar_documento, invoiceFor, isStaff, approvedByName };

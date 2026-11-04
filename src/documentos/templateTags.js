@@ -16,16 +16,42 @@ const LATEST_JOIN = `
   LEFT JOIN LATERAL (SELECT id, version_number FROM template_tag_versions
                      WHERE template_id = t.id ORDER BY version_number DESC LIMIT 1) lv ON TRUE`;
 
-// Every active model with its status (for lists and the summary)
-async function listStatuses() {
+// Every active model with its status (for lists and the summary). Private models stay out unless
+// asked for: with `requested`, the ones whose owner asked to publish them come too.
+async function listStatuses({ requested = false } = {}) {
   const { rows } = await pool.query(
     `SELECT t.id, t.name, t.file_path, c.name AS category, ${STATUS_SQL} AS status,
-            lv.version_number AS latest_version, t.approved_tag_version_id,
+            lv.version_number AS latest_version, t.approved_tag_version_id, t.is_private, t.publish_requested_at,
+            CASE WHEN t.is_private THEN COALESCE(NULLIF(ou.name, ''), ou.username) END AS owner_name,
             (SELECT COUNT(*)::int FROM template_corrections tc WHERE tc.template_id = t.id AND tc.status = 'pending') AS pending_corrections
-     FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id ${LATEST_JOIN}
-     WHERE t.is_active = TRUE ORDER BY c.name NULLS LAST, t.name`
+     FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users ou ON ou.id = t.created_by ${LATEST_JOIN}
+     WHERE t.is_active = TRUE AND (t.is_private = FALSE OR ($1::boolean AND t.publish_requested_at IS NOT NULL))
+     ORDER BY c.name NULLS LAST, t.name`,
+    [requested]
   );
   return rows;
+}
+
+// The private models this user can see: an admin all of them, anyone else only their own. Never cached.
+async function listPrivate(user) {
+  const { rows } = await pool.query(
+    `SELECT t.id, t.name, t.file_path, t.file_name, c.name AS category, ${STATUS_SQL} AS status,
+            t.created_by, t.publish_requested_at, COALESCE(NULLIF(ou.name, ''), ou.username) AS owner_name
+     FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users ou ON ou.id = t.created_by ${LATEST_JOIN}
+     WHERE t.is_active = TRUE AND t.is_private AND ($1::boolean OR t.created_by = $2)
+     ORDER BY t.name`,
+    [user?.role === 'admin', user?.id ?? null]
+  );
+  return rows;
+}
+
+// What this user can do with this model: 'admin', 'owner' (a private model they uploaded),
+// 'employee' (a model that is not private) or null (someone else's private model).
+function accessFor(user, t) {
+  if (!user || !t) return null;
+  if (user.role === 'admin') return 'admin';
+  if (!t.is_private) return 'employee';
+  return t.created_by != null && t.created_by === user.id ? 'owner' : null;
 }
 
 const VERSION_SELECT = `
@@ -53,23 +79,29 @@ async function getVersion(id) {
 
 async function getTemplate(templateId) {
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.file_path, t.is_active, t.approved_tag_version_id, c.name AS category
+    `SELECT t.id, t.name, t.file_path, t.is_active, t.approved_tag_version_id, t.is_private, t.created_by, t.publish_requested_at, c.name AS category
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id WHERE t.id = $1`,
     [Number(templateId)]
   );
   return rows[0] || null;
 }
 
-// The model with its versions. Employees only get the approved version (null when there is none).
-async function getModel(templateId, { admin }) {
+// The model with its versions. Employees only get the approved version (null when there is none);
+// the owner of a private model sees it as an admin does. Pass `user`; `admin` is for internal calls.
+async function getModel(templateId, { admin, user } = {}) {
   const t = await getTemplate(templateId);
   if (!t || !t.is_active) return null;
+  const access = accessFor(user || { role: admin ? 'admin' : 'employee' }, t);
+  if (!access) return null;
   const { rows: versions } = await pool.query(`${VERSION_SELECT} WHERE v.template_id = $1 ORDER BY v.version_number DESC`, [t.id]);
   const approved = versions.find((v) => v.id === t.approved_tag_version_id) || null;
   const latest = versions[0] || null;
   const status = !latest ? 'untagged' : latest === approved ? 'approved' : 'pending';
-  const base = { id: t.id, name: t.name, category: t.category, status };
-  if (!admin) {
+  const base = {
+    id: t.id, name: t.name, category: t.category, status,
+    is_private: t.is_private === true, can_manage: access !== 'employee', can_publish: access === 'admin', publish_requested_at: t.publish_requested_at || null,
+  };
+  if (access === 'employee') {
     if (!approved) return null;
     return { ...base, status: 'approved', current: employeeVersion(approved), approved: employeeVersion(approved) };
   }
@@ -168,9 +200,11 @@ async function createVersion({ templateId, localFile, tags, skipped = [], source
 async function approve(versionId, adminId) {
   const v = await getVersion(versionId);
   if (!v) return null;
+  const t = await getTemplate(v.template_id);
   await pool.query('UPDATE template_tag_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [adminId, v.id]);
-  await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1 WHERE id = $2', [v.id, v.template_id]);
-  return v;
+  // one statement: a private model can never be published (the database refuses it)
+  await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1, is_private = FALSE, publish_requested_at = NULL WHERE id = $2', [v.id, v.template_id]);
+  return { ...v, was_private: t?.is_private === true, owner_id: t?.created_by ?? null };
 }
 
 // Who saved the model's version from that client document (for the approval notice)
@@ -185,4 +219,4 @@ async function originAuthor(templateId, documentId) {
 
 const isWord = (filePath) => path.extname(filePath || '').toLowerCase() === '.docx';
 
-module.exports = { trash, untrash, listTrash, listStatuses, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };
+module.exports = { trash, untrash, listTrash, listStatuses, listPrivate, accessFor, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };

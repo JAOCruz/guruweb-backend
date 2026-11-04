@@ -36,7 +36,7 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions, portfolio_versions, portfolio_documents, clients, doc_templates, doc_categories, service_catalog CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, user_id INT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT, slug TEXT, parent_id INT, sort_order INT DEFAULT 0)`);
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, slug TEXT, description TEXT, file_path TEXT, file_name TEXT,
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, slug TEXT, description TEXT, file_path TEXT, file_name TEXT,
     doc_type TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE, sort_order INT DEFAULT 0, updated_at TIMESTAMPTZ)`);
   await pool.query(`CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, active BOOLEAN DEFAULT TRUE, template_id TEXT)`);
   await runSqlFile('migrations/20260929_portfolio.sql');

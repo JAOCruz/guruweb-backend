@@ -42,7 +42,7 @@ async function resolveModels(entries) {
   const models = [];
   for (const e of entries) {
     const { rows } = await pool.query(
-      'SELECT id, name, file_path FROM doc_templates WHERE is_active = TRUE AND btrim(name) = $1 ORDER BY id', [e.modelo]
+      'SELECT id, name, file_path FROM doc_templates WHERE is_active = TRUE AND is_private = FALSE AND btrim(name) = $1 ORDER BY id', [e.modelo]
     );
     if (rows.length !== 1) missing.push(rows.length ? `${e.modelo} (${rows.length} modelos activos con ese nombre)` : e.modelo);
     else models.push({ ...rows[0], servicio: e.servicio });

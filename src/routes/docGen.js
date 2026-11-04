@@ -24,7 +24,7 @@ router.get('/categories', async (req, res) => {
           'required_roles', t.required_roles
         ) ORDER BY t.sort_order, t.name) FILTER (WHERE t.id IS NOT NULL) AS templates
       FROM doc_categories c
-      LEFT JOIN doc_templates t ON t.category_id = c.id AND t.is_active = true
+      LEFT JOIN doc_templates t ON t.category_id = c.id AND t.is_active = true AND t.is_private = FALSE
       GROUP BY c.id
       ORDER BY c.sort_order, c.name
     `);
@@ -45,7 +45,7 @@ router.get('/templates', async (req, res) => {
         c.name AS category_name, c.slug AS category_slug
       FROM doc_templates t
       LEFT JOIN doc_categories c ON c.id = t.category_id
-      WHERE t.is_active = true
+      WHERE t.is_active = true AND t.is_private = FALSE
     `;
     const params = [];
     if (search) {
@@ -72,7 +72,7 @@ router.get('/templates/:id', async (req, res) => {
       SELECT t.*, c.name AS category_name
       FROM doc_templates t
       LEFT JOIN doc_categories c ON c.id = t.category_id
-      WHERE t.id = $1
+      WHERE t.id = $1 AND t.is_private = FALSE
     `, [req.params.id]);
 
     if (!template) return res.status(404).json({ error: 'Template not found' });
@@ -117,6 +117,8 @@ router.post('/sessions', async (req, res) => {
   try {
     const { templateId, clientId, phone } = req.body;
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
+    const { rows: allowed } = await pool.query('SELECT 1 FROM doc_templates WHERE id = $1 AND is_private = FALSE', [templateId]);
+    if (!allowed.length) return res.status(404).json({ error: 'Template not found' });
 
     const { rows: [session] } = await pool.query(`
       INSERT INTO doc_generation_sessions (template_id, client_id, phone, status, collected_data, assigned_roles)

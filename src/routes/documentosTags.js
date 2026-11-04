@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const { authenticate, requireRole } = require('../middleware/auth');
 const pool = require('../db/pool');
 const { logActivity, safeLog } = require('../services/activityLog');
-const { resolveModelPath, clearCache } = require('../documentos/templatesCatalog');
+const { resolveModelPath, clearCache, UPLOADS_SUBDIR } = require('../documentos/templatesCatalog');
+const storage = require('../utils/storage');
 const Corrections = require('../documentos/templateCorrections');
 const { listBlocks, applySpans, applyOps, fillTags, listTags, sanitizeDocx } = require('../documentos/docxText');
 const aiDocs = require('../documentos/aiDocs');
@@ -26,6 +27,17 @@ router.use(authenticate);
 router.param('id', (req, res, next, id) => (/^\d+$/.test(id) ? next() : res.status(404).json({ error: 'No encontrado', code: 'NOT_FOUND' })));
 const admin = requireRole('admin');
 const isAdmin = (req) => req.user.role === 'admin';
+// An admin, or the owner of this private model. Someone else's private model does not exist for them.
+const requireManage = async (req, res, next) => {
+  try {
+    const access = Tags.accessFor(req.user, await Tags.getTemplate(req.params.id));
+    if (access === 'admin' || access === 'owner') return next();
+    if (access === 'employee') return res.status(403).json({ error: 'Insufficient permissions' });
+    return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
+  } catch (err) {
+    return fail(res, err, 'access');
+  }
+};
 
 const BLANK = '________';
 const sendError = (res, status, code, error, extra = {}) => res.status(status).json({ error, code, ...extra });
@@ -176,7 +188,7 @@ async function runBatch(userId) {
 
 router.get('/summary', admin, async (req, res) => {
   try {
-    const all = await Tags.listStatuses();
+    const all = await Tags.listStatuses({ requested: true });
     const counts = { untagged: 0, pending: 0, approved: 0 };
     for (const m of all) counts[m.status] += 1;
     const models = all.map(({ file_path, ...m }) => ({ ...m, taggable: Boolean(originalFile({ file_path })) }));
@@ -201,7 +213,7 @@ router.post('/batch', admin, (req, res) => {
 
 router.get('/batch', admin, (req, res) => res.json({ batch }));
 
-router.post('/models/:id/ai', admin, async (req, res) => {
+router.post('/models/:id/ai', requireManage, async (req, res) => {
   try {
     const v = await tagModel(Number(req.params.id), req.user.id);
     const model = await Tags.getModel(req.params.id, { admin: true });
@@ -217,8 +229,8 @@ router.post('/models/:id/ai', admin, async (req, res) => {
 
 router.get('/models/:id', async (req, res) => {
   try {
-    const model = await Tags.getModel(req.params.id, { admin: isAdmin(req) });
-    if (!model) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está aprobado para llenar');
+    const model = await Tags.getModel(req.params.id, { user: req.user });
+    if (!model) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está publicado para llenar');
     res.json({ model });
   } catch (err) {
     return fail(res, err, 'model');
@@ -229,7 +241,8 @@ router.get('/versions/:id/file', async (req, res) => {
   try {
     const v = await Tags.getVersion(req.params.id);
     const t = v && (await Tags.getTemplate(v.template_id));
-    const allowed = v && t && (isAdmin(req) || (t.is_active && t.approved_tag_version_id === v.id));
+    const access = t && Tags.accessFor(req.user, t);
+    const allowed = v && t && (access === 'admin' || access === 'owner' || (access === 'employee' && t.is_active && t.approved_tag_version_id === v.id));
     if (!allowed || !fs.existsSync(v.file_path)) return sendError(res, 404, 'NOT_FOUND', 'Versión no encontrada');
     res.attachment(`${t.name.replace(/[\\/:*?"<>|]+/g, ' ').trim()} (etiquetas v${v.version_number}).docx`);
     res.sendFile(path.resolve(v.file_path));
@@ -321,7 +334,7 @@ async function bodyEdit(base, ops, temps) {
 // Selections are tagged first (they point at the base text); then renames, removals and labels are
 // applied to the tag list, and the file gets them in one pass. Each tag keeps the original text of
 // each of its places (in document order), so removing a tag puts back exactly what was there.
-router.post('/models/:id/edit', admin, async (req, res) => {
+router.post('/models/:id/edit', requireManage, async (req, res) => {
   const { base_version_id: baseId, ops = [], notes = null, correction_id: correctionId = null } = req.body || {};
   const temps = [];
   try {
@@ -449,7 +462,7 @@ router.post('/models/:id/edit', admin, async (req, res) => {
 
 // "Cambiar con IA": the AI proposes changes to the wording of the latest version; nothing is saved
 // here. The admin confirms the ones they want and they come back through /edit as a new version.
-router.post('/models/:id/ai-edit', admin, async (req, res) => {
+router.post('/models/:id/ai-edit', requireManage, async (req, res) => {
   const instructions = String((req.body || {}).instructions || '').trim();
   if (instructions.length < 3) return sendError(res, 400, 'INVALID_EDIT', 'Escribe qué cambios legales quieres');
   try {
@@ -493,7 +506,7 @@ router.post('/models/:id/ai-edit', admin, async (req, res) => {
   }
 });
 
-router.post('/models/:id/restore', admin, async (req, res) => {
+router.post('/models/:id/restore', requireManage, async (req, res) => {
   try {
     const templateId = Number(req.params.id);
     const old = await Tags.getVersion((req.body || {}).version_id);
@@ -524,13 +537,24 @@ router.post('/versions/:id/approve', admin, async (req, res) => {
       category: 'documentos', action: 'etiquetas.approve', entityType: 'modelo', entityId: v.template_id,
       summary: `Aprobó las etiquetas v${v.version_number} de «${model.name}»`,
     }));
+    clearCache();
+    // whoever uploaded a private model learns it is now everyone's
+    if (v.was_private && v.owner_id && v.owner_id !== req.user.id) {
+      await notifyUsers([v.owner_id], {
+        type: 'approval',
+        title: '✅ Modelo publicado',
+        message: `Tu modelo «${model.name}» fue publicado: desde ahora todos los usuarios lo pueden usar.`,
+        link: '/documents?tab=biblioteca',
+        metadata: { template_id: v.template_id, version_id: v.id },
+      });
+    }
     // the digitador who saved it from a document learns it is now everyone's model (also after the admin's fixes)
     const author = v.origin_document_id && await Tags.originAuthor(v.template_id, v.origin_document_id);
     if (author && author !== req.user.id) {
       await notifyUsers([author], {
         type: 'approval',
-        title: '✅ Versión de modelo aprobada',
-        message: `Tu versión de «${model.name}» (v${v.version_number}) fue aprobada: desde ahora todos la usan para llenar.`,
+        title: '✅ Versión de modelo publicada',
+        message: `Tu versión de «${model.name}» (v${v.version_number}) fue publicada: desde ahora todos la usan para llenar.`,
         link: '/documents',
         metadata: { template_id: v.template_id, version_id: v.id },
       });
@@ -571,8 +595,9 @@ router.post('/models/:id/corrections', async (req, res) => {
   if (!comment || comment.length < 3) return sendError(res, 400, 'INVALID_CORRECTION', 'Escribe qué está mal o qué se puede mejorar');
   try {
     // what the person can see: employees the approved version, admins any version of the model
-    const model = await Tags.getModel(req.params.id, { admin: isAdmin(req) });
-    if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está aprobado');
+    const model = await Tags.getModel(req.params.id, { user: req.user });
+    if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está publicado');
+    if (model.is_private) return sendError(res, 400, 'PRIVATE_MODEL', 'Este modelo es privado: edítalo directamente');
     const asked = Number(body.version_id);
     const version = isAdmin(req) && asked ? model.versions.find((v) => v.id === asked) : (model.approved || model.current);
     if (!version) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este modelo');
@@ -638,8 +663,93 @@ router.post('/corrections/:id/dismiss', admin, async (req, res) => {
   }
 });
 
+// ── Subir un modelo propio: empieza privado (su dueño y los admins lo usan sin aprobación) ──
+const MODEL_MAX_BYTES = 20 * 1024 * 1024;
+const modelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MODEL_MAX_BYTES, files: 1 } });
+const slugify = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 200);
+
+router.get('/categories', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.id, COALESCE(p.name || ' › ' || c.name, c.name) AS name
+       FROM doc_categories c LEFT JOIN doc_categories p ON p.id = c.parent_id ORDER BY 2`
+    );
+    res.json({ categories: rows });
+  } catch (err) {
+    return fail(res, err, 'categories');
+  }
+});
+
+router.post('/models', (req, res) =>
+  modelUpload.single('file')(req, res, async (err) => {
+    if (err) return sendError(res, 400, err.code === 'LIMIT_FILE_SIZE' ? 'FILE_TOO_LARGE' : 'INVALID_FILE', err.code === 'LIMIT_FILE_SIZE' ? 'El archivo pasa de 20 MB' : 'No se pudo leer el archivo');
+    const file = req.file;
+    const isDocx = file && path.extname(file.originalname || '').toLowerCase() === '.docx' && file.buffer.subarray(0, 4).toString('latin1') === 'PK\x03\x04';
+    if (!isDocx) return sendError(res, 400, 'INVALID_FILE', 'Sube un documento Word (.docx)');
+    const name = String(req.body.name || '').trim().slice(0, 200);
+    if (!name) return sendError(res, 400, 'NAME_REQUIRED', 'Ponle un nombre al modelo');
+    const categoryId = Number(req.body.category_id);
+    const temps = [tmpDocx(), tmpDocx()];
+    let stored = null;
+    try {
+      const { rows: cats } = Number.isInteger(categoryId) && categoryId > 0 ? await pool.query('SELECT id FROM doc_categories WHERE id = $1', [categoryId]) : { rows: [] };
+      if (!cats.length) return sendError(res, 400, 'INVALID_CATEGORY', 'Elige una categoría');
+      fs.writeFileSync(temps[0], file.buffer);
+      // what a Word carries outside its text (tracked changes, comments, author) never reaches the stored file
+      try {
+        await sanitizeDocx(temps[0], temps[1]);
+      } catch (e) {
+        console.error('[etiquetas] upload sanitize:', e.message);
+        return sendError(res, 400, 'INVALID_FILE', 'Ese archivo no es un Word válido');
+      }
+      const unique = crypto.randomBytes(6).toString('hex');
+      const safeName = path.basename(file.originalname).replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(-120);
+      stored = storage.saveLocalFile(temps[1], UPLOADS_SUBDIR, `${Date.now()}-${unique}.docx`);
+      // the private slug never collides with one of the library scripts
+      const { rows: [row] } = await pool.query(
+        `INSERT INTO doc_templates (name, slug, category_id, file_path, file_name, doc_type, is_active, is_private, created_by)
+         VALUES ($1, $2, $3, $4, $5, 'docx', TRUE, TRUE, $6) RETURNING id`,
+        [name, `${slugify(name) || 'modelo'}-privado-${unique}`, categoryId, stored, safeName, req.user.id]
+      );
+      await safeLog(() => logActivity(req, {
+        category: 'documentos', action: 'modelo.upload', entityType: 'modelo', entityId: row.id, summary: `Subió su modelo privado «${name}»`,
+      }));
+      res.status(201).json({ model: await Tags.getModel(row.id, { user: req.user }) });
+    } catch (e) {
+      if (stored) fs.rm(stored, { force: true }, () => {});
+      return fail(res, e, 'upload');
+    } finally {
+      for (const f of temps) fs.rm(f, { force: true }, () => {});
+    }
+  })
+);
+
+router.post('/models/:id/request-publish', requireManage, async (req, res) => {
+  try {
+    const t = await Tags.getTemplate(req.params.id);
+    if (!t.is_private || !t.is_active) return sendError(res, 400, 'NOT_PRIVATE', 'Este modelo ya está publicado');
+    if (!(await Tags.latestVersionId(t.id))) return sendError(res, 400, 'NO_TAGS', 'Etiquétalo primero para poder publicarlo');
+    await pool.query('UPDATE doc_templates SET publish_requested_at = NOW() WHERE id = $1', [t.id]);
+    const { rows: [me] } = await pool.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
+    const admins = (await activeAdminIds()).filter((id) => id !== req.user.id);
+    if (admins.length) await notifyUsers(admins, {
+      type: 'approval',
+      title: '📤 Modelo por publicar',
+      message: `${me?.name || me?.username || 'Un usuario'} pidió publicar su modelo «${t.name}». Revísalo y publícalo para que todos lo usen.`,
+      link: `/documents?tab=etiquetas&model=${t.id}`,
+      metadata: { template_id: t.id },
+    });
+    await safeLog(() => logActivity(req, {
+      category: 'documentos', action: 'modelo.request_publish', entityType: 'modelo', entityId: t.id, summary: `Pidió publicar el modelo «${t.name}»`,
+    }));
+    res.json({ model: await Tags.getModel(t.id, { user: req.user }) });
+  } catch (err) {
+    return fail(res, err, 'request-publish');
+  }
+});
+
 // ── Trash: "Eliminar" hides the model everywhere (lists, the website, the bot); "Restaurar" brings it back
-router.delete('/models/:id', admin, async (req, res) => {
+router.delete('/models/:id', requireManage, async (req, res) => {
   try {
     const t = await Tags.trash(req.params.id, req.user.id);
     if (!t) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
@@ -685,7 +795,7 @@ router.post('/documents/:id/as-model', async (req, res) => {
     const doc = await Portfolio.getDocument(req.user, req.params.id);
     if (!doc) return sendError(res, 404, 'NOT_FOUND', 'Documento no encontrado');
     const t = doc.template_id && await Tags.getTemplate(doc.template_id);
-    if (!t || !t.is_active) return sendError(res, 400, 'NO_MODEL', 'Este documento no salió de un modelo de nuestra selección');
+    if (!t || !t.is_active || !Tags.accessFor(req.user, t)) return sendError(res, 400, 'NO_MODEL', 'Este documento no salió de un modelo de nuestra selección');
     const latestWord = doc.versions.find((v) => v.mime_type === DOCX);
     const version = latestWord && await Portfolio.getVersion(req.user, latestWord.id);
     if (!version || !fs.existsSync(version.file_path)) return sendError(res, 400, 'NO_WORD', 'Este documento no tiene un Word (.docx) para guardarlo como modelo');
@@ -706,11 +816,12 @@ router.post('/documents/:id/as-model', async (req, res) => {
 
     const { rows: [me] } = await pool.query('SELECT name, username FROM users WHERE id = $1', [req.user.id]);
     const who = me?.name || me?.username || 'Un empleado';
-    const admins = (await activeAdminIds()).filter((id) => id !== req.user.id);
-    await notifyUsers(admins, {
+    // a private model is edited by its owner: nobody has to review it until they ask to publish it
+    const admins = t.is_private ? [] : (await activeAdminIds()).filter((id) => id !== req.user.id);
+    if (admins.length) await notifyUsers(admins, {
       type: 'approval',
-      title: '🧩 Versión de modelo por aprobar',
-      message: `${who} guardó una nueva versión de «${t.name}» (v${v.version_number}) desde un documento personalizado. Revísala y apruébala para que todos la usen.`,
+      title: '🧩 Versión de modelo por publicar',
+      message: `${who} guardó una nueva versión de «${t.name}» (v${v.version_number}) desde un documento personalizado. Revísala y publícala para que todos la usen.`,
       link: `/documents?tab=etiquetas&model=${t.id}`,
       metadata: { template_id: t.id, version_id: v.id },
     });
@@ -730,7 +841,7 @@ const ATTACH_OK = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf|audio\/(m
 
 async function versionFor(req, model) {
   const asked = Number((req.body || {}).version_id);
-  if (isAdmin(req) && asked) return model.versions.find((v) => v.id === asked) || null;
+  if (model.versions && asked) return model.versions.find((v) => v.id === asked) || null;
   return model.approved || model.current;
 }
 
@@ -740,8 +851,8 @@ router.post('/models/:id/extract', (req, res) =>
     const files = req.files || [];
     if (files.some((f) => !ATTACH_OK.test(f.mimetype))) return sendError(res, 400, 'INVALID_FILE', 'Adjunta fotos, PDF o audios');
     try {
-      const model = await Tags.getModel(req.params.id, { admin: isAdmin(req) });
-      if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está aprobado para llenar');
+      const model = await Tags.getModel(req.params.id, { user: req.user });
+      if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está publicado para llenar');
       const version = await versionFor(req, model);
       if (!version) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este modelo');
       const clientId = Number(req.body.client_id);
@@ -759,8 +870,8 @@ router.post('/models/:id/extract', (req, res) =>
 router.post('/models/:id/fill', async (req, res) => {
   const { values = {}, client_role: role = null } = req.body || {};
   try {
-    const model = await Tags.getModel(req.params.id, { admin: isAdmin(req) });
-    if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está aprobado para llenar');
+    const model = await Tags.getModel(req.params.id, { user: req.user });
+    if (!model || !model.current) return sendError(res, 404, 'NOT_FOUND', 'Este modelo todavía no está publicado para llenar');
     const chosen = await versionFor(req, model);
     if (!chosen) return sendError(res, 400, 'INVALID_VERSION', 'Esa versión no es de este modelo');
     const clientId = Number(req.body.client_id);

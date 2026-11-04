@@ -45,7 +45,7 @@ async function main() {
     await client.query('BEGIN');
 
     // Deactivate all existing templates; matched ones will be re-activated
-    await client.query('UPDATE doc_templates SET is_active = false');
+    await client.query('UPDATE doc_templates SET is_active = false WHERE is_private = FALSE');
 
     for (const doc of docs) {
       const categories = [doc.category, doc.subcategory, doc.sub_subcategory].filter(Boolean);
@@ -60,7 +60,7 @@ async function main() {
 
       // Try to match by current file_path or by slug+category; otherwise insert
       const { rows: existing } = await client.query(
-        `SELECT id FROM doc_templates WHERE slug = $1 AND category_id = $2 LIMIT 1`,
+        `SELECT id FROM doc_templates WHERE slug = $1 AND category_id = $2 AND is_private = FALSE LIMIT 1`,
         [slug, parentId]
       );
 

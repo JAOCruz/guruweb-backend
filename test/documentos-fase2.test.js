@@ -39,7 +39,9 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS legal_profiles, portfolio_versions, portfolio_documents, clients, doc_template_variables, doc_variables, doc_templates, doc_categories CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, email TEXT, address TEXT, notes TEXT, user_id INT, source TEXT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions CASCADE');
+  await runSqlFile('migrations/20261002_template_tags.sql'); // la lista de modelos lee las versiones de los privados
   await pool.query(`CREATE TABLE doc_variables (id SERIAL PRIMARY KEY, tag TEXT, description TEXT, is_rol_dynamic BOOLEAN DEFAULT FALSE, rol_type TEXT)`);
   await pool.query(`CREATE TABLE doc_template_variables (id SERIAL PRIMARY KEY, template_id INT, variable_id INT, is_required BOOLEAN DEFAULT TRUE, sort_order INT DEFAULT 0)`);
   makeDocx(path.join(TPL_DIR, 'venta.docx'), ['ACTO DE VENTA', 'Yo, JOSE ANTONIO PEREZ, cédula 001-0000000-1, vendo a ________ el vehículo.', 'PRIMERO: El precio es RD$100,000.']);

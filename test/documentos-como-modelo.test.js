@@ -98,7 +98,7 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions, legal_profiles, portfolio_versions, portfolio_documents, clients, doc_template_variables, doc_variables, doc_templates, doc_categories CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, email TEXT, address TEXT, notes TEXT, user_id INT, source TEXT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
   await pool.query(`CREATE TABLE doc_variables (id SERIAL PRIMARY KEY, tag TEXT, description TEXT, is_rol_dynamic BOOLEAN DEFAULT FALSE, rol_type TEXT)`);
   await pool.query(`CREATE TABLE doc_template_variables (id SERIAL PRIMARY KEY, template_id INT, variable_id INT, is_required BOOLEAN DEFAULT TRUE, sort_order INT DEFAULT 0)`);
   makeDocx(path.join(TPL_DIR, 'poder.docx'), ['PODER ESPECIAL', 'Yo, ANA RUIZ, cédula 001-2222222-3, otorgo poder a LUIS DIAZ.', 'Hecho en Santo Domingo.']);
@@ -172,7 +172,7 @@ test('a digitador saves their document as a new pending version of the model; th
   for (const who of ['admin', 'admin2']) {
     const [n] = await notificationsOf(who);
     assert.equal(n.type, 'approval');
-    assert.match(n.title, /por aprobar/);
+    assert.match(n.title, /por publicar/);
     assert.match(n.message, /Hengi/);
     assert.match(n.message, /PODER ESPECIAL/);
     assert.doesNotMatch(n.message, /Juan|JUAN/);
@@ -204,7 +204,7 @@ test('the admin sees where the version came from; once approved, employees fill 
 
   // the author learns it was approved
   const [n] = await notificationsOf('hengi');
-  assert.match(n.title, /aprobada/);
+  assert.match(n.title, /publicada/);
   assert.equal(n.link, '/documents');
 });
 
@@ -279,7 +279,7 @@ test('employees never get tag examples: an admin who tags a leftover cédula doe
   // the fixed version keeps where it came from, and its author hears it was approved
   const { rows: [row] } = await pool.query('SELECT origin_document_id FROM template_tag_versions WHERE id = $1', [fixed.id]);
   assert.equal(row.origin_document_id, docId);
-  assert.match((await notificationsOf('hengi'))[0].title, /aprobada/);
+  assert.match((await notificationsOf('hengi'))[0].title, /publicada/);
 });
 
 test('a value the AI replaced (another person) left elsewhere in the text is reported too', opts, async () => {

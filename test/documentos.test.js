@@ -42,7 +42,9 @@ test.before(async () => {
   await pool.query('DROP TABLE IF EXISTS portfolio_versions, portfolio_documents, clients, doc_templates, doc_categories CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, email TEXT, address TEXT, notes TEXT, user_id INT, source TEXT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions CASCADE');
+  await runSqlFile('migrations/20261002_template_tags.sql'); // la lista de modelos lee las versiones de los privados
   await pool.query(`INSERT INTO doc_categories (name) VALUES ('DECLARACIONES'), ('CONTRATOS')`);
   fs.mkdirSync(path.join(TPL_DIR, 'DECLARACIONES'), { recursive: true });
   fs.writeFileSync(path.join(TPL_DIR, 'DECLARACIONES', 'DECLARACION JURADA DE INGRESOS.docx'), DOCX);

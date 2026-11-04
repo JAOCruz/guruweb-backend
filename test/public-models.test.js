@@ -11,7 +11,7 @@ test.before(async () => {
   await resetDb();
   await pool.query('DROP TABLE IF EXISTS doc_templates, doc_categories CASCADE');
   await pool.query('CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)');
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, description TEXT, file_path TEXT, file_name TEXT,
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, description TEXT, file_path TEXT, file_name TEXT,
     category_id INT, is_active BOOLEAN DEFAULT TRUE, approved_tag_version_id INT)`);
   await pool.query(`INSERT INTO doc_categories (name) VALUES ('PODERES'), ('BIENES TRASLATIVOS')`);
   await pool.query(`INSERT INTO doc_templates (name, file_path, category_id, is_active, approved_tag_version_id) VALUES

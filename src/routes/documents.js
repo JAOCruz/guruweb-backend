@@ -26,7 +26,7 @@ router.get('/index', async (req, res) => {
       FROM doc_templates t
       LEFT JOIN doc_categories c ON c.id = t.category_id
       LEFT JOIN doc_categories p ON p.id = c.parent_id
-      WHERE t.is_active = true
+      WHERE t.is_active = true AND t.is_private = FALSE
       ORDER BY c.sort_order, c.name, t.sort_order, t.name
     `);
 

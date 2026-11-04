@@ -7,7 +7,7 @@ const { authenticate } = require('../middleware/auth');
 const storage = require('../utils/storage');
 const Client = require('../models/Client');
 const { logActivity, safeLog } = require('../services/activityLog');
-const { listModels, searchTemplates, resolveModelPath } = require('../documentos/templatesCatalog');
+const { listModelsFor, searchTemplates, resolveModelPath } = require('../documentos/templatesCatalog');
 const { aiSearchTemplates } = require('../documentos/aiSearch');
 const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
@@ -80,13 +80,18 @@ function pdfError(res, err) {
 // ── Nuestra selección ──
 router.get('/models', async (req, res) => {
   try {
-    const all = await listModels();
+    const all = await listModelsFor(req.user);
     // tag status (Etiquetas); before its migration runs the list still works, without status
     // employees only learn whether a model is approved to fill
     const admin = req.user.role === 'admin';
     const status = new Map((await Tags.listStatuses().catch(() => []))
       .map((m) => [m.id, admin ? m.status : m.approved_tag_version_id ? 'approved' : 'untagged']));
-    const models = searchTemplates(all, req.query.q || '').map(({ file_path, ...m }) => ({ ...m, tag_status: status.get(m.id) || 'untagged' }));
+    const models = searchTemplates(all, req.query.q || '').map(({ file_path, created_by, status: own, ...m }) => ({
+      ...m,
+      is_private: m.is_private === true,
+      can_manage: admin || m.is_private === true, // a private model only reaches this list for its owner or an admin
+      tag_status: m.is_private ? own : status.get(m.id) || 'untagged',
+    }));
     res.json({ models });
   } catch (err) {
     console.error('[documentos] models error:', err);
@@ -98,8 +103,8 @@ router.post('/models/ai-search', async (req, res) => {
   const query = String((req.body || {}).query || '').trim();
   if (query.length < 3) return sendError(res, 400, 'QUERY_TOO_SHORT', 'Describe un poco más lo que necesitas');
   try {
-    const picks = await aiSearchTemplates(query, await listModels());
-    res.json({ models: picks.map(({ file_path, ...m }) => m) });
+    const picks = await aiSearchTemplates(query, await listModelsFor(req.user));
+    res.json({ models: picks.map(({ file_path, created_by, ...m }) => m) });
   } catch (err) {
     console.error('[documentos] AI search error:', err.message);
     sendError(res, 502, 'AI_UNAVAILABLE', 'La IA no respondió; intenta de nuevo o busca por nombre');
@@ -108,7 +113,7 @@ router.post('/models/ai-search', async (req, res) => {
 
 router.get('/models/:id/file', async (req, res) => {
   try {
-    const model = (await listModels()).find((m) => m.id === Number(req.params.id));
+    const model = (await listModelsFor(req.user)).find((m) => m.id === Number(req.params.id));
     const file = model && resolveModelPath(model.file_path);
     if (!file || !fs.existsSync(file)) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
     const baseName = model.name.replace(/[\\/:*?"<>|]+/g, ' ').trim();
@@ -184,6 +189,10 @@ router.post('/documents', withUpload(async (req, res) => {
   const clientId = hasClient ? Number(req.body.client_id) : null;
   if (!title) return sendError(res, 400, 'TITLE_REQUIRED', 'Ponle un nombre al documento');
   try {
+    if (req.body.template_id) {
+      const t = await Tags.getTemplate(Number(req.body.template_id));
+      if (!t || !Tags.accessFor(req.user, t)) return sendError(res, 400, 'INVALID_MODEL', 'Ese modelo no existe');
+    }
     const { rows } = hasClient ? await require('../db/pool').query('SELECT id, name FROM clients WHERE id = $1', [clientId]) : { rows: [{ name: 'sin cliente' }] };
     if (!rows.length) return sendError(res, 400, 'INVALID_CLIENT', 'Ese cliente no existe; elige otro o déjalo sin cliente');
     const id = await Portfolio.createDocument({
@@ -389,7 +398,7 @@ async function resolveSource(user, { model_id, version_id }) {
     if (v.mime_type !== DOCX) return { error: [400, 'NO_WORD', 'Solo se puede personalizar una versión en Word (.docx)'] };
     return { file: v.file_path, title: v.title, version: v, documentId: v.document_id };
   }
-  const model = (await listModels()).find((m) => m.id === Number(model_id));
+  const model = (await listModelsFor(user)).find((m) => m.id === Number(model_id));
   const file = model && resolveModelPath(model.file_path);
   if (!file || !fs.existsSync(file)) return { error: [404, 'NOT_FOUND', 'Modelo no encontrado'] };
   return { file, title: model.name, model };

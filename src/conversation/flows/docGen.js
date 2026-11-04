@@ -33,7 +33,7 @@ async function getCategories() {
     SELECT c.id, c.name, c.slug,
       COUNT(t.id) AS template_count
     FROM doc_categories c
-    LEFT JOIN doc_templates t ON t.category_id = c.id AND t.is_active = true
+    LEFT JOIN doc_templates t ON t.category_id = c.id AND t.is_active = true AND t.is_private = FALSE
     WHERE c.parent_id IS NULL
     GROUP BY c.id
     ORDER BY c.sort_order, c.name
@@ -46,7 +46,7 @@ async function getTemplatesByCategory(categorySlug) {
     SELECT t.id, t.name, t.slug, t.description, t.file_path
     FROM doc_templates t
     JOIN doc_categories c ON c.id = t.category_id
-    WHERE c.slug = $1 AND t.is_active = true
+    WHERE c.slug = $1 AND t.is_active = true AND t.is_private = FALSE
     ORDER BY t.sort_order, t.name
   `, [categorySlug]);
   return rows;
@@ -57,7 +57,7 @@ async function getTemplateDetail(templateId) {
     SELECT t.*, c.name AS category_name
     FROM doc_templates t
     LEFT JOIN doc_categories c ON c.id = t.category_id
-    WHERE t.id = $1
+    WHERE t.id = $1 AND t.is_private = FALSE
   `, [templateId]);
   return template;
 }
@@ -569,4 +569,4 @@ print(output)
   }
 }
 
-module.exports = { handle };
+module.exports = { handle, getCategories, getTemplatesByCategory, getTemplateDetail };

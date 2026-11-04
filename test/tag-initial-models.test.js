@@ -27,7 +27,7 @@ test.beforeEach(async () => {
   await pool.query(`CREATE TABLE invoices (id SERIAL PRIMARY KEY)`);
   await runSqlFile('migrations/20261005_bot_agent.sql'); // service_catalog.template_id
   await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
-  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, name TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
+  await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
   await runSqlFile('migrations/20261002_template_tags.sql');
   await runSqlFile('migrations/20261022_modelo_desde_documento.sql');
   await runSqlFile('migrations/20261025_modelos_papelera_correcciones.sql');

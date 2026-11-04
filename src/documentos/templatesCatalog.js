@@ -1,5 +1,6 @@
 const path = require('path');
 const pool = require('../db/pool');
+const storage = require('../utils/storage');
 
 // "Nuestra selección": the curated, up-to-date models in doc_templates (with their own tags).
 // Documentos only reads them; tags are managed in MotherBrain.
@@ -8,11 +9,15 @@ function templatesBaseDir() {
   return process.env.GURU_TEMPLATES_BASE_DIR || path.join(__dirname, '..', '..', 'templates', 'documents');
 }
 
-// Absolute path of a model file, never outside the templates folder
+// Models people upload live on the persistent volume, not in the templates folder of the image
+const UPLOADS_SUBDIR = 'template_uploads';
+const uploadsDir = () => path.resolve(storage.getStorageRoot(), UPLOADS_SUBDIR);
+
+// Absolute path of a model file, never outside the templates or uploads folder
 function resolveModelPath(filePath) {
   const base = path.resolve(templatesBaseDir());
   const full = path.resolve(base, filePath || '');
-  return full.startsWith(base + path.sep) ? full : null;
+  return full.startsWith(base + path.sep) || full.startsWith(uploadsDir() + path.sep) ? full : null;
 }
 
 let cache = { at: 0, list: null };
@@ -21,11 +26,17 @@ async function listModels() {
   const { rows } = await pool.query(
     `SELECT t.id, t.name, t.file_path, t.file_name, c.name AS category
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id
-     WHERE t.is_active = TRUE
+     WHERE t.is_active = TRUE AND t.is_private = FALSE
      ORDER BY c.name NULLS LAST, t.name`
   );
   cache = { at: Date.now(), list: rows };
   return rows;
+}
+
+// What this user can choose from: the shared models plus their private ones, first. An admin sees every private one.
+async function listModelsFor(user) {
+  const [mine, shared] = await Promise.all([require('./templateTags').listPrivate(user), listModels()]);
+  return [...mine.map((m) => ({ ...m, is_private: true })), ...shared];
 }
 
 const norm = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -51,4 +62,4 @@ function searchTemplates(list, q) {
 // a model went to (or came back from) the trash: the next list reads the database
 const clearCache = () => { cache = { at: 0, list: null }; };
 
-module.exports = { clearCache, listModels, searchTemplates, resolveModelPath, templatesBaseDir };
+module.exports = { UPLOADS_SUBDIR, clearCache, listModels, listModelsFor, searchTemplates, resolveModelPath, templatesBaseDir };
