@@ -30,7 +30,9 @@ const isAdmin = (req) => req.user.role === 'admin';
 // An admin, or the owner of this private model. Someone else's private model does not exist for them.
 const requireManage = async (req, res, next) => {
   try {
-    const access = Tags.accessFor(req.user, await Tags.getTemplate(req.params.id));
+    const t = await Tags.getTemplate(req.params.id);
+    if (!t || !t.is_active) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado'); // in the trash: only «Restaurar» applies
+    const access = Tags.accessFor(req.user, t);
     if (access === 'admin' || access === 'owner') return next();
     if (access === 'employee') return res.status(403).json({ error: 'Insufficient permissions' });
     return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
@@ -216,7 +218,7 @@ router.get('/batch', admin, (req, res) => res.json({ batch }));
 router.post('/models/:id/ai', requireManage, async (req, res) => {
   try {
     const v = await tagModel(Number(req.params.id), req.user.id);
-    const model = await Tags.getModel(req.params.id, { admin: true });
+    const model = await Tags.getModel(req.params.id, { user: req.user });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'etiquetas.ai', entityType: 'modelo', entityId: model.id,
       summary: `Etiquetó con IA «${model.name}» (v${v.version_number})`,
@@ -242,7 +244,7 @@ router.get('/versions/:id/file', async (req, res) => {
     const v = await Tags.getVersion(req.params.id);
     const t = v && (await Tags.getTemplate(v.template_id));
     const access = t && Tags.accessFor(req.user, t);
-    const allowed = v && t && (access === 'admin' || access === 'owner' || (access === 'employee' && t.is_active && t.approved_tag_version_id === v.id));
+    const allowed = v && t && (access === 'admin' || (access === 'owner' && t.is_active) || (access === 'employee' && t.is_active && t.approved_tag_version_id === v.id));
     if (!allowed || !fs.existsSync(v.file_path)) return sendError(res, 404, 'NOT_FOUND', 'Versión no encontrada');
     res.attachment(`${t.name.replace(/[\\/:*?"<>|]+/g, ' ').trim()} (etiquetas v${v.version_number}).docx`);
     res.sendFile(path.resolve(v.file_path));
@@ -358,13 +360,13 @@ router.post('/models/:id/edit', requireManage, async (req, res) => {
         templateId, localFile: file, tags, skipped: [], source: 'edit', notes, userId: req.user.id, baseVersionId: latest,
         originDocumentId: base.origin_document_id,
       });
-      const model = await Tags.getModel(templateId, { admin: true });
+      const model = await Tags.getModel(templateId, { user: req.user });
       await safeLog(() => logActivity(req, {
         category: 'documentos', action: 'etiquetas.edit_text', entityType: 'modelo', entityId: templateId,
         summary: `Cambió el texto de «${model.name}» (v${v.version_number})${notes ? `: ${String(notes).slice(0, 120)}` : ''}`,
       }));
       if (correction) await applyCorrection(req, correction, v, model.name);
-      return res.status(201).json({ model: correction ? await Tags.getModel(templateId, { admin: true }) : model });
+      return res.status(201).json({ model: correction ? await Tags.getModel(templateId, { user: req.user }) : model });
     }
     const examplesOf = (t) => (Array.isArray(t.examples) ? t.examples : t.example != null ? [t.example] : []);
     // fileKey: the name the tag has in the file; key: its name after these edits
@@ -446,13 +448,13 @@ router.post('/models/:id/edit', requireManage, async (req, res) => {
       templateId, localFile: file, tags: await orderedTags(file, finalTags), skipped: base.skipped, source: 'edit', notes,
       userId: req.user.id, baseVersionId: latest, originDocumentId: base.origin_document_id,
     });
-    const model = await Tags.getModel(templateId, { admin: true });
+    const model = await Tags.getModel(templateId, { user: req.user });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'etiquetas.edit', entityType: 'modelo', entityId: templateId,
       summary: `Guardó la versión v${v.version_number} de las etiquetas de «${model.name}»`,
     }));
     if (correction) await applyCorrection(req, correction, v, model.name);
-    res.status(201).json({ model: correction ? await Tags.getModel(templateId, { admin: true }) : model });
+    res.status(201).json({ model: correction ? await Tags.getModel(templateId, { user: req.user }) : model });
   } catch (err) {
     return fail(res, err, 'edit');
   } finally {
@@ -517,7 +519,7 @@ router.post('/models/:id/restore', requireManage, async (req, res) => {
       templateId, localFile: copy, tags: old.tags, skipped: old.skipped, source: 'restore',
       notes: `Restaurada desde v${old.version_number}`, userId: req.user.id, originDocumentId: old.origin_document_id,
     });
-    const model = await Tags.getModel(templateId, { admin: true });
+    const model = await Tags.getModel(templateId, { user: req.user });
     await safeLog(() => logActivity(req, {
       category: 'documentos', action: 'etiquetas.restore', entityType: 'modelo', entityId: templateId,
       summary: `Restauró la v${old.version_number} de «${model.name}» como v${v.version_number}`,
@@ -550,7 +552,7 @@ router.post('/versions/:id/approve', admin, async (req, res) => {
     }
     // the digitador who saved it from a document learns it is now everyone's model (also after the admin's fixes)
     const author = v.origin_document_id && await Tags.originAuthor(v.template_id, v.origin_document_id);
-    if (author && author !== req.user.id) {
+    if (author && author !== req.user.id && author !== v.owner_id) {
       await notifyUsers([author], {
         type: 'approval',
         title: '✅ Versión de modelo publicada',
@@ -702,6 +704,10 @@ router.post('/models', (req, res) =>
         console.error('[etiquetas] upload sanitize:', e.message);
         return sendError(res, 400, 'INVALID_FILE', 'Ese archivo no es un Word válido');
       }
+      // any zip can be renamed .docx: only a real Word with text gets stored
+      const blocks = await listBlocks(temps[1]).catch(() => null);
+      if (!blocks) return sendError(res, 400, 'INVALID_FILE', 'Ese archivo no es un Word válido');
+      if (!blocks.some((b) => String(b.text || '').trim())) return sendError(res, 400, 'EMPTY_FILE', 'Ese Word no tiene texto');
       const unique = crypto.randomBytes(6).toString('hex');
       const safeName = path.basename(file.originalname).replace(/[^\p{L}\p{N}._ -]+/gu, '_').slice(-120);
       stored = storage.saveLocalFile(temps[1], UPLOADS_SUBDIR, `${Date.now()}-${unique}.docx`);

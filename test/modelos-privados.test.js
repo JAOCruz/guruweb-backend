@@ -186,6 +186,18 @@ t('un archivo falso, sin nombre o con categoría inexistente: 400 sin guardar na
   assert.equal(fs.existsSync(dir) ? fs.readdirSync(dir).length : 0, filesBefore);
 });
 
+t('un zip que no es Word o un Word sin texto: 400 sin guardar nada', async () => {
+  const before = (await pool.query('SELECT COUNT(*)::int AS n FROM doc_templates')).rows[0].n;
+  const zip = path.join(TPL_DIR, 'falso.zip');
+  spawnSync(PY, ['-c', 'import sys, zipfile\nz = zipfile.ZipFile(sys.argv[1], "w")\nz.writestr("xl/workbook.xml", "<a/>")\nz.close()', zip]);
+  assert.equal((await upload('hengi', { buffer: fs.readFileSync(zip) })).status, 400);
+  const blank = path.join(TPL_DIR, 'blanco.tmp.docx');
+  makeDocx(blank, []);
+  assert.equal((await upload('hengi', { buffer: fs.readFileSync(blank) })).status, 400);
+  fs.rmSync(zip); fs.rmSync(blank);
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM doc_templates')).rows[0].n, before);
+});
+
 // ── Biblioteca ──
 t('la Biblioteca muestra el privado a su dueño y al admin, no a otros', async () => {
   const m = await ownModel();
@@ -261,6 +273,44 @@ t('un documento nuevo no puede apuntar al modelo privado de otro', async () => {
   form.append('template_id', String(m.id));
   const r = await fetch(`${base}/api/documentos/documents`, { method: 'POST', headers: { Authorization: `Bearer ${tok.otro}` }, body: form });
   assert.equal(r.status, 400);
+});
+
+t('al editar o restaurar, la respuesta al dueño nunca le ofrece publicar', async () => {
+  const m = await ownModel();
+  const P = `/api/documentos/tags/models/${m.id}`;
+  assert.equal(m.can_publish, false);
+  const { rows: [v] } = await pool.query('SELECT id FROM template_tag_versions WHERE template_id = $1', [m.id]);
+  const restored = await call('POST', `${P}/restore`, 'hengi', { version_id: v.id });
+  assert.equal(restored.status, 201);
+  assert.equal((await restored.json()).model.can_publish, false);
+  const edited = await call('POST', `${P}/edit`, 'hengi', { ops: [{ op: 'label', key: 'NOMBRE_PODERDANTE', label: 'Otro nombre' }] });
+  const body = await edited.json();
+  if (edited.status === 201) assert.equal(body.model.can_publish, false);
+  const asAdmin = await (await call('GET', P, 'admin')).json();
+  assert.equal(asAdmin.model.can_publish, true);
+});
+
+t('en la papelera el dueño no puede tocar su modelo ni bajar sus versiones', async () => {
+  const m = await ownModel();
+  const P = `/api/documentos/tags/models/${m.id}`;
+  const { rows: [v] } = await pool.query('SELECT id FROM template_tag_versions WHERE template_id = $1', [m.id]);
+  assert.equal((await call('DELETE', P, 'hengi')).status, 200);
+  const before = (await pool.query('SELECT COUNT(*)::int AS n FROM template_tag_versions WHERE template_id = $1', [m.id])).rows[0].n;
+  for (const [method, p] of [['POST', `${P}/ai`], ['POST', `${P}/request-publish`], ['DELETE', P], ['GET', `/api/documentos/tags/versions/${v.id}/file`]]) {
+    assert.equal((await call(method, p, 'hengi')).status, 404, `${method} ${p}`);
+  }
+  assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM template_tag_versions WHERE template_id = $1', [m.id])).rows[0].n, before);
+});
+
+t('publicar avisa una sola vez al dueño aunque guardó una versión desde un documento', async () => {
+  const m = await ownModel();
+  const { rows: [v] } = await pool.query('SELECT id FROM template_tag_versions WHERE template_id = $1', [m.id]);
+  const doc = await (await call('POST', `/api/documentos/tags/models/${m.id}/fill`, 'hengi', { client_id: 1, values: { NOMBRE_PODERDANTE: 'JUAN' } })).json();
+  await pool.query(`UPDATE template_tag_versions SET source = 'client', origin_document_id = $1 WHERE id = $2`, [doc.document.id, v.id]);
+  assert.equal((await call('POST', `/api/documentos/tags/versions/${v.id}/approve`, 'admin')).status, 200);
+  const { rows } = await pool.query('SELECT title FROM notifications WHERE user_id = $1', [users.hengi]);
+  assert.equal(rows.length, 1);
+  assert.match(rows[0].title, /Modelo publicado/);
 });
 
 // ── Publicar ──
