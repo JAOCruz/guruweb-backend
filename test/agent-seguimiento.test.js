@@ -129,3 +129,16 @@ test('el punto de entrada real (src/index.js) arranca el seguimiento', () => {
   assert.ok(timer);
   clearInterval(timer);
 });
+
+test('con BOT_FORZAR_APAGADO no le escribe al cliente ni gasta el seguimiento', async () => {
+  const inv = await makeInvoice();
+  process.env.BOT_FORZAR_APAGADO = 'true';
+  try {
+    assert.deepEqual(await followup.processFollowups(NOW), { sent: 0, apagado: true });
+  } finally {
+    delete process.env.BOT_FORZAR_APAGADO;
+  }
+  assert.equal(sent.length, 0);
+  const { rows } = await pool.query('SELECT followup_at FROM invoices WHERE id = $1', [inv.id]);
+  assert.equal(rows[0].followup_at, null);
+});

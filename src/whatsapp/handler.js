@@ -13,6 +13,7 @@ const pool = require('../db/pool');
 const { respond: agentRespond, runSerial } = require('../agent/agent');
 const { engineFor } = require('../agent/engine');
 const { notifyUrgentAfterHandoff, URGENT_ACK } = require('../agent/tools/handoff');
+const { botForzadoApagado } = require('./forzarApagado');
 
 // ── Per-phone message buffer (debounce for multi-image bursts) ──
 // When a user sends multiple images at once, WhatsApp fires them as separate
@@ -158,6 +159,7 @@ const ALWAYS_MANUAL_PHONES = new Set([
 ]);
 
 // Load persisted settings on startup (async)
+if (botForzadoApagado()) console.warn('[WA] BOT_FORZAR_APAGADO activo: el bot no le escribirá a ningún cliente');
 let botActive = true;
 let botMode = 'all';
 let assignmentMode = 'automatic';
@@ -211,13 +213,17 @@ function persist() {
 }
 
 function setBotActive(active) {
+  if (botForzadoApagado()) {
+    console.warn('[WA] BOT_FORZAR_APAGADO está activo: el interruptor del bot no cambia nada');
+    return;
+  }
   botActive = active;
   console.log(`[WA] Bot ${active ? 'RESUMED' : 'PAUSED'}`);
   persist().catch(() => {});
 }
 
 function isBotActive() {
-  return botActive;
+  return botActive && !botForzadoApagado();
 }
 
 function setBotMode(mode) {
@@ -315,6 +321,7 @@ function clearManualPhones() {
 
 // The chat's own switch (the 🤖 button): everything except the global pause
 function chatBotOn(phone) {
+  if (botForzadoApagado()) return false;
   const clean = normalizePhone(phone);
   if (clean.endsWith('@g.us')) return false;
   if (botMode === 'selected' && !enabledPhones.has(clean)) return false;
@@ -326,6 +333,7 @@ function chatBotOn(phone) {
 // The 🤖 button of a chat. In "selected" it enables/disables that chat (enabling also ends an
 // agent takeover); in "all" it is the agent takeover. → whether the bot is now on for the chat
 function toggleChatBot(phone) {
+  if (botForzadoApagado()) return false; // no cambia lo guardado de este chat
   const on = chatBotOn(phone);
   if (botMode === 'selected') {
     if (on) {
@@ -342,6 +350,7 @@ function toggleChatBot(phone) {
 
 // Determine if bot should respond to a specific phone
 function shouldBotRespond(phone) {
+  if (botForzadoApagado()) return false;
   const clean = normalizePhone(phone);
   // Groups are always manual (bot never responds)
   if (clean.endsWith('@g.us')) return false;

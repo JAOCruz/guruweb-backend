@@ -98,6 +98,15 @@ const Message = {
     return rows[0] || null;
   },
 
+  // Meta avisó por webhook que no entregó un mensaje enviado: el chat lo muestra como no enviado
+  async markFailedByWaId(waMessageId, status) {
+    const { rowCount } = await pool.query(
+      `UPDATE messages SET status = $2 WHERE wa_message_id = $1 AND direction = 'outbound'`,
+      [waMessageId, status]
+    );
+    return rowCount;
+  },
+
   async updateStatus(id, status) {
     const { rows } = await pool.query(
       'UPDATE messages SET status = $1 WHERE id = $2 RETURNING *',

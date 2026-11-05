@@ -185,9 +185,8 @@ router.get('/status', async (req, res) => {
 });
 
 router.post('/bot-toggle', requireAdmin, (req, res) => {
-  const current = isBotActive();
-  setBotActive(!current);
-  res.json({ botActive: !current });
+  setBotActive(!isBotActive());
+  res.json({ botActive: isBotActive() });
 });
 
 // "Empezar de cero": Mensajes shows only chats from now on (old ones archived, nothing deleted)

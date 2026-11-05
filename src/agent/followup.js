@@ -9,6 +9,7 @@ const Message = require('../models/Message');
 const { getBusinessInfo, isOpen } = require('./businessInfo');
 const { activeAdminIds, notifyUsers } = require('./tools/notify');
 const { logActivity } = require('../services/activityLog');
+const { botForzadoApagado } = require('../whatsapp/forzarApagado');
 
 const WINDOW_HOURS = 48;
 
@@ -35,6 +36,7 @@ function followupText(invoice, now, zona) {
 }
 
 async function processFollowups(now = new Date()) {
+  if (botForzadoApagado()) return { sent: 0, apagado: true };
   const info = await getBusinessInfo();
   const cfg = info.seguimiento_cotizaciones;
   if (!cfg || cfg.activo !== true) return { sent: 0, apagado: true };

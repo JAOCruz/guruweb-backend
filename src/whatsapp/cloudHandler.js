@@ -349,6 +349,11 @@ async function processWebhookPayload(payload) {
         const e = (st.errors || [])[0] || {};
         // ids and codes only: never the recipient's phone
         console.error(`[WA Cloud] ❌ Not delivered: message=${st.id || '?'} code=${e.code || ''} ${e.title || ''}`.trim());
+        try {
+          await Message.markFailedByWaId(st.id, Number(e.code) === 131047 ? 'failed_window' : 'failed');
+        } catch (err) {
+          console.error('[WA Cloud] could not mark message failed:', err.code || err.name || 'ERROR');
+        }
         if (!REVERT_CODES.has(Number(e.code))) continue;
         try {
           // A quote or document the panel sent with this id goes back to "ready, not sent" (see agent/delivery)

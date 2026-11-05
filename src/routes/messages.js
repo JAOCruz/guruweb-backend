@@ -13,6 +13,20 @@ const uploadMedia = multer({
   limits: { fileSize: 16 * 1024 * 1024 }, // 16MB (WhatsApp media cap)
 });
 
+// Si WhatsApp no acepta el mensaje, el panel tiene que saberlo y nada queda guardado como enviado
+const WINDOW_TEXT = 'No se envió: pasaron más de 24 h desde el último mensaje del cliente. '
+  + 'WhatsApp solo deja escribirle cuando el cliente vuelva a escribir.';
+async function trySend(res, send) {
+  try {
+    return await send();
+  } catch (err) {
+    console.error('[Messages] send failed:', err.code || err.metaCode || err.name || 'ERROR');
+    if (err.code === 'WINDOW_CLOSED') res.status(409).json({ error: WINDOW_TEXT, code: 'WINDOW_CLOSED' });
+    else res.status(502).json({ error: 'No se envió: WhatsApp no aceptó el mensaje. Inténtalo de nuevo.', code: 'SEND_FAILED' });
+    return null;
+  }
+}
+
 function isEmployee(role) {
   return role !== 'admin';
 }
@@ -183,7 +197,8 @@ router.post('/send', async (req, res) => {
     const client = await Client.findById(client_id);
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
-    const sent = await outgoing.sendText(client.phone, content);
+    const sent = await trySend(res, () => outgoing.sendText(client.phone, content));
+    if (!sent) return;
 
     const message = await Message.create({
       waMessageId: sent.key?.id || null,
@@ -216,7 +231,8 @@ router.post('/send-direct', async (req, res) => {
     // Use the real JID from last inbound message (handles @lid privacy accounts)
     const lastJid = await Message.getLastJid(phone);
     const target = lastJid || phone;
-    const sent = await outgoing.sendText(target, content);
+    const sent = await trySend(res, () => outgoing.sendText(target, content));
+    if (!sent) return;
 
     // Find client_id if this phone is a registered client
     const client = await Client.findByPhone(phone);
@@ -270,12 +286,13 @@ router.post('/send-media', uploadMedia.single('file'), async (req, res) => {
     const mediaType = isImage ? 'image' : isAudio ? 'audio' : isVideo ? 'video' : 'document';
 
     // Send via the unified outgoing layer (Cloud API or Baileys)
-    const sent = await outgoing.sendMedia(target, filePath, {
+    const sent = await trySend(res, () => outgoing.sendMedia(target, filePath, {
       mime,
       fileName: file.originalname,
       caption: caption || '',
       mediaType,
-    });
+    }));
+    if (!sent) return;
 
     const client = await Client.findByPhone(phone);
 
