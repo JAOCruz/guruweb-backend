@@ -155,12 +155,14 @@ router.get('/models/:id/thumbnail', async (req, res) => {
     const model = (await listModelsFor(req.user)).find((m) => m.id === Number(req.params.id));
     const file = model && resolveModelPath(model.file_path);
     if (!file || !fs.existsSync(file)) return sendError(res, 404, 'NOT_FOUND', 'Modelo no encontrado');
-    // a published model shows its reviewed version: the library's originals may carry names from a real case
+    // a library model shows only its reviewed version: the originals may carry names from a real case, so without one the card keeps its icon
     const { rows: [approved] } = await pool.query(
       `SELECT v.file_path FROM doc_templates t JOIN template_tag_versions v ON v.id = t.approved_tag_version_id WHERE t.id = $1`,
       [model.id]
     );
-    const source = approved && fs.existsSync(approved.file_path) ? approved.file_path : file;
+    const reviewed = approved && fs.existsSync(approved.file_path) ? approved.file_path : null;
+    const source = reviewed || (model.is_private ? file : null);
+    if (!source) return sendError(res, 404, 'NO_PREVIEW', 'Este modelo todavía no tiene vista previa');
     const thumb = await modelThumbnail(model.id, source);
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('Vary', 'Authorization');

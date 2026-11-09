@@ -547,11 +547,10 @@ test('pdftoppm convierte de verdad la primera página en una imagen PNG', { skip
   thumbnails.removeThumbnails(999999);
 });
 
-test('la miniatura de un modelo publicado de la biblioteca sale de la versión revisada, no del original', { skip: !hasDocx }, async () => {
+test('un modelo de la biblioteca sin revisar no da miniatura, y al publicarlo sale de la versión revisada', { skip: !hasDocx }, async () => {
   fakeThumbnails();
   const { rows: [t] } = await pool.query(`SELECT id FROM doc_templates WHERE name = 'MODELO OFICIAL'`);
-  const antes = Buffer.from(await (await thumb(t.id, 'otro')).arrayBuffer());
-  assert.match(docxText(antes.subarray(4)), /ANA RUIZ/);
+  assert.equal((await thumb(t.id, 'otro')).status, 404, 'sin revisar solo se ve el icono: el original puede traer nombres reales');
   assert.equal((await call('POST', `/api/documentos/tags/models/${t.id}/ai`, 'admin')).status, 201);
   await publish({ id: t.id });
   const despues = Buffer.from(await (await thumb(t.id, 'otro')).arrayBuffer());
