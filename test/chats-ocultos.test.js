@@ -19,7 +19,7 @@ const cloudHandler = require('../src/whatsapp/cloudHandler');
 const VIEJO = '18095550001';
 const OTRO = '18095550002';
 const MIGRATION = 'migrations/20261110_chats_ocultos.sql';
-let server, base, admin, digi;
+let server, base, admin, digi, digiId;
 
 const msg = (phone, content, direction = 'inbound', ago = "'1 hour'") => pool.query(
   `INSERT INTO messages (phone, direction, content, created_at, read) VALUES ($1, $2, $3, NOW() - INTERVAL ${ago}, FALSE)`, [phone, direction, content]);
@@ -51,6 +51,7 @@ test.beforeEach(async () => {
   await runSqlFile('migrations/20261006_bot_fase2.sql');
   const a = await createUser('leandro', 'admin', 'Leandro');
   const d = await createUser('hengi', 'digitador', 'Hengi');
+  digiId = d;
   admin = generateToken({ id: a, username: 'leandro', email: 'a@x.com', role: 'admin' });
   digi = generateToken({ id: d, username: 'hengi', email: 'h@x.com', role: 'digitador' });
   await pool.query(`INSERT INTO clients (name, phone, assigned_to) VALUES ('Viejo', $1, $2)`, [VIEJO, d]);
@@ -156,4 +157,13 @@ test('un mensaje desde el teléfono hace reaparecer un chat oculto', async () =>
   await pool.query(`UPDATE hidden_chats SET hidden_at = NOW() - INTERVAL '10 minutes'`);
   await webhook({ metadata: META, message_echoes: [echo({ to: VIEJO })] });
   assert.deepEqual(await chat(VIEJO, admin), ['Le escribo desde el teléfono']);
+});
+
+test('los no leídos no cuentan los chats archivados con «Empezar de cero»', async () => {
+  await pool.query(`INSERT INTO clients (name, phone, assigned_to) VALUES ('Otro', $1, $2)`, [OTRO, digiId]);
+  await msg(OTRO, 'archivado', 'inbound', "'3 days'");
+  await pool.query(`INSERT INTO wa_bot_state (key, value) VALUES ('chats_since', $1)`, [JSON.stringify({ since: new Date(Date.now() - 86400000).toISOString() })]);
+  await msg(OTRO, 'nuevo', 'inbound', "'0 seconds'");
+  assert.equal(Number((await call('GET', '/unread-count', admin)).body.count), 1);
+  assert.equal(Number((await call('GET', '/unread-count', digi)).body.count), 1);
 });

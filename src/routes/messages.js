@@ -78,22 +78,24 @@ router.get('/conversations', async (req, res) => {
 router.get('/unread-count', async (req, res) => {
   try {
     const pool = require('../db/pool');
+    // chats archived with «Empezar de cero» are not in the list, so they do not count either
+    const since = (await getChatsSince()) || '-infinity';
     let result;
     if (isEmployee(req.user.role)) {
       result = await pool.query(
         `SELECT COUNT(*) AS count FROM messages m
-         WHERE m.read = FALSE AND m.direction = 'inbound'
+         WHERE m.read = FALSE AND m.direction = 'inbound' AND m.created_at >= $2
            AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = m.phone AND m.created_at <= h.hidden_at)
            AND (
              m.phone IN (SELECT phone FROM clients WHERE assigned_to = $1)
              OR m.client_id IN (SELECT id FROM clients WHERE assigned_to = $1)
              OR m.case_id IN (SELECT id FROM cases WHERE user_id = $1)
            )`,
-        [req.user.id]
+        [req.user.id, since]
       );
     } else {
       result = await pool.query(
-        `SELECT COUNT(*) AS count FROM messages m WHERE m.read = FALSE AND m.direction = 'inbound' AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = m.phone AND m.created_at <= h.hidden_at)`
+        `SELECT COUNT(*) AS count FROM messages m WHERE m.read = FALSE AND m.direction = 'inbound' AND m.created_at >= $1 AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = m.phone AND m.created_at <= h.hidden_at)`, [since]
       );
     }
     res.json({ count: parseInt(result.rows[0].count, 10) || 0 });
