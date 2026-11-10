@@ -209,6 +209,74 @@ async function getQuotedContent(quotedId) {
   }
 }
 
+const mediaInfoOf = (normalized) => normalized.message.imageMessage
+  || normalized.message.documentMessage
+  || normalized.message.audioMessage
+  || normalized.message.videoMessage;
+
+// Saves a message's photo or file, whichever side wrote it. null when it has none or it could not be saved.
+async function storeMedia(normalized, waMessageId, phone, client) {
+  const mediaInfo = mediaInfoOf(normalized);
+  if (!mediaInfo?.mediaId) return null;
+  try {
+    const mediaType = normalized.message.imageMessage ? 'image'
+      : normalized.message.documentMessage ? 'document'
+      : normalized.message.audioMessage ? 'audio'
+      : 'video';
+    const fileName = normalized.message.documentMessage?.fileName || undefined;
+    const mediaResult = await saveCloudMedia(mediaInfo.mediaId, mediaInfo.mimetype, fileName, mediaType, phone, waMessageId);
+    return await ClientMedia.create({
+      phone,
+      clientId: client?.id || null,
+      waMessageId,
+      mediaType,
+      mimeType: mediaResult.mimeType,
+      originalName: fileName || mediaResult.fileName,
+      savedName: mediaResult.savedName,
+      filePath: mediaResult.filePath,
+      fileSize: mediaResult.fileSize,
+      context: 'conversation',
+    });
+  } catch (mediaErr) {
+    console.error('[WA Cloud] Error saving media:', mediaErr.message);
+    return null;
+  }
+}
+
+function contentForChat(text, normalized, savedMedia, type) {
+  const mediaLabel = normalized.message.imageMessage ? 'foto'
+    : normalized.message.documentMessage ? 'documento'
+    : normalized.message.audioMessage ? 'audio'
+    : normalized.message.videoMessage ? 'video' : 'archivo';
+  if (text) return savedMedia ? `${text}\n[📎 adjunto]` : text;
+  if (savedMedia) return `[📎 ${savedMedia.media_type || mediaLabel}]`;
+  return mediaInfoOf(normalized) ? `[📎 ${mediaLabel}]` : `[${type}]`;
+}
+
+// What the business writes from the WhatsApp Business app on the phone: goes in the chat as sent. The bot does not react.
+async function processEcho(echo, value) {
+  if (!echo?.id || !echo.to || processingIds.has(echo.id)) return;
+  processingIds.add(echo.id);
+  try {
+    if (await Message.findByWaMessageId(echo.id)) return;
+    const phone = normalizePhone(echo.to);
+    const { normalized, text } = normalizeMessage({ ...echo, from: echo.to }, value);
+    const client = await Client.findByPhone(phone);
+    const savedMedia = await storeMedia(normalized, echo.id, phone, client);
+    await Message.create({
+      waMessageId: echo.id,
+      phone,
+      clientId: client?.id || null,
+      direction: 'outbound',
+      content: contentForChat(text, normalized, savedMedia, echo.type),
+      mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
+      waJid: `${phone}@s.whatsapp.net`,
+    });
+  } finally {
+    processingIds.delete(echo.id);
+  }
+}
+
 async function processSingleMessage(message, value) {
   if (!message || !message.id || !message.from) return;
 
@@ -252,52 +320,9 @@ async function processSingleMessage(message, value) {
       } catch (_) {}
     }
 
-    let savedMedia = null;
-    const mediaInfo = normalized.message.imageMessage
-      || normalized.message.documentMessage
-      || normalized.message.audioMessage
-      || normalized.message.videoMessage;
-
-    if (mediaInfo?.mediaId) {
-      try {
-        const mediaType = normalized.message.imageMessage ? 'image'
-          : normalized.message.documentMessage ? 'document'
-          : normalized.message.audioMessage ? 'audio'
-          : 'video';
-        const fileName = normalized.message.documentMessage?.fileName || undefined;
-        const mediaResult = await saveCloudMedia(
-          mediaInfo.mediaId,
-          mediaInfo.mimetype,
-          fileName,
-          mediaType,
-          phone,
-          message.id
-        );
-        savedMedia = await ClientMedia.create({
-          phone,
-          clientId: client?.id || null,
-          waMessageId: message.id,
-          mediaType,
-          mimeType: mediaResult.mimeType,
-          originalName: fileName || mediaResult.fileName,
-          savedName: mediaResult.savedName,
-          filePath: mediaResult.filePath,
-          fileSize: mediaResult.fileSize,
-          context: 'conversation',
-        });
-      } catch (mediaErr) {
-        console.error('[WA Cloud] Error saving media:', mediaErr.message);
-      }
-    }
-
-    const hasMedia = !!savedMedia || !!mediaInfo;
-    const mediaLabel = normalized.message.imageMessage ? 'foto'
-      : normalized.message.documentMessage ? 'documento'
-      : normalized.message.audioMessage ? 'audio'
-      : normalized.message.videoMessage ? 'video' : 'archivo';
-    const logContent = finalText
-      ? (savedMedia ? `${finalText}\n[📎 adjunto]` : finalText)
-      : (savedMedia ? `[📎 ${savedMedia.media_type || mediaLabel}]` : mediaInfo ? `[📎 ${mediaLabel}]` : `[${message.type}]`);
+    const mediaInfo = mediaInfoOf(normalized);
+    const savedMedia = await storeMedia(normalized, message.id, phone, client);
+    const logContent = contentForChat(finalText, normalized, savedMedia, message.type);
 
     try {
       await Message.create({
@@ -360,6 +385,13 @@ async function processWebhookPayload(payload) {
           await require('../agent/delivery').revertWindowClosed(st.id, Number(e.code) === 131047 ? 'WINDOW_CLOSED' : 'SEND_FAILED');
         } catch (err) {
           console.error('[WA Cloud] window-closed revert failed:', err.code || err.name || 'ERROR');
+        }
+      }
+      for (const echo of value.message_echoes || []) {
+        try {
+          await processEcho(echo, value);
+        } catch (err) {
+          console.error('[WA Cloud] Error saving a message written on the phone:', err.code || err.name || 'ERROR');
         }
       }
       const messages = value.messages || [];

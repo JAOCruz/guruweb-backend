@@ -50,15 +50,29 @@ const Message = {
     return rows;
   },
 
-  async findByPhone(phone, { limit = 100, offset = 0 } = {}) {
+  // onlyVisible: what the chat shows outside «Ver ocultos» (a hidden chat that came back shows only what is new)
+  async findByPhone(phone, { limit = 100, offset = 0, onlyVisible = false } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM messages
-       WHERE phone = $1
-          OR (phone IS NULL AND client_id IN (SELECT id FROM clients WHERE phone = $1))
+       WHERE (phone = $1
+          OR (phone IS NULL AND client_id IN (SELECT id FROM clients WHERE phone = $1)))
+         AND (NOT $4::boolean OR created_at > COALESCE((SELECT hidden_at FROM hidden_chats WHERE phone = $1), '-infinity'))
        ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-      [phone, limit, offset]
+      [phone, limit, offset, onlyVisible]
     );
     return rows;
+  },
+
+  async hideChat(phone, userId) {
+    await pool.query(
+      `INSERT INTO hidden_chats (phone, hidden_by) VALUES ($1, $2)
+       ON CONFLICT (phone) DO UPDATE SET hidden_by = EXCLUDED.hidden_by, hidden_at = NOW()`,
+      [phone, userId]
+    );
+  },
+
+  async unhideChat(phone) {
+    await pool.query('DELETE FROM hidden_chats WHERE phone = $1', [phone]);
   },
 
   // Get recent messages for a phone in chronological order (for LLM context)
@@ -141,8 +155,10 @@ const Message = {
   // ("FULL JOIN is only supported with merge-joinable or hash-joinable join conditions").
   // If userId provided, only returns conversations from clients OR cases assigned to that user.
   // `since`: only chats with messages from then on (archived ones stay in the DB, out of the list)
-  async getConversations(filter = 'all', userId = null, since = null) {
+  // hidden: the admin's «Ver ocultos», with the whole history of those chats
+  async getConversations(filter = 'all', userId = null, since = null, { hidden = false } = {}) {
     const uid = userId !== null ? parseInt(userId) : null;
+    if (hidden) since = null;
     const params = since ? [since] : [];
 
     // Conditions for the messages side
@@ -163,6 +179,7 @@ const Message = {
         )`);
       }
     }
+    msgConditions.push(hidden ? 'h.phone IS NOT NULL' : '(h.phone IS NULL OR m.created_at > h.hidden_at)');
     if (since) msgConditions.push('m.created_at >= $1');
     const msgWhere = msgConditions.length > 0 ? 'WHERE ' + msgConditions.join(' AND ') : '';
 
@@ -174,6 +191,7 @@ const Message = {
     if (uid !== null) {
       cliConditions.push(`c.assigned_to = ${uid}`);
     }
+    cliConditions.push(`${hidden ? '' : 'NOT '}EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = c.phone)`);
     if (since) cliConditions.push('c.created_at >= $1');
     const cliWhere = 'WHERE ' + cliConditions.join(' AND ');
 
@@ -190,6 +208,7 @@ const Message = {
           COUNT(m.id) AS message_count
         FROM messages m
         LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
+        LEFT JOIN hidden_chats h ON h.phone = COALESCE(m.phone, c.phone)
         ${msgWhere}
         GROUP BY COALESCE(m.phone, c.phone)
 
@@ -239,6 +258,7 @@ const Message = {
       FROM messages m
       LEFT JOIN clients c ON c.id = m.client_id OR c.phone = m.phone
       WHERE LOWER(m.content) LIKE LOWER($1)
+        AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = COALESCE(m.phone, c.phone) AND m.created_at <= h.hidden_at)
       GROUP BY COALESCE(m.phone, c.phone)
       ORDER BY MAX(m.created_at) DESC
       LIMIT 50

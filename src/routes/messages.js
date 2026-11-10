@@ -56,9 +56,12 @@ router.get('/conversations', async (req, res) => {
   try {
     const filter = req.query.filter || 'all'; // all | clients | non_clients
     const userId = isEmployee(req.user.role) ? req.user.id : null;
-    const conversations = await Message.getConversations(filter, userId, await getChatsSince());
+    const hidden = req.query.hidden === '1';
+    if (hidden && req.user.role !== 'admin') return res.status(403).json({ error: 'Solo el administrador ve los chats ocultos' });
+    const conversations = await Message.getConversations(filter, userId, await getChatsSince(), { hidden });
     // Enrich with bot/manual state
     for (const conv of conversations) {
+      if (hidden) conv.hidden = true;
       conv.chatEnabled = isChatEnabled(conv.phone);
       conv.botActive = chatBotOn(conv.phone);
       conv.manualMode = isManualMode(conv.phone);
@@ -80,6 +83,7 @@ router.get('/unread-count', async (req, res) => {
       result = await pool.query(
         `SELECT COUNT(*) AS count FROM messages m
          WHERE m.read = FALSE AND m.direction = 'inbound'
+           AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = m.phone AND m.created_at <= h.hidden_at)
            AND (
              m.phone IN (SELECT phone FROM clients WHERE assigned_to = $1)
              OR m.client_id IN (SELECT id FROM clients WHERE assigned_to = $1)
@@ -89,7 +93,7 @@ router.get('/unread-count', async (req, res) => {
       );
     } else {
       result = await pool.query(
-        `SELECT COUNT(*) AS count FROM messages WHERE read = FALSE AND direction = 'inbound'`
+        `SELECT COUNT(*) AS count FROM messages m WHERE m.read = FALSE AND m.direction = 'inbound' AND NOT EXISTS (SELECT 1 FROM hidden_chats h WHERE h.phone = m.phone AND m.created_at <= h.hidden_at)`
       );
     }
     res.json({ count: parseInt(result.rows[0].count, 10) || 0 });
@@ -144,6 +148,7 @@ router.get('/phone/:phone', async (req, res) => {
     const messages = await Message.findByPhone(req.params.phone, {
       limit: parseInt(limit, 10) || 100,
       offset: parseInt(offset, 10) || 0,
+      onlyVisible: !(req.user.role === 'admin' && req.query.hidden === '1'),
     });
     // Las herramientas son un extra: si bot_tool_log no existe (migración sin correr) el chat se lista igual.
     try {
@@ -156,6 +161,27 @@ router.get('/phone/:phone', async (req, res) => {
   } catch (err) {
     console.error('List messages by phone error:', err);
     res.status(500).json({ error: 'Failed to list messages' });
+  }
+});
+
+// Ocultar o volver a mostrar un chat (solo admin). No se borra nada.
+router.post('/phone/:phone/hide', requireRole('admin'), async (req, res) => {
+  try {
+    await Message.hideChat(req.params.phone, req.user.id);
+    res.json({ hidden: true });
+  } catch (err) {
+    console.error('Hide chat error:', err.code || err.name || 'ERROR');
+    res.status(500).json({ error: 'No se pudo ocultar el chat' });
+  }
+});
+
+router.post('/phone/:phone/unhide', requireRole('admin'), async (req, res) => {
+  try {
+    await Message.unhideChat(req.params.phone);
+    res.json({ hidden: false });
+  } catch (err) {
+    console.error('Unhide chat error:', err.code || err.name || 'ERROR');
+    res.status(500).json({ error: 'No se pudo mostrar el chat' });
   }
 });
 
