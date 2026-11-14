@@ -1,5 +1,30 @@
-// Keys only — hex values and emoji live in the frontend (dashboard src/lib/userColors.ts).
-const COLOR_KEYS = ['green', 'yellow', 'red', 'purple', 'orange', 'pink', 'teal', 'cyan', 'blue', 'indigo', 'lime', 'brown'];
+// The 12 palette colors (keys + hex, same as the dashboard's src/lib/userColors.ts). Besides these, a user may
+// pick any color of their own as #rrggbb (Mi cuenta → «Otro color…»).
+const COLOR_HEX = {
+  green: '#22c55e', yellow: '#facc15', red: '#ef4444', purple: '#9333ea', orange: '#f97316', pink: '#ec4899',
+  teal: '#14b8a6', cyan: '#06b6d4', blue: '#3b82f6', indigo: '#6366f1', lime: '#84cc16', brown: '#92400e',
+};
+const COLOR_KEYS = Object.keys(COLOR_HEX);
+const isCustomColor = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+const toRgb = (c) => {
+  const hex = COLOR_HEX[c] || (isCustomColor(c) ? c : null);
+  return hex && [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+};
+// Below this distance (RGB) two colors look the same in Casos and the chat
+const TOO_CLOSE = 36;
+// Whoever among `others` ({ name, color }) has a color that looks almost like `color`; palette colors never clash with each other.
+function closestColorOwner(color, others) {
+  const a = toRgb(color);
+  if (!a) return null;
+  let best = null;
+  for (const o of others) {
+    const b = toRgb(o.color);
+    if (!b || (COLOR_KEYS.includes(color) && COLOR_KEYS.includes(o.color))) continue;
+    const d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    if (d < TOO_CLOSE && (!best || d < best.d)) best = { ...o, d };
+  }
+  return best && { name: best.name, color: best.color };
+}
 
 // Animal catalog: faces and full-body animals. Keys only; emoji and labels live in the
 // frontend (dashboard src/lib/userColors.ts) and must stay in sync. Very new emoji
@@ -52,7 +77,7 @@ function validateAppearance({ role, color, avatar, enabledAvatars = DEFAULT_ENAB
   if (color === undefined && avatar === undefined) {
     return fail(400, 'NOTHING_TO_UPDATE', 'Debes enviar color o avatar');
   }
-  if (color !== undefined && !COLOR_KEYS.includes(color)) {
+  if (color !== undefined && !COLOR_KEYS.includes(color) && !isCustomColor(color)) {
     return fail(400, 'INVALID_COLOR', 'Color no válido');
   }
   if (avatar !== undefined && avatar !== null && !AVATAR_KEYS.includes(avatar)) {
@@ -67,4 +92,4 @@ function validateAppearance({ role, color, avatar, enabledAvatars = DEFAULT_ENAB
   return { ok: true };
 }
 
-module.exports = { COLOR_KEYS, AVATAR_KEYS, ADMIN_ONLY_AVATAR, DEFAULT_ENABLED_AVATARS, SEED_COLORS, validateAppearance };
+module.exports = { COLOR_KEYS, COLOR_HEX, isCustomColor, closestColorOwner, AVATAR_KEYS, ADMIN_ONLY_AVATAR, DEFAULT_ENABLED_AVATARS, SEED_COLORS, validateAppearance };

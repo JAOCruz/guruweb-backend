@@ -55,6 +55,18 @@ test('taken color → 409 COLOR_TAKEN with Spanish message', async () => {
   assert.deepEqual(await res.json(), { error: 'Ese color lo acaba de tomar otro usuario', code: 'COLOR_TAKEN' });
 });
 
+test('a custom color is saved in lowercase', async () => {
+  const res = await call('PUT', '/api/auth/me/appearance', 'israel', { color: '#A1B2C3' });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).user.color, '#a1b2c3');
+});
+
+test('a custom color that looks almost like someone else\'s → 409 COLOR_TOO_CLOSE', async () => {
+  const res = await call('PUT', '/api/auth/me/appearance', 'israel', { color: '#3c83f5' }); // Hengi has blue #3b82f6
+  assert.equal(res.status, 409);
+  assert.deepEqual(await res.json(), { error: 'Se parece mucho al color de Hengi; escoge otro', code: 'COLOR_TOO_CLOSE', owner: 'Hengi' });
+});
+
 test('taken avatar → 409 AVATAR_TAKEN', async () => {
   const res = await call('PUT', '/api/auth/me/appearance', 'israel', { avatar: 'cow' });
   assert.equal(res.status, 409);

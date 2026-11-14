@@ -1,9 +1,10 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
+const pool = require('../db/pool');
 const config = require('../config');
 const { generateToken, authenticate, requireRole, invalidateUserStatus } = require('../middleware/auth');
-const { validateAppearance } = require('../config/appearance');
+const { validateAppearance, isCustomColor, closestColorOwner } = require('../config/appearance');
 const { getEnabledAvatars } = require('../services/avatarSettings');
 const turnstile = require('../services/turnstile');
 const { validatePassword } = require('../config/passwordPolicy');
@@ -283,11 +284,21 @@ router.put('/me/appearance', authenticate, async (req, res) => {
     const me = await User.findById(req.user.id);
     if (!me) return res.status(404).json({ error: 'User not found' });
 
-    const { color, avatar } = req.body || {};
+    const { avatar } = req.body || {};
+    let { color } = req.body || {};
+    if (isCustomColor(color)) color = color.toLowerCase();
     const enabledAvatars = await getEnabledAvatars();
     const check = validateAppearance({ role: me.role, color, avatar, enabledAvatars, currentAvatar: me.avatar });
     if (!check.ok) {
       return res.status(check.status).json({ error: check.error, code: check.code });
+    }
+
+    // A color of one's own must not look almost like someone else's (they would be confused in Casos and the chat)
+    if (color !== undefined && color !== me.color) {
+      const { rows: others } = await pool.query(
+        `SELECT COALESCE(NULLIF(name, ''), username) AS name, color FROM users WHERE id <> $1 AND color IS NOT NULL`, [me.id]);
+      const near = closestColorOwner(color, others);
+      if (near) return res.status(409).json({ error: `Se parece mucho al color de ${near.name}; escoge otro`, code: 'COLOR_TOO_CLOSE', owner: near.name });
     }
 
     let updated = me;
