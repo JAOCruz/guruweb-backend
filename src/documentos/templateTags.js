@@ -37,7 +37,7 @@ async function listStatuses({ requested = false } = {}) {
 // The private models this user can see: an admin all of them, anyone else only their own. Never cached.
 async function listPrivate(user) {
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, c.name AS category, ${STATUS_SQL} AS status,
+    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, t.category_id, c.name AS category, ${STATUS_SQL} AS status,
             t.created_by, t.publish_requested_at, COALESCE(NULLIF(ou.name, ''), ou.username) AS owner_name
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users ou ON ou.id = t.created_by ${LATEST_JOIN}
      WHERE t.is_active = TRUE AND t.is_private AND ($1::boolean OR t.created_by = $2)

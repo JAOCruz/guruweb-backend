@@ -27,13 +27,28 @@ let cache = { at: 0, list: null };
 async function listModels() {
   if (cache.list && Date.now() - cache.at < 60_000) return cache.list;
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, c.name AS category
+    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, t.category_id, c.name AS category
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id
      WHERE t.is_active = TRUE AND t.is_private = FALSE
      ORDER BY c.name NULLS LAST, t.name`
   );
   cache = { at: Date.now(), list: rows };
   return rows;
+}
+
+// Each category's path from the top folder down, e.g. CONTRATOS CIVILES › CONTRATOS AUTENTICOS › COMERCIALES.
+// Names repeat across branches (two COMERCIALES), so Mis documentos groups by the whole path.
+async function categoryPaths() {
+  const { rows } = await pool.query('SELECT id, name, parent_id FROM doc_categories')
+    .catch(() => pool.query('SELECT id, name, NULL::int AS parent_id FROM doc_categories'));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const paths = new Map();
+  for (const r of rows) {
+    const path = [];
+    for (let c = r, guard = 0; c && guard < 10; c = byId.get(c.parent_id), guard++) path.unshift(c.name);
+    paths.set(r.id, path);
+  }
+  return paths;
 }
 
 // What this user can choose from: the shared models plus their private ones, first. An admin sees every private one.
@@ -65,4 +80,5 @@ function searchTemplates(list, q) {
 // a model went to (or came back from) the trash: the next list reads the database
 const clearCache = () => { cache = { at: 0, list: null }; };
 
-module.exports = { UPLOADS_SUBDIR, isUploadedModel, clearCache, listModels, listModelsFor, searchTemplates, resolveModelPath, templatesBaseDir };
+module.exports = {
+  UPLOADS_SUBDIR, categoryPaths, isUploadedModel, clearCache, listModels, listModelsFor, searchTemplates, resolveModelPath, templatesBaseDir };

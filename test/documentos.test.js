@@ -41,17 +41,17 @@ test.before(async () => {
   // Minimal copies of production tables this module reads
   await pool.query('DROP TABLE IF EXISTS portfolio_versions, portfolio_documents, clients, doc_templates, doc_categories CASCADE');
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, name TEXT, phone TEXT UNIQUE, email TEXT, address TEXT, notes TEXT, user_id INT, source TEXT, assigned_to INT, created_at TIMESTAMPTZ DEFAULT NOW())`);
-  await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT)`);
+  await pool.query(`CREATE TABLE doc_categories (id SERIAL PRIMARY KEY, name TEXT, parent_id INT)`);
   await pool.query(`CREATE TABLE doc_templates (id SERIAL PRIMARY KEY, is_private BOOLEAN NOT NULL DEFAULT FALSE, created_by INT, publish_requested_at TIMESTAMPTZ, name TEXT, description TEXT, file_path TEXT, file_name TEXT, category_id INT, is_active BOOLEAN DEFAULT TRUE)`);
   await pool.query('DROP TABLE IF EXISTS template_corrections, template_tag_versions CASCADE');
   await runSqlFile('migrations/20261002_template_tags.sql'); // la lista de modelos lee las versiones de los privados
-  await pool.query(`INSERT INTO doc_categories (name) VALUES ('DECLARACIONES'), ('CONTRATOS')`);
+  await pool.query(`INSERT INTO doc_categories (name, parent_id) VALUES ('DECLARACIONES', NULL), ('CONTRATOS', NULL), ('CONTRATOS AUTENTICOS', 2), ('PODERES', 3)`);
   fs.mkdirSync(path.join(TPL_DIR, 'DECLARACIONES'), { recursive: true });
   fs.writeFileSync(path.join(TPL_DIR, 'DECLARACIONES', 'DECLARACION JURADA DE INGRESOS.docx'), DOCX);
   await pool.query(`INSERT INTO doc_templates (name, file_path, file_name, category_id, is_active) VALUES
     ('DECLARACIÓN JURADA DE INGRESOS', 'DECLARACIONES/DECLARACION JURADA DE INGRESOS.docx', 'DECLARACION JURADA DE INGRESOS.docx', 1, TRUE),
     ('CONTRATO DE ALQUILER DE VIVIENDA', 'CONTRATOS/ALQUILER.docx', 'ALQUILER.docx', 2, TRUE),
-    ('PODER ESPECIAL', 'CONTRATOS/PODER.docx', 'PODER.docx', 2, TRUE),
+    ('PODER ESPECIAL', 'CONTRATOS/PODER.docx', 'PODER.docx', 4, TRUE),
     ('MODELO VIEJO', 'X.docx', 'X.docx', 2, FALSE)`);
   await pool.query(`INSERT INTO clients (name, phone) VALUES ('Juan Pérez', '18095550001'), ('María Gómez', '18095550002')`);
   await runSqlFile('migrations/20260929_portfolio.sql');
@@ -110,6 +110,13 @@ test('GET /models searches the selection; employees can use it', async () => {
   assert.equal(models[0].category, 'DECLARACIONES');
   const all = (await (await call('GET', '/api/documentos/models', 'hengi')).json()).models;
   assert.equal(all.length, 3); // inactive one hidden
+});
+
+test('GET /models gives each model its whole category path, from the top folder down', async () => {
+  const all = (await (await call('GET', '/api/documentos/models', 'hengi')).json()).models;
+  const byName = Object.fromEntries(all.map((m) => [m.name, m]));
+  assert.deepEqual(byName['PODER ESPECIAL'].category_path, ['CONTRATOS', 'CONTRATOS AUTENTICOS', 'PODERES']);
+  assert.deepEqual(byName['DECLARACIÓN JURADA DE INGRESOS'].category_path, ['DECLARACIONES']);
 });
 
 test('AI search returns the models Gemini picked, ignoring invented ids', async () => {

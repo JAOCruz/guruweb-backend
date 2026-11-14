@@ -8,7 +8,7 @@ const { modelThumbnail } = require('../documentos/thumbnails');
 const storage = require('../utils/storage');
 const Client = require('../models/Client');
 const { logActivity, safeLog } = require('../services/activityLog');
-const { listModelsFor, searchTemplates, resolveModelPath } = require('../documentos/templatesCatalog');
+const { listModelsFor, searchTemplates, resolveModelPath, categoryPaths } = require('../documentos/templatesCatalog');
 const { aiSearchTemplates } = require('../documentos/aiSearch');
 const { convertToPdf } = require('../documentos/pdf');
 const Portfolio = require('../documentos/portfolio');
@@ -101,6 +101,7 @@ router.get('/models', async (req, res) => {
     const status = new Map((await Tags.listStatuses().catch(() => []))
       .map((m) => [m.id, admin ? m.status : m.approved_tag_version_id ? 'approved' : 'untagged']));
     const mostUsed = await mostUsedIds().catch(() => []);
+    const paths = await categoryPaths().catch(() => new Map());
     const q = String(req.query.q || '').trim();
     const rank = (m) => (m.is_private ? -1 : mostUsed.includes(m.id) ? mostUsed.indexOf(m.id) : mostUsed.length);
     const found = searchTemplates(all, q);
@@ -108,6 +109,7 @@ router.get('/models', async (req, res) => {
     const ordered = q ? found : [...found].sort((a, b) => rank(a) - rank(b));
     const models = ordered.map(({ file_path, created_by, status: own, ...m }) => ({
       ...m,
+      category_path: paths.get(m.category_id) || (m.category ? [m.category] : []),
       most_used: mostUsed.includes(m.id),
       is_private: m.is_private === true,
       can_manage: admin || m.is_private === true, // a private model only reaches this list for its owner or an admin
