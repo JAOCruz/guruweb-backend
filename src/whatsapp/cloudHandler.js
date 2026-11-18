@@ -6,6 +6,7 @@ const storage = require('../utils/storage');
 const config = require('../config');
 const { shouldBotRespond, bufferMessage } = require('./handler');
 const cloudApi = require('./cloudApi');
+const { toContactId } = require('./contactId');
 
 // Meta accepted the send but could not deliver it: outside the 24 h window (131047 -> WINDOW_CLOSED) or
 // generic undeliverable (131026 -> SEND_FAILED, not the window)
@@ -38,15 +39,18 @@ function getExtension(mimeType, fileName) {
   return MIME_EXTENSIONS[mimeType] || '.bin';
 }
 
+// Profile name; someone with a username and no name shows as "@username"
 function getPushName(value, from) {
   const contacts = value?.contacts || [];
-  const contact = contacts.find((c) => c.wa_id === from);
-  return contact?.profile?.name || null;
+  const contact = contacts.find((c) => (c.wa_id && c.wa_id === from) || (c.user_id && c.user_id === from));
+  const name = contact?.profile?.name;
+  if (name) return name;
+  return contact?.profile?.username ? `@${contact.profile.username}` : null;
 }
 
-function normalizePhone(phone) {
-  return String(phone).replace(/\D/g, '');
-}
+const normalizePhone = toContactId;
+// The phone when Meta sends it; users who hide it behind a username only come with their BSUID
+const senderOf = (message) => message?.from || message?.from_user_id || null;
 
 async function notifyNewMessage(client, phone, text) {
   try {
@@ -255,12 +259,13 @@ function contentForChat(text, normalized, savedMedia, type) {
 
 // What the business writes from the WhatsApp Business app on the phone: goes in the chat as sent. The bot does not react.
 async function processEcho(echo, value) {
-  if (!echo?.id || !echo.to || processingIds.has(echo.id)) return;
+  const to = echo?.to || echo?.to_user_id;
+  if (!echo?.id || !to || processingIds.has(echo.id)) return;
   processingIds.add(echo.id);
   try {
     if (await Message.findByWaMessageId(echo.id)) return;
-    const phone = normalizePhone(echo.to);
-    const { normalized, text } = normalizeMessage({ ...echo, from: echo.to }, value);
+    const phone = normalizePhone(to);
+    const { normalized, text } = normalizeMessage({ ...echo, from: to }, value);
     const client = await Client.findByPhone(phone);
     const savedMedia = await storeMedia(normalized, echo.id, phone, client);
     await Message.create({
@@ -278,7 +283,8 @@ async function processEcho(echo, value) {
 }
 
 async function processSingleMessage(message, value) {
-  if (!message || !message.id || !message.from) return;
+  if (!message || !message.id || !senderOf(message)) return;
+  if (!message.from) message = { ...message, from: message.from_user_id };
 
   // Deduplicate in-memory to avoid racing on bursts / Meta retries.
   if (processingIds.has(message.id)) return;

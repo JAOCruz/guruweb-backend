@@ -53,9 +53,7 @@ function getMimeFromPath(filePath) {
   return map[ext] || 'application/octet-stream';
 }
 
-function normalizePhone(input) {
-  return String(input).replace(/\D/g, '');
-}
+const { recipientFields } = require('./contactId');
 
 const authHeader = () => ({ Authorization: `Bearer ${config.wa.cloud.accessToken}` });
 
@@ -122,7 +120,7 @@ function splitText(text) {
 }
 
 async function sendTextMessage(phone, text) {
-  const to = normalizePhone(phone);
+  const to = recipientFields(phone);
   let first = null;
   for (const body of splitText(text)) {
     const data = await graphRequest(`/${config.wa.cloud.phoneNumberId}/messages`, {
@@ -131,7 +129,7 @@ async function sendTextMessage(phone, text) {
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to,
+        ...to,
         type: 'text',
         text: { body },
       }),
@@ -173,14 +171,14 @@ async function sendDocumentMessage(phone, filePath, fileName, caption = '') {
   const baseFileName = fileName || path.basename(filePath);
   const { id: mediaId } = await uploadMedia(buffer, mimeType, baseFileName);
 
-  const to = normalizePhone(phone);
+  const to = recipientFields(phone);
   const data = await graphRequest(`/${config.wa.cloud.phoneNumberId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to,
+      ...to,
       type: 'document',
       document: {
         id: mediaId,
@@ -193,7 +191,7 @@ async function sendDocumentMessage(phone, filePath, fileName, caption = '') {
 }
 
 async function sendImageMessage(phone, filePathOrUrl, caption = '') {
-  const to = normalizePhone(phone);
+  const to = recipientFields(phone);
   const isUrl = /^https?:\/\//i.test(filePathOrUrl);
 
   let imagePayload;
@@ -215,7 +213,7 @@ async function sendImageMessage(phone, filePathOrUrl, caption = '') {
     body: JSON.stringify({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to,
+      ...to,
       type: 'image',
       image: imagePayload,
     }),

@@ -9,9 +9,7 @@ function isCloudEnabled() {
   return cloudApi.isCloudEnabled();
 }
 
-function toCloudPhone(input) {
-  return String(input).replace(/\D/g, '');
-}
+const { toContactId: toCloudPhone } = require('./contactId');
 
 function toBaileysJid(input) {
   const s = String(input);
