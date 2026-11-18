@@ -193,8 +193,14 @@ function normalizeMessage(message, value) {
       normalized.message.conversation = text;
       break;
     }
+    case 'sticker': {
+      // saved and shown in the chat like a small picture, but the bot does not answer it
+      const st = message.sticker || {};
+      normalized.message.stickerMessage = { mimetype: st.mime_type || 'image/webp', mediaId: st.id };
+      break;
+    }
     default:
-      // reactions, stickers, contacts, unsupported…: stored, never answered
+      // reactions, contacts, unsupported…: stored with a readable line (specialContent), never answered
       text = '';
   }
 
@@ -218,14 +224,15 @@ const mediaInfoOf = (normalized) => normalized.message.imageMessage
   || normalized.message.audioMessage
   || normalized.message.videoMessage;
 
-// Saves a message's photo or file, whichever side wrote it. null when it has none or it could not be saved.
+// Saves a message's photo, sticker or file, whichever side wrote it. null when it has none or it could not be saved.
 async function storeMedia(normalized, waMessageId, phone, client) {
-  const mediaInfo = mediaInfoOf(normalized);
+  const mediaInfo = mediaInfoOf(normalized) || normalized.message.stickerMessage;
   if (!mediaInfo?.mediaId) return null;
   try {
     const mediaType = normalized.message.imageMessage ? 'image'
       : normalized.message.documentMessage ? 'document'
       : normalized.message.audioMessage ? 'audio'
+      : normalized.message.stickerMessage ? 'sticker'
       : 'video';
     const fileName = normalized.message.documentMessage?.fileName || undefined;
     const mediaResult = await saveCloudMedia(mediaInfo.mediaId, mediaInfo.mimetype, fileName, mediaType, phone, waMessageId);
@@ -251,10 +258,50 @@ function contentForChat(text, normalized, savedMedia, type) {
   const mediaLabel = normalized.message.imageMessage ? 'foto'
     : normalized.message.documentMessage ? 'documento'
     : normalized.message.audioMessage ? 'audio'
-    : normalized.message.videoMessage ? 'video' : 'archivo';
+    : normalized.message.videoMessage ? 'video'
+    : normalized.message.stickerMessage ? 'sticker' : 'archivo';
   if (text) return savedMedia ? `${text}\n[📎 adjunto]` : text;
   if (savedMedia) return `[📎 ${savedMedia.media_type || mediaLabel}]`;
-  return mediaInfoOf(normalized) ? `[📎 ${mediaLabel}]` : `[${type}]`;
+  return mediaInfoOf(normalized) || normalized.message.stickerMessage ? `[📎 ${mediaLabel}]` : `[${type}]`;
+}
+
+// What Meta could not hand over ("unsupported"): say why and send them to the phone
+const UNSUPPORTED_LINES = [
+  [/edit/, '✏️ El cliente editó un mensaje. WhatsApp no deja ver el cambio aquí; míralo en el celular.'],
+  [/view_?once/, '📵 Foto o video de ver una sola vez. WhatsApp no deja verlo aquí; míralo en el celular.'],
+  [/poll/, '📊 El cliente mandó una encuesta. WhatsApp no deja verla aquí; mírala en el celular.'],
+  [/event/, '📅 El cliente mandó un evento. WhatsApp no deja verlo aquí; míralo en el celular.'],
+  [/delete|revoke/, '🗑️ El cliente borró un mensaje.'],
+];
+const UNSUPPORTED_DEFAULT = '📵 El cliente mandó algo que WhatsApp no deja ver aquí. Míralo en el celular.';
+
+// The chat line for messages with no text or file: reactions, shared contacts, unsupported. null for the rest.
+async function specialContent(message) {
+  switch (message?.type) {
+    case 'reaction': {
+      const emoji = message.reaction?.emoji;
+      if (!emoji) return 'Quitó su reacción';
+      const quoted = message.reaction?.message_id ? await getQuotedContent(message.reaction.message_id) : null;
+      return quoted ? `${emoji} reaccionó a: "${quoted}"` : `${emoji} reaccionó a un mensaje`;
+    }
+    case 'contacts': {
+      const list = (message.contacts || []).map((c) => {
+        const name = c.name?.formatted_name || [c.name?.first_name, c.name?.last_name].filter(Boolean).join(' ') || 'Sin nombre';
+        const phone = c.phones?.[0]?.phone;
+        return phone ? `${name} · ${phone}` : name;
+      });
+      return list.length ? `👤 Contacto compartido: ${list.join(', ')}` : '👤 Contacto compartido';
+    }
+    case 'unsupported': {
+      const kind = String(message.unsupported?.type || '').toLowerCase();
+      const code = message.errors?.[0]?.code || '';
+      console.warn(`[WA Cloud] Unsupported message: type=${kind || '?'} code=${code}`); // no content, no phone
+      const hit = UNSUPPORTED_LINES.find(([re]) => re.test(kind));
+      return hit ? hit[1] : UNSUPPORTED_DEFAULT;
+    }
+    default:
+      return null;
+  }
 }
 
 // What the business writes from the WhatsApp Business app on the phone: goes in the chat as sent. The bot does not react.
@@ -273,7 +320,9 @@ async function processEcho(echo, value) {
       phone,
       clientId: client?.id || null,
       direction: 'outbound',
-      content: contentForChat(text, normalized, savedMedia, echo.type),
+      // a reaction or contact from the phone reads like the client's; "unsupported" lines talk about the client, so not here
+      content: (!text && !savedMedia && ['reaction', 'contacts'].includes(echo.type) && await specialContent(echo))
+        || contentForChat(text, normalized, savedMedia, echo.type),
       mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
       waJid: `${phone}@s.whatsapp.net`,
     });
@@ -328,7 +377,8 @@ async function processSingleMessage(message, value) {
 
     const mediaInfo = mediaInfoOf(normalized);
     const savedMedia = await storeMedia(normalized, message.id, phone, client);
-    const logContent = contentForChat(finalText, normalized, savedMedia, message.type);
+    const logContent = (!finalText && !savedMedia && await specialContent(message))
+      || contentForChat(finalText, normalized, savedMedia, message.type);
 
     try {
       await Message.create({
