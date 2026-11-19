@@ -158,3 +158,34 @@ test('aprobar algo ya aprobado responde NOT_PENDING con su estado', async () => 
   assert.equal(body.code, 'NOT_PENDING');
   assert.equal(body.status, 'approved');
 });
+
+// ── El digitador asignado envía las cotizaciones aprobadas del bot o de un admin ──
+const get = (p, who) => fetch(base + p, { headers: { Authorization: `Bearer ${tok[who]}` } });
+
+test('el asignado puede abrir y preparar una cotización aprobada del bot', async () => {
+  await pool.query('UPDATE clients SET assigned_to = $1 WHERE id = $2', [digitadorId, clientId]);
+  const inv = await makeInvoice('approved', null);
+  assert.equal((await get(`/api/invoices/${inv.id}`, 'hengi')).status, 200);
+  assert.notEqual((await call(`/api/invoices/${inv.id}/generate-pdf`, 'hengi')).status, 403);
+  assert.notEqual((await call(`/api/invoices/${inv.id}/send-whatsapp`, 'hengi')).status, 403);
+  assert.notEqual((await get(`/api/invoices/${inv.id}/pdf`, 'hengi')).status, 403);
+});
+
+test('el asignado también con una cotización que creó un admin', async () => {
+  await pool.query('UPDATE clients SET assigned_to = $1 WHERE id = $2', [digitadorId, clientId]);
+  const inv = await makeInvoice('approved', adminId);
+  assert.equal((await get(`/api/invoices/${inv.id}`, 'hengi')).status, 200);
+});
+
+test('sin ser el asignado, sigue sin poder abrirla', async () => {
+  const inv = await makeInvoice('approved', null);
+  assert.equal((await get(`/api/invoices/${inv.id}`, 'hengi')).status, 403);
+  assert.equal((await call(`/api/invoices/${inv.id}/send-whatsapp`, 'hengi')).status, 403);
+});
+
+test('la cotización de otro digitador sigue siendo solo suya aunque el cliente sea mío', async () => {
+  const otro = await createUser('marleni', 'digitador', 'Marleni');
+  await pool.query('UPDATE clients SET assigned_to = $1 WHERE id = $2', [digitadorId, clientId]);
+  const inv = await makeInvoice('approved', otro);
+  assert.equal((await get(`/api/invoices/${inv.id}`, 'hengi')).status, 403);
+});

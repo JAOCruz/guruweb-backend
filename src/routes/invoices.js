@@ -49,6 +49,20 @@ async function isPricingAssignee(req, invoice) {
   const { rows } = await pool.query('SELECT 1 FROM clients WHERE id = $1 AND assigned_to = $2', [invoice.client_id, req.user.id]);
   return rows.length > 0;
 }
+// El digitador asignado al cliente abre, prepara y envía las cotizaciones que no son de otro empleado
+// (las creó el bot o un admin): el admin las aprueba y el asignado las envía.
+async function isClientAssignee(req, invoice) {
+  if (!isEmployee(req.user.role) || !invoice.client_id) return false;
+  const { rows } = await pool.query(
+    `SELECT 1 FROM clients c
+      WHERE c.id = $1 AND c.assigned_to = $2
+        AND ($3::int IS NULL OR EXISTS (SELECT 1 FROM users u WHERE u.id = $3 AND u.role = 'admin'))`,
+    [invoice.client_id, req.user.id, invoice.created_by]
+  );
+  return rows.length > 0;
+}
+// Employee may act on this invoice: their own, or (see isClientAssignee) one of their assigned client
+const canEmployeeAct = async (req, invoice) => invoice.created_by === req.user.id || isClientAssignee(req, invoice);
 const { generateInvoicePDF, generateDocNumber } = require('../documents/generateInvoice');
 
 const Case = require('../models/Case');
@@ -296,7 +310,7 @@ router.get('/:id', async (req, res) => {
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     // Employee can only see own invoices (or, to set prices, the bot quotes of their assigned clients)
     if (await isPricingAssignee(req, invoice)) return res.json({ invoice });
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && !(await canEmployeeAct(req, invoice))) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (blockUnapproved(req, res, invoice)) return;
@@ -624,7 +638,7 @@ router.post('/:id/send', async (req, res) => {
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
 
     // Employee ownership check
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && !(await canEmployeeAct(req, invoice))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -712,7 +726,7 @@ router.post('/:id/generate-pdf', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && !(await canEmployeeAct(req, invoice))) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (blockUnapproved(req, res, invoice)) return;
@@ -753,7 +767,7 @@ router.post('/:id/send-whatsapp', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && !(await canEmployeeAct(req, invoice))) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (invoice.status === 'rejected') {
@@ -787,7 +801,7 @@ router.get('/:id/pdf', async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (isEmployee(req.user.role) && invoice.created_by !== req.user.id) {
+    if (isEmployee(req.user.role) && !(await canEmployeeAct(req, invoice))) {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (blockUnapproved(req, res, invoice)) return;
