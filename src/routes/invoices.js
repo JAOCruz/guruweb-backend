@@ -296,6 +296,17 @@ router.get('/', async (req, res) => {
       );
     }
 
+    // can_send: this user can open, prepare and send it (the employee list also has their clients' quotes)
+    if (isAdmin) {
+      invoices = invoices.map((i) => ({ ...i, can_send: true }));
+    } else {
+      const { rows } = await pool.query(`SELECT id FROM users WHERE role = 'admin'`);
+      const adminIds = new Set(rows.map((r) => r.id));
+      invoices = invoices.map((i) => ({
+        ...i,
+        can_send: i.created_by === req.user.id || i.created_by == null || adminIds.has(i.created_by),
+      }));
+    }
     res.json({ invoices });
   } catch (err) {
     console.error('List invoices error:', err);
@@ -314,7 +325,7 @@ router.get('/:id', async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     if (blockUnapproved(req, res, invoice)) return;
-    res.json({ invoice });
+    res.json({ invoice: { ...invoice, can_send: !isEmployee(req.user.role) || (await canEmployeeAct(req, invoice)) } });
   } catch (err) {
     console.error('Get invoice error:', err);
     res.status(500).json({ error: 'Failed to get invoice' });

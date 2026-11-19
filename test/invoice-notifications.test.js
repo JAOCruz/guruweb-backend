@@ -189,3 +189,15 @@ test('la cotización de otro digitador sigue siendo solo suya aunque el cliente 
   const inv = await makeInvoice('approved', otro);
   assert.equal((await get(`/api/invoices/${inv.id}`, 'hengi')).status, 403);
 });
+
+test('la lista y el detalle dicen si el digitador puede enviarla (can_send)', async () => {
+  const otro = await createUser('marleni', 'digitador', 'Marleni');
+  await pool.query('UPDATE clients SET assigned_to = $1 WHERE id = $2', [digitadorId, clientId]);
+  const bot = await makeInvoice('approved', null);
+  const ajena = await makeInvoice('approved', otro);
+  const list = (await (await get('/api/invoices', 'hengi')).json()).invoices;
+  assert.equal(list.find((i) => i.id === bot.id).can_send, true);
+  const ajenaRow = list.find((i) => i.id === ajena.id);
+  if (ajenaRow) assert.equal(ajenaRow.can_send, false);
+  assert.equal((await (await get(`/api/invoices/${bot.id}`, 'hengi')).json()).invoice.can_send, true);
+});
