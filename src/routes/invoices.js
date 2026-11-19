@@ -81,17 +81,27 @@ async function notifyApprovalRequested(req, inv) {
     metadata: { invoice_id: inv.id },
   });
 }
-// Campana: el admin decidió -> el empleado que la creó (ni el bot ni otro admin).
-async function notifyDecision(inv, approved, reason) {
-  if (!inv || !inv.created_by) return;
-  const { rows } = await pool.query('SELECT role FROM users WHERE id = $1', [inv.created_by]);
-  if (!rows[0] || !isEmployee(rows[0].role)) return;
+// Campana: el admin decidió -> el empleado que la creó. Si la creó el bot o un admin y solo se aprobó
+// (toSend: falta enviarla), el aviso va al digitador asignado del cliente, que es quien la envía.
+async function notifyDecision(inv, approved, reason, { toSend = false } = {}) {
+  if (!inv) return;
+  let recipient = null;
+  if (inv.created_by) {
+    const { rows } = await pool.query('SELECT role FROM users WHERE id = $1', [inv.created_by]);
+    if (rows[0] && isEmployee(rows[0].role)) recipient = inv.created_by;
+  }
+  if (!recipient && approved && toSend && inv.client_id) {
+    const { rows } = await pool.query('SELECT assigned_to FROM clients WHERE id = $1', [inv.client_id]);
+    recipient = rows[0]?.assigned_to || null;
+  }
+  if (!recipient) return;
   const kind = docKind(inv);
   const done = approved ? 'aprobada' : 'rechazada';
-  await notifyUsers([inv.created_by], {
+  const tail = !approved && reason ? `: ${reason}` : approved && toSend ? ', ya puedes enviarla.' : '.';
+  await notifyUsers([recipient], {
     type: 'approval',
     title: `${approved ? '✅' : '❌'} ${kind === 'factura' ? 'Factura' : 'Cotización'} ${done}`,
-    message: `La ${kind} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} fue ${done}${!approved && reason ? `: ${reason}` : '.'}`,
+    message: `La ${kind} ${inv.doc_number} de ${inv.client_name || 'cliente sin nombre'} fue ${done}${tail}`,
     link: `/cotizaciones?invoice=${inv.id}`,
     metadata: { invoice_id: inv.id },
   });
@@ -519,12 +529,12 @@ router.post('/:id/approve', requireRole('admin'), async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     if (!['draft', 'pending_approval'].includes(invoice.status)) {
-      return res.status(400).json({ error: `Invoice is already ${invoice.status}` });
+      return res.status(400).json({ error: `Invoice is already ${invoice.status}`, code: 'NOT_PENDING', status: invoice.status });
     }
     if (hasPendingPrices(invoice)) return pricesPending(res);
     const updated = await Invoice.approve(invoice.id, req.user.id);
     await safeLog(() => logInvoice(req, 'invoice.approve', updated, `Aprobó ${docLabel(updated)} por ${rd(updated.total)}`));
-    await safeLog(() => notifyDecision(updated, true));
+    await safeLog(() => notifyDecision(updated, true, null, { toSend: true }));
     res.json({ invoice: updated, message: 'Invoice approved' });
   } catch (err) {
     console.error('Approve invoice error:', err);

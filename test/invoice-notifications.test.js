@@ -125,3 +125,36 @@ test('aprobar y enviar algo del digitador también le avisa', async () => {
   const n = await notifs(digitadorId);
   assert.equal(n.filter((x) => /aprobada/i.test(x.title)).length, 1);
 });
+
+// ── Aprobar desde la campanita: el que envía es el digitador ──
+test('aprobar una cotización del bot avisa al digitador asignado del cliente', async () => {
+  await pool.query('UPDATE clients SET assigned_to = $1 WHERE id = $2', [digitadorId, clientId]);
+  const inv = await makeInvoice('pending_approval', null);
+  assert.equal((await call(`/api/invoices/${inv.id}/approve`, 'admin')).status, 200);
+  const n = await notifs(digitadorId);
+  assert.equal(n.length, 1);
+  assert.match(n[0].title, /aprobada/i);
+  assert.match(n[0].message, /ya puedes enviarla/);
+});
+
+test('aprobar una cotización del bot sin asignado no crea avisos', async () => {
+  const inv = await makeInvoice('pending_approval', null);
+  assert.equal((await call(`/api/invoices/${inv.id}/approve`, 'admin')).status, 200);
+  const { rows } = await pool.query('SELECT count(*)::int n FROM notifications');
+  assert.equal(rows[0].n, 0);
+});
+
+test('el digitador que la creó también lee que ya puede enviarla', async () => {
+  const inv = await makeInvoice('pending_approval', digitadorId);
+  await call(`/api/invoices/${inv.id}/approve`, 'admin');
+  assert.match((await notifs(digitadorId))[0].message, /ya puedes enviarla/);
+});
+
+test('aprobar algo ya aprobado responde NOT_PENDING con su estado', async () => {
+  const inv = await makeInvoice('approved', digitadorId);
+  const r = await call(`/api/invoices/${inv.id}/approve`, 'admin');
+  assert.equal(r.status, 400);
+  const body = await r.json();
+  assert.equal(body.code, 'NOT_PENDING');
+  assert.equal(body.status, 'approved');
+});
