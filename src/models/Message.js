@@ -25,8 +25,13 @@ const Message = {
 
   // Get the last known real JID for a phone (handles @lid accounts)
   async getLastJid(phone) {
+    // An @lid is an old Baileys privacy id: Meta's Cloud API cannot deliver to it ("undeliverable", 131026),
+    // so with Cloud the chat's phone is used instead
+    const cloud = require('../whatsapp/cloudApi').isCloudEnabled();
     const { rows } = await pool.query(
-      `SELECT wa_jid FROM messages WHERE phone = $1 AND wa_jid IS NOT NULL AND direction = 'inbound' ORDER BY created_at DESC LIMIT 1`,
+      `SELECT wa_jid FROM messages WHERE phone = $1 AND wa_jid IS NOT NULL AND direction = 'inbound'
+         ${cloud ? "AND wa_jid NOT LIKE '%@lid'" : ''}
+       ORDER BY created_at DESC LIMIT 1`,
       [phone]
     );
     return rows[0]?.wa_jid || null;
