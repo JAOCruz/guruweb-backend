@@ -117,7 +117,7 @@ router.post('/', async (req, res) => {
     if (!name || !phone) {
       return res.status(400).json({ error: 'name and phone are required' });
     }
-    const client = await Client.create({ name, phone, email, address, notes, userId: req.user.id });
+    const client = await Client.create({ name, phone, email, address, notes, userId: req.user.id, nameLocked: true });
     await backfillMessagesClientId(client.id, client.phone);
     res.status(201).json({ client });
   } catch (err) {
@@ -134,6 +134,8 @@ router.put('/:id', async (req, res) => {
     const { name, phone, email, address, notes } = req.body;
     const fields = {};
     if (name !== undefined) fields.name = name;
+    // Nombre puesto por el equipo: queda fijo frente al nombre de perfil de WhatsApp.
+    if (typeof name === 'string' && name.trim()) fields.name_locked = true;
     if (phone !== undefined) fields.phone = phone;
     if (email !== undefined) fields.email = email;
     if (address !== undefined) fields.address = address;

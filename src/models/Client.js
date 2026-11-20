@@ -1,10 +1,12 @@
 const pool = require('../db/pool');
 
 const Client = {
-  async create({ name, phone, email, address, notes, userId, source = 'whatsapp' }) {
+  // nameLocked: el nombre lo puso el equipo; el nombre de perfil de WhatsApp no lo cambia.
+  async create({ name, phone, email, address, notes, userId, source = 'whatsapp', nameLocked = false }) {
+    const lock = nameLocked ? ', name_locked' : '';
     const { rows } = await pool.query(
-      `INSERT INTO clients (name, phone, email, address, notes, user_id, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      `INSERT INTO clients (name, phone, email, address, notes, user_id, source${lock})
+       VALUES ($1, $2, $3, $4, $5, $6, $7${nameLocked ? ', true' : ''}) RETURNING *`,
       [name, phone, email || null, address || null, notes || null, userId, source]
     );
     return rows[0];
@@ -62,12 +64,14 @@ const Client = {
 
   // Save WhatsApp display name for contacts. Prefer the richest name:
   // more words beats fewer words; longer beats shorter; existing beats empty.
+  // A name the team saved (name_locked) is never replaced.
   async updateOrCreatePushName(phone, pushName) {
     const { rows } = await pool.query(
       `INSERT INTO clients (phone, name, created_at, updated_at)
        VALUES ($1, $2, NOW(), NOW())
        ON CONFLICT (phone) DO UPDATE SET
          name = CASE
+           WHEN clients.name_locked THEN clients.name
            WHEN clients.name IS NULL OR clients.name = '' THEN $2
            WHEN array_length(string_to_array($2, ' '), 1) > array_length(string_to_array(clients.name, ' '), 1) THEN $2
            WHEN length($2) > length(clients.name) THEN $2

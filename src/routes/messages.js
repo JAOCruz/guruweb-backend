@@ -427,6 +427,7 @@ router.post('/register-client', async (req, res) => {
       address: address || null,
       notes: notes || null,
       userId: req.user.id,
+      nameLocked: true,
     });
 
     // Backfill client_id on existing messages for this phone

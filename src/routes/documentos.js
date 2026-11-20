@@ -199,7 +199,7 @@ router.post('/clients', async (req, res) => {
   const phone = String((req.body || {}).phone || '').replace(/[^\d+]/g, '');
   if (!name || phone.length < 7) return sendError(res, 400, 'INVALID_CLIENT', 'Escribe el nombre y un teléfono válido');
   try {
-    const client = await Client.create({ name, phone, userId: req.user.id, source: 'documentos' });
+    const client = await Client.create({ name, phone, userId: req.user.id, source: 'documentos', nameLocked: true });
     res.status(201).json({ client: { id: client.id, name: client.name, phone: client.phone } });
   } catch (err) {
     if (err.code === '23505') return sendError(res, 409, 'PHONE_TAKEN', 'Ya existe un cliente con ese teléfono; búscalo en la lista');

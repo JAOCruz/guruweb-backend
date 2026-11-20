@@ -10,6 +10,7 @@ async function createAgentSchema() {
     service_catalog, service_categories, legal_profiles, client_media, messages, cases, clients CASCADE`);
   await pool.query(`CREATE TABLE clients (id SERIAL PRIMARY KEY, phone VARCHAR(20) UNIQUE, name VARCHAR(255), assigned_to INT, user_id INT, email VARCHAR(255), address TEXT, notes TEXT, source VARCHAR(20) DEFAULT 'whatsapp',
     created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+  await runSqlFile('migrations/20261120_nombre_fijo.sql');
   await runSqlFile('migrations/20260929_legal_profiles.sql');
   await pool.query(`CREATE TABLE service_categories (id SERIAL PRIMARY KEY, name TEXT)`);
   await pool.query(`CREATE TABLE service_catalog (id SERIAL PRIMARY KEY, name TEXT, description TEXT, category_id INT, digitacion_price NUMERIC,
