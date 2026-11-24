@@ -2,6 +2,7 @@ const pool = require('../../db/pool');
 const Invoice = require('../../models/Invoice');
 const { calculatePrice } = require('../../models/servicePricing');
 const { duplicadoPrice, validFojas } = require('../../models/fojaRates');
+const pricingRates = require('../../models/pricingRates');
 const { activeAdminIds, assigneeOrAdmins, notifyUsers } = require('./notify');
 const { ensureClient } = require('./client');
 
@@ -25,6 +26,7 @@ async function preparar_cotizacion(args, ctx) {
   const client = await ensureClient(ctx);
   if (!client?.id) return { error: 'cliente no encontrado' };
 
+  await pricingRates.refreshRates();
   const items = [];
   const noExiste = [];
   const faltaValor = []; // partidas por tramos sin valor_del_bien
@@ -48,6 +50,7 @@ async function preparar_cotizacion(args, ctx) {
     if (unit.tramo) desc += ` (tramo ${unit.tramo})`;
     else if (opts.assetValue) desc += ` (valor ${opts.assetValue})`;
     if (unit.tarifaPorFoja !== null && unit.fojas) desc += ` (${unit.fojas} fojas)`;
+    if (unit.tarifaPorPagina && unit.paginas) desc += ` (${unit.paginas} ${unit.paginas === 1 ? 'página' : 'páginas'} × ${unit.tarifaPorPagina})`;
     const fixed = unit.total !== null && unit.total > 0 ? unit.total : null;
     if (fixed !== null && !isTranslation(s)) {
       items.push({ desc, cantidad, precio: fixed });

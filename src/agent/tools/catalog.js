@@ -2,6 +2,14 @@ const pool = require('../../db/pool');
 const { fold } = require('../text');
 const { calculatePrice } = require('../../models/servicePricing');
 const { FOJA_RATES, validFojas } = require('../../models/fojaRates');
+const pricingRates = require('../../models/pricingRates');
+
+// Tramos de una traducción por tipo: precio por página según cuántas páginas tiene (total = precio × páginas).
+async function porPagina(s) {
+  if (!s.traduccion_tipo) return null;
+  const t = (await pricingRates.getRates()).traduccion.tipos.find((x) => x.key === s.traduccion_tipo);
+  return t ? { tipo: t.label, tramos: t.tramos } : null;
+}
 
 const SELECT = `SELECT s.*, c.name AS categoria FROM service_catalog s
   LEFT JOIN service_categories c ON c.id = s.category_id`;
@@ -53,10 +61,12 @@ async function buscar_servicio(args = {}, ctx) {
   const consulta = fold(args.consulta);
   const qTokens = tokens(consulta).filter((w) => w.length >= 3 && !STOPWORDS.has(w));
   if (!qTokens.length) return { resultados: [] };
+  await pricingRates.refreshRates();
   const { rows } = await pool.query(`${SELECT} WHERE s.active = true ORDER BY s.id`);
-  const resultados = rank(rows, consulta, qTokens)
-    .slice(0, 5)
-    .map(({ s }) => {
+  const top = rank(rows, consulta, qTokens).slice(0, 5);
+  const paginas = await Promise.all(top.map(({ s }) => porPagina(s)));
+  const resultados = top
+    .map(({ s }, i) => {
       const price = calculatePrice(s);
       return {
         id: s.id,
@@ -74,6 +84,8 @@ async function buscar_servicio(args = {}, ctx) {
         unidad: s.unit_type || null,
         // Servicio por foja: tarifa por foja y fojas que se asumen si el cliente no dice cuántas.
         por_foja: FOJA_RATES[s.foja_tipo] ? { tipo: s.foja_tipo, tarifa_por_foja: FOJA_RATES[s.foja_tipo], fojas_aprox: validFojas(s.fojas) ?? 1 } : null,
+        // Traducción por tipo: precio por página según el tramo de páginas (pase las páginas en fojas a calcular_precio).
+        ...(paginas[i] ? { por_pagina: paginas[i] } : {}),
       };
     });
   return { resultados };
@@ -85,6 +97,7 @@ async function calcular_precio(args = {}, ctx) {
   const { rows } = await pool.query(`${SELECT} WHERE s.id = $1 AND s.active = true`, [id]);
   if (!rows.length) return { error: 'servicio no encontrado' };
   const s = rows[0];
+  await pricingRates.refreshRates();
   const opts = {
     quantity: args.cantidad ?? 1,
     includeNotarization: args.con_notarizacion !== false,
@@ -106,6 +119,7 @@ async function calcular_precio(args = {}, ctx) {
   return {
     servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
     fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
+    ...(s.traduccion_tipo ? { tarifa_por_pagina: p.tarifaPorPagina ?? null, paginas: p.paginas ?? null, paginas_estimadas: p.paginasEstimadas ?? false } : {}),
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
     ...(tramos ? { tramos } : {}),
     ...(dup ? { duplicados: { total: dup } } : {}),

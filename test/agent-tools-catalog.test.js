@@ -227,3 +227,27 @@ test('un servicio por confirmar no le pasa ningún precio al bot (ni sugerido)',
   assert.equal(r.por_confirmar, true);
   assert.equal('precio_sugerido' in r, false);
 });
+
+// ---------- traducciones por tipo (tarifas editables): precio por página que baja por tramos ----------
+async function traduccionDensa() {
+  await pool.query('ALTER TABLE service_catalog ADD COLUMN IF NOT EXISTS traduccion_tipo TEXT');
+  return (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, unit_type, traduccion_tipo, alias)
+    VALUES ('Traducción - Carta extensivo o denso', 1, 1000, 'por página', 'carta_denso', ARRAY['traducir record de notas']) RETURNING id`)).rows[0].id;
+}
+test('buscar_servicio de una traducción trae sus tramos por página', async () => {
+  await traduccionDensa();
+  const r = await buscar_servicio({ consulta: 'traducir record de notas' });
+  const t = r.resultados[0];
+  assert.equal(t.nombre, 'Traducción - Carta extensivo o denso');
+  assert.deepEqual(t.por_pagina.tramos, [{ desde: 1, precio: 1000 }, { desde: 3, precio: 800 }, { desde: 10, precio: 700 }]);
+});
+test('calcular_precio de 3 páginas densas: 3 × 800 = 2400, y el bot puede decir 800 y 2400', async () => {
+  const id = await traduccionDensa();
+  const r = await calcular_precio({ servicio_id: id, fojas: 3 });
+  assert.equal(r.total, 2400);
+  assert.equal(r.tarifa_por_pagina, 800);
+  assert.equal(r.paginas, 3);
+  assert.equal(r.paginas_estimadas, false);
+  const amounts = collectAmounts(r, new Set());
+  assert.ok(amounts.has(800) && amounts.has(2400));
+});

@@ -25,7 +25,8 @@ const TOOLS = [
       'su id, qué incluye, sus reglas, requisitos y si lleva notarización. Devuelve hasta 5 resultados; el precio que trae es solo ' +
       'de referencia: para decirle un monto al cliente use calcular_precio. Si depende_del_valor es true, el precio viene nulo: ' +
       'pregunte el valor del bien y páselo a calcular_precio. Si trae por_foja, el servicio se cobra por foja (cada cara impresa es una foja): ' +
-      'tarifa_por_foja y fojas_aprox son solo referencia.',
+      'tarifa_por_foja y fojas_aprox son solo referencia. Si trae por_pagina, es una traducción por tipo: el precio por página ' +
+      'baja según cuántas páginas son (tramos: desde N páginas, precio por página).',
     parameters: {
       type: 'object',
       properties: {
@@ -42,7 +43,8 @@ const TOOLS = [
       'por_confirmar o total nulo, diga "se lo confirmo" y cree la solicitud; si devuelve rango, dé el rango y diga que el ' +
       'digitador lo confirma. Si el servicio va por foja (devuelve tarifa_por_foja) y el cliente no dijo cuántas fojas, el precio es ' +
       'estimado (fojas_estimadas: true): dígalo así y pregunte cuántas fojas; con fojas dadas el precio es exacto. Si pide originales ' +
-      'adicionales o duplicados, pase duplicados.',
+      'adicionales o duplicados, pase duplicados. En una traducción por tipo, pase las páginas en fojas: devuelve tarifa_por_pagina, ' +
+      'paginas y el total (tarifa del tramo × páginas); si paginas_estimadas es true, pregunte cuántas páginas son.',
     parameters: {
       type: 'object',
       properties: {
@@ -52,7 +54,8 @@ const TOOLS = [
           'Por defecto 1. En un servicio por foja, las páginas del documento van en fojas, no en cantidad; los originales ' +
           'adicionales van en duplicados.' },
         con_notarizacion: { type: 'boolean', description: 'false si el cliente quiere solo la redacción, sin notarizar. Por defecto true.' },
-        fojas: { type: 'integer', description: 'Cuántas fojas (caras impresas) tiene el documento, si el servicio va por foja y el cliente lo dijo.' },
+        fojas: { type: 'integer', description: 'Cuántas fojas (caras impresas) tiene el documento, si el servicio va por foja y el cliente lo dijo. ' +
+          'En una traducción, cuántas páginas tiene el documento a traducir.' },
         duplicados: { type: 'integer', description: 'Originales adicionales o duplicados que pide el cliente.' },
       },
       required: ['servicio_id'],

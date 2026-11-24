@@ -124,6 +124,18 @@ test('una traducción siempre queda por confirmar con su precio como sugerido', 
   assert.equal(r2.por_confirmar[0].precio_sugerido, 700); // la traducción sí: es su precio por página
 });
 
+test('una traducción por tipo va por confirmar con el total de sus páginas como sugerido', async () => {
+  await pool.query('ALTER TABLE service_catalog ADD COLUMN IF NOT EXISTS traduccion_tipo TEXT');
+  const id = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, traduccion_tipo, price_tiers)
+    VALUES ('Traducción - Legal extensivo o denso', 1, 800, 'legal_denso', '[]') RETURNING id`)).rows[0].id;
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: id, fojas: 4 }] }, ctx);
+  const line = (await pool.query('SELECT items FROM invoices')).rows[0].items[0];
+  assert.equal(line.precio, null); assert.equal(line.por_confirmar, true);
+  assert.equal(line.precio_sugerido, 2800);
+  assert.match(line.desc, /4 páginas/);
+  assert.equal(r.por_confirmar[0].precio_sugerido, 2800);
+});
+
 test('modificación de 3 fojas queda como rango por confirmar; de 2 fojas tiene precio', async () => {
   const x = await extraServices();
   await preparar_cotizacion({ partidas: [{ servicio_id: x.modif, fojas: 3 }, { servicio_id: x.modif, fojas: 2 }] }, ctx);

@@ -1,6 +1,7 @@
 const pool = require('../../db/pool');
 const { fold } = require('../text');
 const { calculatePrice } = require('../../models/servicePricing');
+const { refreshRates } = require('../../models/pricingRates');
 
 async function ver_tramite(args = {}, ctx) {
   const q = fold(args.nombre);
@@ -9,6 +10,7 @@ async function ver_tramite(args = {}, ctx) {
     || (q.length >= 3 ? rows.find((r) => fold(r.nombre).includes(q) || (r.alias || []).some((a) => fold(a).includes(q))) : null);
   if (!t) return { error: 'trámite no encontrado', disponibles: rows.map((r) => r.nombre) };
 
+  await refreshRates();
   const faltan = [];
   let total = 0;
   const pasos = [];
