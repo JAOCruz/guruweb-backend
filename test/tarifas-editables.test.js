@@ -121,3 +121,16 @@ test('sin la tabla de tarifas se usan las de siempre y nada se cae', async () =>
   assert.equal(r.foja.legal_simple, 250);
   assert.equal(rates.traduccionPrecio('carta_sencillo', 1).total, 700);
 });
+
+test('un tipo de traducción nuevo crea su servicio en el catálogo para que el bot lo cotice', async () => {
+  const cur = (await (await req('GET', 'admin')).json()).rates;
+  cur.traduccion.tipos.push({ key: 'carta_avanzada', label: 'Carta redacción avanzada', tramos: [{ desde: 1, precio: 1200 }, { desde: 3, precio: 1000 }] });
+  assert.equal((await req('PUT', 'admin', cur)).status, 200);
+  const s = await svc('Traducción - Carta redacción avanzada');
+  assert.equal(s.traduccion_tipo, 'carta_avanzada');
+  assert.equal(s.active, true);
+  assert.equal(calculatePrice(s, { fojas: 3 }).total, 3000);
+  // guardar otra vez no lo duplica
+  await req('PUT', 'admin', cur);
+  assert.equal((await pool.query(`SELECT count(*)::int n FROM service_catalog WHERE traduccion_tipo = 'carta_avanzada'`)).rows[0].n, 1);
+});

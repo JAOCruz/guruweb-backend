@@ -114,6 +114,16 @@ async function saveRates(body, userId) {
         [key, JSON.stringify(r[key]), userId ?? null]
       );
     }
+    // un tipo de traducción nuevo necesita su servicio en el catálogo para que el bot lo encuentre y lo cotice
+    for (const t of r.traduccion.tipos) {
+      await client.query(
+        `INSERT INTO service_catalog (name, category_id, digitacion_price, unit_type, active, traduccion_tipo, reglas)
+         SELECT $1, (SELECT id FROM service_categories WHERE name ILIKE '%traducci%' ORDER BY id LIMIT 1), $2, 'por página', true, $3, $4
+         WHERE NOT EXISTS (SELECT 1 FROM service_catalog WHERE traduccion_tipo = $3)`,
+        [`Traducción - ${t.label}`, t.tramos[0].precio, t.key,
+          `${t.label}. Se cobra por página y el precio por página baja con la cantidad de páginas: el total es el precio del tramo por todas las páginas. Pida el documento en foto o PDF. Solo se traduce la versión final y oficial. El digitador confirma el tipo y el precio.`]
+      );
+    }
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
