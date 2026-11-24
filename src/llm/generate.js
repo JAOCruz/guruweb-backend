@@ -48,29 +48,55 @@ function isQuotaError(err) {
   return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
 }
 
+// Google saturado o caído un momento (503/500/UNAVAILABLE): vale la pena esperar y reintentar una vez
+const isOverloaded = (err) => /\b(503|500)\b|UNAVAILABLE|high demand|overloaded|INTERNAL/i.test(err?.message || '');
+let retryDelayMs = 2500;
+function _setRetryDelay(ms) { retryDelayMs = ms; }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// El motivo del error para el log: con el código (503, 429…) y sin la clave ni la URL larga
+function reason(err) {
+  return String(err?.message || err)
+    .replace(/key=[^&\s]+/g, 'key=***')
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, '***')
+    .replace(/Error fetching from https?:\/\/\S+?\/models\//, 'models/')
+    .slice(0, 300);
+}
+
 async function generateWithFallback(fn) {
+  let err;
   try {
     return await fn(model);
-  } catch (err) {
-    console.log(`[LLM] Primary error: ${err.message.substring(0, 120)}`);
-    if (isRetriable(err)) {
-      try {
-        return await fn(fallbackModel);
-      } catch (fallbackErr) {
-        console.log(`[LLM] Fallback error: ${fallbackErr.message.substring(0, 120)}`);
-        // If both fail with quota errors, activate backoff
-        if (isQuotaError(fallbackErr) || isQuotaError(err)) {
-          activateQuotaBackoff(fallbackErr);
-        }
-        return null;
-      }
+  } catch (e) {
+    err = e;
+    console.log(`[LLM] Primary error: ${reason(err)}`);
+  }
+  if (isOverloaded(err)) {
+    await sleep(retryDelayMs);
+    try {
+      return await fn(model);
+    } catch (e) {
+      err = e;
+      console.log(`[LLM] Primary retry error: ${reason(err)}`);
     }
-    if (isQuotaError(err)) {
-      activateQuotaBackoff(err);
+  }
+  if (isRetriable(err)) {
+    try {
+      return await fn(fallbackModel);
+    } catch (fallbackErr) {
+      console.log(`[LLM] Fallback error: ${reason(fallbackErr)}`);
+      // If both fail with quota errors, activate backoff
+      if (isQuotaError(fallbackErr) || isQuotaError(err)) {
+        activateQuotaBackoff(fallbackErr);
+      }
       return null;
     }
-    throw err;
   }
+  if (isQuotaError(err)) {
+    activateQuotaBackoff(err);
+    return null;
+  }
+  throw err;
 }
 
 // Intent detection prompt — minimal, no knowledge base needed
@@ -341,5 +367,5 @@ Reglas: español dominicano formal, *negritas* WhatsApp, ${isSingleWord ? 'NO me
 module.exports = {
   detectIntentLLM, generateLegalResponse, generateGreeting, generateIntakeConfirmation, getRateLimitStatus, getQuotaBackoffRemaining,
   // Shared rate limiter utilities (used by mediaAnalysis.js)
-  canMakeRequest, recordRequest, generateWithFallback,
+  canMakeRequest, recordRequest, generateWithFallback, _setRetryDelay,
 };
