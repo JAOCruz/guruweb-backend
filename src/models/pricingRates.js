@@ -31,6 +31,7 @@ function apply(r) {
   return current;
 }
 
+// null when the table can't be read for a reason other than not existing (then the rates in memory stay)
 async function load() {
   const r = clone(DEFAULTS);
   try {
@@ -40,14 +41,21 @@ async function load() {
       if (row.key === 'traduccion' && Array.isArray(row.value?.tipos)) r.traduccion = row.value;
     }
   } catch (err) {
-    if (err.code !== '42P01') console.error('[Tarifas] no se pudieron leer:', err.code || err.message);
+    if (err.code === '42P01') return r; // migración sin correr: las de siempre
+    console.error('[Tarifas] no se pudieron leer:', err.code || err.message);
+    return null;
   }
   return r;
 }
 
+let version = 0; // sube con cada guardado: una lectura que empezó antes no pisa lo guardado
 async function refreshRates() {
   if (Date.now() - loadedAt < TTL_MS) return current;
-  return apply(await load());
+  const v = version;
+  const r = await load();
+  if (v !== version) return current;
+  if (!r) { loadedAt = Date.now() - TTL_MS + 5000; return current; } // error: se queda lo que hay y reintenta en 5 s
+  return apply(r);
 }
 
 async function getRates({ fresh = false } = {}) {
@@ -86,10 +94,10 @@ function validateRates(body) {
     keys.add(t.key);
     if (typeof t.label !== 'string' || !t.label.trim()) return 'Cada tipo de traducción necesita un nombre';
     if (!Array.isArray(t.tramos) || !t.tramos.length) return `«${t.label}» necesita al menos un tramo`;
-    if (t.tramos[0].desde !== 1) return `El primer tramo de «${t.label}» debe empezar en 1 página`;
     for (let i = 0; i < t.tramos.length; i++) {
       const x = t.tramos[i];
-      if (!isPage(x?.desde) || !isPrice(x?.precio)) return `Revise los tramos de «${t.label}»: páginas y precios deben ser mayores que 0`;
+      if (!x || typeof x !== 'object' || !isPage(x.desde) || !isPrice(x.precio)) return `Revise los tramos de «${t.label}»: páginas y precios deben ser mayores que 0`;
+      if (i === 0 && x.desde !== 1) return `El primer tramo de «${t.label}» debe empezar en 1 página`;
       if (i > 0 && x.desde <= t.tramos[i - 1].desde) return `Los tramos de «${t.label}» deben ir de menos a más páginas, sin repetirse`;
     }
   }
@@ -114,13 +122,21 @@ async function saveRates(body, userId) {
         [key, JSON.stringify(r[key]), userId ?? null]
       );
     }
-    // un tipo de traducción nuevo necesita su servicio en el catálogo para que el bot lo encuentre y lo cotice
+    // cada tipo tiene su servicio en el catálogo (para que el bot lo encuentre y lo cotice), con su nombre y el precio
+    // de 1 página al día; un tipo que se quitó deja su servicio inactivo
+    const keys = r.traduccion.tipos.map((t) => t.key);
+    await client.query(
+      `UPDATE service_catalog SET active = false WHERE traduccion_tipo IS NOT NULL AND NOT (traduccion_tipo = ANY($1::text[]))`, [keys]);
     for (const t of r.traduccion.tipos) {
+      const name = `Traducción - ${t.label}`;
+      const { rowCount } = await client.query(
+        `UPDATE service_catalog SET name = $1, digitacion_price = $2, active = true WHERE traduccion_tipo = $3`,
+        [name, t.tramos[0].precio, t.key]);
+      if (rowCount) continue;
       await client.query(
         `INSERT INTO service_catalog (name, category_id, digitacion_price, unit_type, active, traduccion_tipo, reglas)
-         SELECT $1, (SELECT id FROM service_categories WHERE name ILIKE '%traducci%' ORDER BY id LIMIT 1), $2, 'por página', true, $3, $4
-         WHERE NOT EXISTS (SELECT 1 FROM service_catalog WHERE traduccion_tipo = $3)`,
-        [`Traducción - ${t.label}`, t.tramos[0].precio, t.key,
+         VALUES ($1, (SELECT id FROM service_categories WHERE name ILIKE '%traducci%' ORDER BY id LIMIT 1), $2, 'por página', true, $3, $4)`,
+        [name, t.tramos[0].precio, t.key,
           `${t.label}. Se cobra por página y el precio por página baja con la cantidad de páginas: el total es el precio del tramo por todas las páginas. Pida el documento en foto o PDF. Solo se traduce la versión final y oficial. El digitador confirma el tipo y el precio.`]
       );
     }
@@ -131,6 +147,7 @@ async function saveRates(body, userId) {
   } finally {
     client.release();
   }
+  version += 1;
   return clone(apply(r));
 }
 

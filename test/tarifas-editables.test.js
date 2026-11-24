@@ -134,3 +134,41 @@ test('un tipo de traducción nuevo crea su servicio en el catálogo para que el 
   await req('PUT', 'admin', cur);
   assert.equal((await pool.query(`SELECT count(*)::int n FROM service_catalog WHERE traduccion_tipo = 'carta_avanzada'`)).rows[0].n, 1);
 });
+
+test('quitar un tipo desactiva su servicio; renombrar o cambiar el primer tramo actualiza el servicio', async () => {
+  const cur = (await (await req('GET', 'admin')).json()).rates;
+  cur.traduccion.tipos = cur.traduccion.tipos.filter((t) => t.key !== 'legal_denso');
+  cur.traduccion.tipos[0].label = 'Carta sencilla';
+  cur.traduccion.tipos[0].tramos[0].precio = 750;
+  assert.equal((await req('PUT', 'admin', cur)).status, 200);
+  assert.equal((await svc('Traducción - Legal extensivo o denso')).active, false);
+  const s = (await pool.query(`SELECT * FROM service_catalog WHERE traduccion_tipo = 'carta_sencillo'`)).rows[0];
+  assert.equal(s.name, 'Traducción - Carta sencilla');
+  assert.equal(Number(s.digitacion_price), 750);
+});
+
+test('una traducción con un tipo que ya no existe queda por confirmar, sin precio viejo', async () => {
+  await rates.refreshRates();
+  const r = calculatePrice({ traduccion_tipo: 'borrado', digitacion_price: 900 }, { fojas: 2 });
+  assert.equal(r.total, null);
+  assert.equal(r.porConfirmar, true);
+});
+
+test('un error de la base no devuelve las tarifas a las de siempre', async () => {
+  const cur = await rates.getRates({ fresh: true });
+  await rates.saveRates({ ...cur, foja: { ...cur.foja, legal_simple: 300 } }, null);
+  await pool.query('ALTER TABLE pricing_rates RENAME COLUMN value TO valor');
+  try {
+    const r = await rates.getRates({ fresh: true });
+    assert.equal(r.foja.legal_simple, 300);
+    assert.equal(FOJA_RATES.legal_simple, 300);
+  } finally {
+    await pool.query('ALTER TABLE pricing_rates RENAME COLUMN valor TO value');
+  }
+});
+
+test('un cuerpo mal formado responde 400, no se queda colgado', async () => {
+  const cur = (await (await req('GET', 'admin')).json()).rates;
+  const res = await req('PUT', 'admin', { ...cur, traduccion: { tipos: [{ key: 'x_y', label: 'X', tramos: [null] }] } });
+  assert.equal(res.status, 400);
+});

@@ -49,8 +49,11 @@ function evaluateTraduccion(service, { quantity = 1, fojas = null } = {}) {
 
 function evaluate(service, opts = {}) {
   if (service.traduccion_tipo) {
-    const t = evaluateTraduccion(service, opts);
-    if (t) return t;
+    // un tipo que ya no está en las tarifas: lo confirma una persona (nunca un precio viejo)
+    return evaluateTraduccion(service, opts) || {
+      total: null, breakdown: { digitacion: 0, notarizacion: 0 }, porConfirmar: true, rango: null, tramo: null, falta: null,
+      dependeDelValor: false, fojas: null, tarifaPorFoja: null, fojasEstimadas: false,
+    };
   }
   return evaluateBase(service, opts);
 }

@@ -67,9 +67,9 @@ router.get('/rates', async (req, res) => {
 });
 
 router.put('/rates', requireRole('admin'), async (req, res) => {
-  const error = pricingRates.validateRates(req.body);
-  if (error) return res.status(400).json({ error });
   try {
+    const error = pricingRates.validateRates(req.body);
+    if (error) return res.status(400).json({ error });
     const before = await pricingRates.getRates({ fresh: true });
     const rates = await pricingRates.saveRates(req.body, req.user.id);
     await safeLog(() => logActivity(req, {
