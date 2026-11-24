@@ -3,6 +3,8 @@ const Service = require('../models/serviceCatalog');
 const { calculatePrice } = require('../models/servicePricing');
 const { FOJA_RATES, validFojas } = require('../models/fojaRates');
 const { authenticate, requireRole } = require('../middleware/auth');
+const pricingRates = require('../models/pricingRates');
+const { logActivity, safeLog } = require('../services/activityLog');
 
 const router = express.Router();
 router.use(authenticate);
@@ -54,6 +56,33 @@ router.get('/search/:name', async (req, res) => {
   }
 });
 
+// Tarifas editables (por foja y de traducción): cualquiera las ve, solo el admin las cambia.
+router.get('/rates', async (req, res) => {
+  try {
+    res.json({ rates: await pricingRates.getRates({ fresh: true }) });
+  } catch (err) {
+    console.error('Get rates error:', err);
+    res.status(500).json({ error: 'No se pudieron leer las tarifas' });
+  }
+});
+
+router.put('/rates', requireRole('admin'), async (req, res) => {
+  const error = pricingRates.validateRates(req.body);
+  if (error) return res.status(400).json({ error });
+  try {
+    const before = await pricingRates.getRates({ fresh: true });
+    const rates = await pricingRates.saveRates(req.body, req.user.id);
+    await safeLog(() => logActivity(req, {
+      category: 'precios', action: 'rates.update', entityType: 'pricing_rates',
+      summary: 'Cambió las tarifas por foja y de traducción', details: { antes: before, despues: rates },
+    }));
+    res.json({ rates });
+  } catch (err) {
+    console.error('Save rates error:', err);
+    res.status(500).json({ error: 'No se pudieron guardar las tarifas' });
+  }
+});
+
 // foja_tipo: una de las 4 claves o null; fojas: entero positivo o null. Devuelve un mensaje de error o null.
 function fojaError(body) {
   const { foja_tipo, fojas } = body;
@@ -80,6 +109,7 @@ router.post('/calculate', async (req, res) => {
     }
 
     const qty = Number(quantity) || 1;
+    await pricingRates.refreshRates();
     const calc = calculatePrice(service, { assetValue, quantity: qty, includeNotarization, fojas, duplicados });
 
     res.json({
@@ -101,6 +131,9 @@ router.post('/calculate', async (req, res) => {
       fojas: calc.fojas,
       tarifaPorFoja: calc.tarifaPorFoja,
       fojasEstimadas: calc.fojasEstimadas,
+      tarifaPorPagina: calc.tarifaPorPagina ?? null,
+      paginas: calc.paginas ?? null,
+      paginasEstimadas: calc.paginasEstimadas ?? false,
       falta: calc.falta, // 'valor_del_bien' si el servicio va por tramos y no se mandó assetValue
     });
   } catch (err) {

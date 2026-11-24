@@ -1,5 +1,7 @@
 // Cálculo de precio compartido (ruta /calculate y herramientas del agente).
 const { FOJA_RATES, MODIFICACION_PISO, MODIFICACION_FOJAS_RANGO, duplicadoPrice, validFojas } = require('./fojaRates');
+// Carga perezosa: pricingRates requiere fojaRates y la base de datos.
+const traduccionPrecio = (...a) => require('./pricingRates').traduccionPrecio(...a);
 
 function num(v) {
   if (v === null || v === undefined || v === '') return null;
@@ -31,7 +33,29 @@ function calculatePrice(service, opts = {}) {
   return { ...r, precioSugerido };
 }
 
-function evaluate(service, { assetValue = null, quantity = 1, includeNotarization = true, fojas = null, duplicados = 0 } = {}) {
+// Traducción con tipo (pricing_rates.traduccion): precio por página según el tramo de páginas; las páginas llegan en
+// `fojas`. total = precio del tramo × páginas × cantidad. Sin páginas se asume 1 y paginasEstimadas es true.
+function evaluateTraduccion(service, { quantity = 1, fojas = null } = {}) {
+  const qty = Number(quantity) || 1;
+  const dadas = validFojas(fojas);
+  const t = traduccionPrecio(service.traduccion_tipo, dadas ?? 1);
+  if (!t) return null;
+  return {
+    total: t.total * qty, breakdown: { digitacion: t.total * qty, notarizacion: 0 }, porConfirmar: false, rango: null,
+    tramo: null, falta: null, dependeDelValor: false, fojas: null, tarifaPorFoja: null, fojasEstimadas: false,
+    tarifaPorPagina: t.porPagina, paginas: t.paginas, paginasEstimadas: dadas === null, tramoPaginas: t.tramo,
+  };
+}
+
+function evaluate(service, opts = {}) {
+  if (service.traduccion_tipo) {
+    const t = evaluateTraduccion(service, opts);
+    if (t) return t;
+  }
+  return evaluateBase(service, opts);
+}
+
+function evaluateBase(service, { assetValue = null, quantity = 1, includeNotarization = true, fojas = null, duplicados = 0 } = {}) {
   const qty = Number(quantity) || 1;
   const rango = service.precio_rango || null;
   const dig = num(service.digitacion_price);
