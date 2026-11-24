@@ -5,6 +5,7 @@ const pool = require('../db/pool');
 const storage = require('../utils/storage');
 const { isUploadedModel } = require('./templatesCatalog');
 const { removeThumbnails } = require('./thumbnails');
+const { fojasDeModelo } = require('./templateFojas');
 
 // Documentos · Etiquetas: tagged copies of the models, with versions and the admin's approval.
 // Status of a model: untagged (no version), pending (latest version not approved), approved.
@@ -38,7 +39,7 @@ async function listStatuses({ requested = false } = {}) {
 async function listPrivate(user) {
   const { rows } = await pool.query(
     `SELECT t.id, t.name, t.description, t.file_path, t.file_name, t.category_id, c.name AS category, ${STATUS_SQL} AS status,
-            t.created_by, t.publish_requested_at, COALESCE(NULLIF(ou.name, ''), ou.username) AS owner_name
+            (to_jsonb(t) ->> 'fojas')::int AS fojas, to_jsonb(t) ->> 'foja_tipo' AS foja_tipo, t.created_by, t.publish_requested_at, COALESCE(NULLIF(ou.name, ''), ou.username) AS owner_name
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id LEFT JOIN users ou ON ou.id = t.created_by ${LATEST_JOIN}
      WHERE t.is_active = TRUE AND t.is_private AND ($1::boolean OR t.created_by = $2)
      ORDER BY t.name`,
@@ -199,6 +200,24 @@ async function createVersion({ templateId, localFile, tags, skipped = [], source
   }
 }
 
+// Fojas y tipo de foja del modelo para su precio (Precio por foja). Con soloSiFalta no pisa lo ya calculado:
+// el original de Word trae las páginas que guardó Word; una copia etiquetada o saneada ya no.
+// Nunca falla la acción que lo llama.
+async function guardarFojas(templateId, file, { soloSiFalta = false } = {}) {
+  try {
+    const { rows: [t] } = await pool.query(
+      `SELECT t.fojas, t.file_path, c.name AS category FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id WHERE t.id = $1`,
+      [templateId]);
+    if (!t || (soloSiFalta && t.fojas)) return null;
+    const r = await fojasDeModelo(file, `${String(t.file_path || '').split('/')[0]} ${t.category || ''}`);
+    await pool.query('UPDATE doc_templates SET fojas = $1, foja_tipo = $2 WHERE id = $3', [r.fojas, r.foja_tipo, templateId]);
+    return r;
+  } catch (err) {
+    console.error('[modelos] fojas:', err.code || err.message);
+    return null;
+  }
+}
+
 async function approve(versionId, adminId) {
   const v = await getVersion(versionId);
   if (!v) return null;
@@ -213,6 +232,7 @@ async function approve(versionId, adminId) {
     removeThumbnails(t.id);
   }
   await pool.query('UPDATE template_tag_versions SET approved_by = $1, approved_at = NOW() WHERE id = $2', [adminId, v.id]);
+  await guardarFojas(v.template_id, v.file_path, { soloSiFalta: true });
   // one statement: a private model can never be published (the database refuses it)
   await pool.query('UPDATE doc_templates SET approved_tag_version_id = $1, is_private = FALSE, publish_requested_at = NULL WHERE id = $2', [v.id, v.template_id]);
   return { ...v, was_private: t?.is_private === true, owner_id: t?.created_by ?? null };
@@ -230,4 +250,4 @@ async function originAuthor(templateId, documentId) {
 
 const isWord = (filePath) => path.extname(filePath || '').toLowerCase() === '.docx';
 
-module.exports = { trash, untrash, listTrash, listStatuses, listPrivate, accessFor, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError };
+module.exports = { trash, untrash, listTrash, listStatuses, listPrivate, accessFor, getModel, getVersion, getTemplate, latestVersionId, createVersion, approve, originAuthor, isWord, StaleError, guardarFojas };

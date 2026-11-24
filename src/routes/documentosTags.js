@@ -717,6 +717,8 @@ router.post('/models', (req, res) =>
          VALUES ($1, $2, $3, $4, $5, 'docx', TRUE, TRUE, $6) RETURNING id`,
         [name, `${slugify(name) || 'modelo'}-privado-${unique}`, categoryId, stored, safeName, req.user.id]
       );
+      // fojas y tipo para su precio: del Word original (el saneado ya no trae las páginas que guardó Word)
+      await Tags.guardarFojas(row.id, temps[0]);
       await safeLog(() => logActivity(req, {
         category: 'documentos', action: 'modelo.upload', entityType: 'modelo', entityId: row.id, summary: `Subió su modelo privado «${name}»`,
       }));

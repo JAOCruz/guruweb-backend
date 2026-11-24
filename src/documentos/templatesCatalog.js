@@ -1,6 +1,8 @@
 const path = require('path');
 const pool = require('../db/pool');
 const storage = require('../utils/storage');
+const { refreshRates } = require('../models/pricingRates');
+const { precioDeModelo } = require('./templateFojas');
 
 // "Nuestra selección": the curated, up-to-date models in doc_templates (with their own tags).
 // Documentos only reads them; tags are managed in MotherBrain.
@@ -23,17 +25,24 @@ function resolveModelPath(filePath) {
 // An uploaded model (not one of the library's own files)
 const isUploadedModel = (filePath) => Boolean(filePath) && path.resolve(filePath).startsWith(uploadsDir() + path.sep);
 
+// Precio de cada modelo: fojas × tarifa de su tipo, con las tarifas vigentes (Leo las cambia en Tarifas).
+async function withPrices(rows) {
+  await refreshRates();
+  return rows.map((r) => ({ ...r, precio: precioDeModelo(r) }));
+}
+
 let cache = { at: 0, list: null };
 async function listModels() {
-  if (cache.list && Date.now() - cache.at < 60_000) return cache.list;
+  if (cache.list && Date.now() - cache.at < 60_000) return withPrices(cache.list);
   const { rows } = await pool.query(
-    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, t.category_id, c.name AS category
+    `SELECT t.id, t.name, t.description, t.file_path, t.file_name, t.category_id, c.name AS category,
+            (to_jsonb(t) ->> 'fojas')::int AS fojas, to_jsonb(t) ->> 'foja_tipo' AS foja_tipo
      FROM doc_templates t LEFT JOIN doc_categories c ON c.id = t.category_id
      WHERE t.is_active = TRUE AND t.is_private = FALSE
      ORDER BY c.name NULLS LAST, t.name`
   );
   cache = { at: Date.now(), list: rows };
-  return rows;
+  return withPrices(rows);
 }
 
 // Each category's path from the top folder down, e.g. CONTRATOS CIVILES › CONTRATOS AUTENTICOS › COMERCIALES.
@@ -54,7 +63,7 @@ async function categoryPaths() {
 // What this user can choose from: the shared models plus their private ones, first. An admin sees every private one.
 async function listModelsFor(user) {
   const [mine, shared] = await Promise.all([require('./templateTags').listPrivate(user), listModels()]);
-  return [...mine.map((m) => ({ ...m, is_private: true })), ...shared];
+  return [...(await withPrices(mine)).map((m) => ({ ...m, is_private: true })), ...shared];
 }
 
 const norm = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
