@@ -431,8 +431,11 @@ async function processBatchNow(phone, batch, sock, { agent, cutoff = null }) {
     console.log(`[WA] Processing batch for ${phone}: ${textParts.length} text msgs + ${allMedia.length} media items`);
   }
 
-  // Run Gemini analysis on ALL media in parallel now that the buffer window is closed
-  if ((mediaAnalysisOverride || config.gemini.enabled) && allMedia.length > 0) {
+  // Run Gemini analysis on ALL media in parallel now that the buffer window is closed.
+  // Only when the bot will answer this batch: with the bot off (or the chat in manual) the AI reads nothing on its
+  // own, to save quota; if the bot takes the chat later, leer_documento reads the file when it needs it.
+  const willRespond = batch[0].willRespond;
+  if (willRespond && (mediaAnalysisOverride || config.gemini.enabled) && allMedia.length > 0) {
     try {
       const { transcribeAudio, analyzeDocument } = mediaAnalysisOverride || require('../llm/mediaAnalysis');
       await Promise.all(allMedia.map(async (media) => {
@@ -489,10 +492,8 @@ async function processBatchNow(phone, batch, sock, { agent, cutoff = null }) {
     }
   }
 
-  // Media has been downloaded, analyzed and persisted above. From here on it's
-  // only about REPLYING. In manual mode / bot paused / stale messages we stop
-  // here — the info is already collected for the employee, but the bot stays silent.
-  const willRespond = batch[0].willRespond;
+  // From here on it's only about REPLYING. In manual mode / bot paused / stale messages we stop here: the media
+  // was saved for the employee (not analyzed), and the bot stays silent.
   if (!willRespond) return;
 
   // Chats del agente: él decide cuándo pasar a una persona (sin la detección de reclamaciones por HTTP).

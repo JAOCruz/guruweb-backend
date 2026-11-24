@@ -159,6 +159,26 @@ test('si el lote no debe responderse, el agente no corre y no se manda nada', as
   assert.deepEqual(await outbound(AGENT), []);
 });
 
+// Jay, 2026-11-24: con el bot apagado (o el chat en manual) la IA no lee fotos ni audios por su cuenta, para no
+// gastar cuota; si el bot toma el chat después, leer_documento lee el archivo cuando lo necesita.
+test('si el lote no debe responderse, no se analizan sus fotos ni audios', async () => {
+  const calls = [];
+  handler._setMediaAnalysis({
+    analyzeDocument: async (f) => { calls.push(f); return 'Cédula'; },
+    transcribeAudio: async (f) => { calls.push(f); return 'hola'; },
+  });
+  try {
+    const foto = { id: 8, media_type: 'image', mime_type: 'image/jpeg', file_path: '/tmp/f.jpg', wa_message_id: 'img-8' };
+    const audio = { id: 9, media_type: 'audio', mime_type: 'audio/ogg', file_path: '/tmp/a.ogg', wa_message_id: 'aud-9' };
+    const b = [...batch(AGENT, '', false, foto), ...batch(AGENT, '', false, audio)];
+    await handler.processBatch(AGENT, b, sock);
+    assert.deepEqual(calls, []);
+    assert.deepEqual(sent, []);
+  } finally {
+    handler._setMediaAnalysis(null);
+  }
+});
+
 // Jay, 2026-10-31: el mensaje de espera dice "escriba 'urgente'"; si nadie contesta, el cliente no sabe si llegó.
 // El primer "urgente" se confirma una vez; el bot sigue sin atender el chat.
 test('chat en manual después de un traspaso: "urgente" fuera de horario avisa al admin y se le confirma al cliente una vez', async () => {
