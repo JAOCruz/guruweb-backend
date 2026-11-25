@@ -103,22 +103,25 @@ async function analyzeDocument(filePath, mimeType, mediaType) {
       else if (filePath.endsWith('.png')) cleanMime = 'image/png';
     }
 
-    recordRequest();
-
-    const result = await generateWithFallback(async (m) => {
-      return m.generateContent([
-        { text: DOCUMENT_PROMPT },
-        { inlineData: { data: fileData, mimeType: cleanMime } },
-      ]);
-    });
-
-    if (!result) return null;
-    const analysis = result.response.text().trim();
-
-    if (!analysis || analysis.length < 5) {
-      console.log('[Media] Empty document analysis');
-      return null;
+    // A veces Gemini responde vacío a una foto legible: se intenta una vez más antes de rendirse
+    // (sin análisis el bot le pide al cliente que mande la foto otra vez).
+    let analysis = '';
+    for (let intento = 1; intento <= 2 && (!analysis || analysis.length < 5); intento++) {
+      recordRequest();
+      const result = await generateWithFallback(async (m) => {
+        return m.generateContent([
+          { text: DOCUMENT_PROMPT },
+          { inlineData: { data: fileData, mimeType: cleanMime } },
+        ]);
+      });
+      if (!result) return null;
+      analysis = (result.response.text() || '').trim();
+      if (!analysis || analysis.length < 5) {
+        const reason = result.response.candidates?.[0]?.finishReason || 'desconocido';
+        console.log(`[Media] Empty document analysis (intento ${intento}, motivo: ${reason})`);
+      }
     }
+    if (!analysis || analysis.length < 5) return null;
 
     // Cap analysis length for WhatsApp
     const capped = analysis.length > 2000
