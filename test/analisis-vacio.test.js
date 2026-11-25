@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const { model, fallbackModel } = require('../src/llm/client');
 const { analyzeDocument } = require('../src/llm/mediaAnalysis');
+delete process.env.ANTHROPIC_API_KEY; // estas pruebas son del camino de Gemini
 
 const resp = (text, finishReason = 'STOP') => ({ response: { text: () => text, candidates: [{ finishReason }] } });
 const foto = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'vacio-')), 'f.jpg');

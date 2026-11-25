@@ -78,12 +78,40 @@ async function transcribeAudio(filePath, mimeType) {
  * @param {string} mediaType - 'image' or 'document'
  * @returns {string|null} Analysis text or null on failure
  */
-async function analyzeDocument(filePath, mimeType, mediaType) {
-  if (!canMakeRequest()) {
-    console.log('[Media] Rate limited — skipping document analysis');
+// Fotos y PDF: los lee Claude (el mismo proveedor que contesta); Gemini queda de respaldo y para los demás archivos.
+const CLAUDE_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']);
+let claudeOverride = null; // solo pruebas
+function _setClaudeClient(c) { claudeOverride = c || null; }
+function claudeClient() {
+  if (claudeOverride) return claudeOverride;
+  const Anthropic = require('@anthropic-ai/sdk');
+  return new Anthropic();
+}
+
+// Devuelve el análisis o null (sin clave, error, negativa o respuesta vacía): entonces sigue Gemini.
+async function analyzeWithClaude(fileData, mime) {
+  if (!process.env.ANTHROPIC_API_KEY || !CLAUDE_MIMES.has(mime)) return null;
+  const block = mime === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: mime, data: fileData } }
+    : { type: 'image', source: { type: 'base64', media_type: mime, data: fileData } };
+  try {
+    const res = await claudeClient().messages.create({
+      model: process.env.BOT_CLAUDE_MODEL || 'claude-sonnet-5-5',
+      max_tokens: 4000,
+      output_config: { effort: 'low' }, // solo clasificar y leer datos
+      messages: [{ role: 'user', content: [block, { type: 'text', text: DOCUMENT_PROMPT }] }],
+    }, { timeout: 60000, maxRetries: 1 });
+    if (res.stop_reason === 'refusal') { console.log('[Media] Claude declined the document; trying Gemini'); return null; }
+    const text = (res.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+    if (text.length < 5) { console.log('[Media] Claude returned an empty analysis; trying Gemini'); return null; }
+    return text;
+  } catch (err) {
+    console.error('[Media] Claude document analysis failed; trying Gemini:', err.status || err.name || 'error');
     return null;
   }
+}
 
+async function analyzeDocument(filePath, mimeType, mediaType) {
   try {
     const stat = fs.statSync(filePath);
     if (stat.size > MAX_FILE_SIZE) {
@@ -103,9 +131,17 @@ async function analyzeDocument(filePath, mimeType, mediaType) {
       else if (filePath.endsWith('.png')) cleanMime = 'image/png';
     }
 
+    if (cleanMime === 'image/jpg') cleanMime = 'image/jpeg';
+    let analysis = await analyzeWithClaude(fileData, cleanMime);
+    if (analysis) console.log(`[Media] Read by Claude (${mediaType})`);
+
+    if (!analysis && !canMakeRequest()) {
+      console.log('[Media] Rate limited — skipping document analysis');
+      return null;
+    }
+
     // A veces Gemini responde vacío a una foto legible: se intenta una vez más antes de rendirse
     // (sin análisis el bot le pide al cliente que mande la foto otra vez).
-    let analysis = '';
     for (let intento = 1; intento <= 2 && (!analysis || analysis.length < 5); intento++) {
       recordRequest();
       const result = await generateWithFallback(async (m) => {
@@ -136,4 +172,4 @@ async function analyzeDocument(filePath, mimeType, mediaType) {
   }
 }
 
-module.exports = { transcribeAudio, analyzeDocument };
+module.exports = { transcribeAudio, analyzeDocument, _setClaudeClient };
