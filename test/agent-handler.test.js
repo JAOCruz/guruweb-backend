@@ -204,6 +204,26 @@ test('chat en manual después de un traspaso: "urgente" fuera de horario avisa a
   assert.equal(sent.length, 1);
 });
 
+// Jay, 2026-11-25: con BOT_FORZAR_APAGADO nada del bot le escribe a un cliente, tampoco la confirmación del
+// "urgente" de un chat que el bot pasó antes de apagarse.
+test('con BOT_FORZAR_APAGADO, el "urgente" de un chat traspasado no avisa ni le escribe al cliente', async () => {
+  await closeBusiness();
+  const client = (await pool.query('SELECT * FROM clients WHERE phone=$1', [AGENT])).rows[0];
+  const botUserId = (await pool.query(`SELECT id FROM users WHERE username='bot'`)).rows[0].id;
+  await pasar_a_humano({ motivo: 'reclamación' }, { phone: AGENT, client, botUserId, now: new Date(), lastText: 'tengo una queja' });
+  await pool.query(`UPDATE wa_bot_state SET value = jsonb_set(value, '{urgente_avisado}', 'false') WHERE key = $1`, [`handoff:${AGENT}`]);
+  const before = (await notifs('handoff')).length;
+  const sentBefore = sent.length;
+  process.env.BOT_FORZAR_APAGADO = 'true';
+  try {
+    await handler.processBatch(AGENT, batch(AGENT, 'Es URGENTE por favor', false), sock);
+  } finally {
+    delete process.env.BOT_FORZAR_APAGADO;
+  }
+  assert.equal((await notifs('handoff')).length, before);
+  assert.equal(sent.length, sentBefore);
+});
+
 test('un "urgente" viejo (ráfaga tras reconectar) no avisa', async () => {
   await closeBusiness();
   const client = (await pool.query('SELECT * FROM clients WHERE phone=$1', [AGENT])).rows[0];

@@ -481,7 +481,8 @@ async function processBatchNow(phone, batch, sock, { agent, cutoff = null }) {
   // Solo lotes frescos (no la ráfaga de mensajes viejos tras una reconexión). El bot no responde (está en
   // manual); el aviso nunca frena el lote.
   const fresh = batch.some((b) => b.isStale !== true);
-  if (fresh && combinedText && isManualMode(phone)) {
+  // Con BOT_FORZAR_APAGADO nada del bot le escribe al cliente (tampoco esta confirmación).
+  if (fresh && combinedText && isManualMode(phone) && !botForzadoApagado()) {
     try {
       // Primer "urgente" avisado: se le confirma al cliente (una vez); el chat sigue con la persona
       if (await notifyUrgentAfterHandoff(phone, combinedText)) {
