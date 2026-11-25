@@ -43,8 +43,10 @@ const mask = (s) => String(s).replace(/postgres(ql)?:\/\/[^\s'"]*/gi, '[url]');
 const die = (msg) => { console.error(`✖ ${mask(msg)}`); process.exit(1); };
 
 function url() {
-  const u = process.env.DATABASE_URL;
+  // Desde la Mac hace falta la URL pública: la de DATABASE_URL puede ser la interna (*.railway.internal).
+  const u = process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
   if (!u) die('Falta DATABASE_URL (corra el comando con railway run --service …)');
+  if (/\.railway\.internal$/.test(new URL(u).hostname)) die('La base solo tiene la dirección interna de Railway: agregue al servicio DATABASE_PUBLIC_URL = ${{<Postgres>.DATABASE_PUBLIC_URL}}');
   return new URL(u);
 }
 const isLocal = (u) => ['localhost', '127.0.0.1'].includes(u.hostname);
