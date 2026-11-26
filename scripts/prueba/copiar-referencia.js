@@ -56,7 +56,7 @@ function pgEnv(u) {
     PGPASSWORD: decodeURIComponent(u.password), PGDATABASE: u.pathname.replace(/^\//, ''), PGSSLMODE: isLocal(u) ? 'disable' : 'require',
   };
 }
-const pool = (u) => new Pool({ connectionString: u.toString(), ssl: isLocal(u) ? false : { rejectUnauthorized: false } });
+const pool = (u) => new Pool({ connectionString: u.toString(), ssl: isLocal(u) ? false : { rejectUnauthorized: false }, keepAlive: true, query_timeout: 120000 });
 // Huella de la base (sin datos sensibles) para no importar nunca sobre la misma base de la que se exportó.
 async function huella(p) {
   const { rows } = await p.query(`SELECT current_database() AS db, (SELECT system_identifier::text FROM pg_control_system()) AS sys`);
@@ -130,10 +130,19 @@ async function importar() {
         const { rows: cols } = await c.query(
           `SELECT column_name, data_type, is_generated FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1`, [t]);
         const tipos = new Map(cols.filter((x) => x.is_generated !== 'ALWAYS').map((x) => [x.column_name, x.data_type]));
-        for (const row of datos.tablas[t]) {
-          const keys = Object.keys(row).filter((k) => tipos.has(k));
-          const vals = keys.map((k) => (row[k] !== null && ['json', 'jsonb'].includes(tipos.get(k)) ? JSON.stringify(row[k]) : row[k]));
-          await c.query(`INSERT INTO ${t} (${keys.map((k) => `"${k}"`).join(', ')}) OVERRIDING SYSTEM VALUE VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')})`, vals);
+        // Por lotes: fila por fila, por internet, tarda demasiado (y una conexión que se cae lo deja colgado).
+        const filas = datos.tablas[t];
+        const keys = [...new Set(filas.flatMap((row) => Object.keys(row)))].filter((k) => tipos.has(k));
+        const porLote = Math.max(1, Math.min(500, Math.floor(60000 / Math.max(1, keys.length))));
+        for (let i = 0; i < filas.length && keys.length; i += porLote) {
+          const lote = filas.slice(i, i + porLote);
+          const vals = [];
+          const tuplas = lote.map((row) => `(${keys.map((k) => {
+            const v = row[k] === undefined ? null : row[k];
+            vals.push(v !== null && ['json', 'jsonb'].includes(tipos.get(k)) ? JSON.stringify(v) : v);
+            return `$${vals.length}`;
+          }).join(', ')})`);
+          await c.query(`INSERT INTO ${t} (${keys.map((k) => `"${k}"`).join(', ')}) OVERRIDING SYSTEM VALUE VALUES ${tuplas.join(', ')}`, vals);
         }
         // las secuencias siguen después del último id copiado
         const { rows: seqs } = await c.query(
