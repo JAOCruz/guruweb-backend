@@ -9,6 +9,7 @@ const { pasar_a_humano } = require('./handoff');
 const { ver_modelo, preparar_documento } = require('./documents');
 const { avisar_pago } = require('./payment');
 const { estimar_tasa } = require('./tasas');
+const { registrar_envio } = require('./delivery');
 const { withTimeout } = require('../provider');
 
 // Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
@@ -225,6 +226,25 @@ const TOOLS = [
     },
   },
   {
+    name: 'registrar_envio',
+    description: 'Registra que el cliente quiere que le enviemos el documento (por Uber). Úsela cuando el cliente elija el envío y ' +
+      'ya tenga la dirección completa con una referencia, quién recibe y su teléfono (si recibe el mismo cliente, use su nombre y su ' +
+      'número). El envío queda en el panel «por enviar» para el equipo. Si el cliente corrige un dato, vuelva a usarla con el dato ' +
+      'nuevo. No cotiza ni cobra el Uber: el monto y el pago los maneja el equipo.',
+    parameters: {
+      type: 'object',
+      properties: {
+        direccion: { type: 'string', description: 'Dirección completa de entrega: calle, número, sector, ciudad.' },
+        referencia: { type: 'string', description: 'Punto de referencia para llegar (cerca de…, frente a…, color de la casa).' },
+        recibe: { type: 'string', description: 'Nombre de quien recibe el documento.' },
+        telefono_recibe: { type: 'string', description: 'Teléfono de quien recibe.' },
+        documento: { type: 'string', description: 'Qué documento se envía (p. ej. "Contrato de alquiler").' },
+        nota: { type: 'string', description: 'Otra indicación para el envío (horario, piso, a quién preguntar).' },
+      },
+      required: ['direccion'],
+    },
+  },
+  {
     name: 'estimar_tasa',
     description: 'Estima una tasa oficial (marbete, matrícula, ayuntamiento, legalización, impuesto de transferencia…). El monto es ' +
       'aproximado: dígalo siempre como aproximado y que lo confirma la institución; nunca lo sume al total de la cotización. ' +
@@ -260,6 +280,7 @@ const TOOLS = [
 const HANDLERS = {
   buscar_servicio, calcular_precio, ver_tramite, guardar_datos_cliente, leer_documento,
   crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento, avisar_pago, estimar_tasa,
+  registrar_envio,
 };
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 

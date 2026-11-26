@@ -98,9 +98,9 @@ test('la guía trae las reglas de rangos y partidas por confirmar (Leandro)', ()
 
 // ---------- registro de herramientas ----------
 
-test('hay exactamente 13 herramientas con los nombres del spec', () => {
+test('hay exactamente 14 herramientas con los nombres del spec', () => {
   assert.deepEqual(TOOLS.map((t) => t.name).sort(), ['avisar_pago', 'buscar_servicio', 'calcular_precio', 'crear_solicitud', 'estado_solicitud', 'estimar_tasa',
-    'guardar_datos_cliente', 'leer_documento', 'pasar_a_humano', 'preparar_cotizacion', 'preparar_documento', 'ver_modelo', 'ver_tramite']);
+    'guardar_datos_cliente', 'leer_documento', 'pasar_a_humano', 'preparar_cotizacion', 'preparar_documento', 'registrar_envio', 'ver_modelo', 'ver_tramite']);
 });
 
 test('cada herramienta tiene descripción en español y parámetros JSON Schema en minúsculas', () => {

@@ -77,8 +77,8 @@ test('avisar_pago sin datos leídos ni cotización: título con el teléfono, in
   assert.deepEqual(l, [{ herramienta: 'avisar_pago', ok: true }]);
 });
 
-test('avisar_pago está registrada: 13 herramientas, sin argumentos obligatorios', () => {
-  assert.equal(TOOLS.length, 13);
+test('avisar_pago está registrada: 14 herramientas, sin argumentos obligatorios', () => {
+  assert.equal(TOOLS.length, 14);
   const t = TOOLS.find((x) => x.name === 'avisar_pago');
   assert.ok(t, 'falta avisar_pago');
   assert.deepEqual(t.parameters.required, []);
