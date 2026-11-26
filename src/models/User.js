@@ -153,7 +153,17 @@ const User = {
       mustChangePassword: user.must_change_password === true,
       inPayroll: user.in_payroll === true,
       birthDate: formatBirthDate(user.birth_date),
+      hasEarningsPin: !!user.earnings_pin_hash,
     };
+  },
+
+  async setEarningsPin(id, pin) {
+    const pinHash = await bcrypt.hash(pin, SALT_ROUNDS);
+    const { rows } = await pool.query(
+      'UPDATE users SET earnings_pin_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [pinHash, id]
+    );
+    return rows[0] || null;
   },
 
   async updateBirthDate(id, birthDate) {

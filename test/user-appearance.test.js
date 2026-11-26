@@ -52,5 +52,5 @@ test('create auto-assigns first free color', async () => {
 
 test('toPublicUser shape', () => {
   const pub = User.toPublicUser({ id: 1, username: 'h', email: null, name: null, role: 'digitador', data_column: 'HENGI', color: 'green', avatar: null, password_hash: 'x' });
-  assert.deepEqual(pub, { id: 1, username: 'h', email: 'h', name: 'h', role: 'digitador', dataColumn: 'HENGI', color: 'green', avatar: null, isActive: true, mustChangePassword: false, inPayroll: false, birthDate: null });
+  assert.deepEqual(pub, { id: 1, username: 'h', email: 'h', name: 'h', role: 'digitador', dataColumn: 'HENGI', color: 'green', avatar: null, isActive: true, mustChangePassword: false, inPayroll: false, birthDate: null, hasEarningsPin: false });
 });

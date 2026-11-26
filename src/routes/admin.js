@@ -73,7 +73,7 @@ function sendError(res, status, code, error) {
 
 function toAdminUser(u) {
   if (!u) return u;
-  const { password_hash, ...rest } = u;
+  const { password_hash, earnings_pin_hash, ...rest } = u; // never send secrets, not even to the admin
   if ('birth_date' in rest) rest.birth_date = formatBirthDate(rest.birth_date);
   return rest;
 }

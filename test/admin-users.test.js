@@ -17,6 +17,8 @@ test.before(async () => {
   await runSqlFile('migrations/20260926_user_appearance.sql');
   await runSqlFile('migrations/20260926_user_management.sql');
   await runSqlFile('migrations/20260927_birth_date.sql');
+  await runSqlFile('migrations/20261126_earnings_pin.sql');
+  await pool.query("UPDATE users SET earnings_pin_hash = 'hash-secreto' WHERE username = 'admin'");
   await pool.query('DROP TABLE IF EXISTS activity_log');
   await runSqlFile('migrations/20260927_activity_log.sql');
   for (const u of (await pool.query('SELECT id, username, email, role FROM users')).rows) {
@@ -45,6 +47,15 @@ const code = async (res) => (await res.json()).code;
 
 test('non-admins are rejected', async () => {
   assert.equal((await call('GET', '/api/admin/users', 'hengi')).status, 403);
+});
+
+test('editing a user never sends back the earnings PIN hash', async () => {
+  const res = await call('PUT', `/api/admin/users/${ids.admin}`, 'admin', { name: 'Admin', username: 'admin', email: 'admin@x.com', role: 'admin', in_payroll: false });
+  assert.equal(res.status, 200);
+  const body = JSON.stringify(await res.json());
+  assert.ok(body.includes('"admin"'));
+  assert.ok(!body.includes('hash-secreto'));
+  assert.ok(!body.includes('earnings_pin_hash'));
 });
 
 test('create user', async () => {

@@ -279,6 +279,73 @@ router.put('/me/profile', authenticate, async (req, res) => {
   }
 });
 
+// PIN de 4 dígitos para ver las ganancias en el dashboard del admin. Se crea o cambia con la
+// contraseña actual. Al verificar, 5 intentos equivocados en 15 minutos → hay que esperar.
+const PIN_RE = /^\d{4}$/;
+const pinAttempts = new Map(); // userId → { count, resetAt }
+const PIN_MAX_FAILS = 5;
+const PIN_WINDOW_MS = 15 * 60 * 1000;
+
+router.put('/me/earnings-pin', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const { currentPassword, pin } = req.body || {};
+    if (typeof pin !== 'string' || !PIN_RE.test(pin)) {
+      return res.status(400).json({ error: 'El PIN debe tener 4 números', code: 'INVALID_PIN' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!currentPassword || !(await User.verifyPassword(currentPassword, user.password_hash))) {
+      // 400, not 401: the dashboard treats 401 as an expired session and logs the user out
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta', code: 'WRONG_CURRENT_PASSWORD' });
+    }
+    const updated = await User.setEarningsPin(user.id, pin);
+    pinAttempts.delete(user.id);
+    await safeLog(() => logActivity(req, {
+      category: 'seguridad', action: 'earnings_pin.set', entityType: 'user', entityId: user.id,
+      summary: `${user.name || user.username} ${user.earnings_pin_hash ? 'cambió' : 'creó'} su PIN de ganancias`,
+    }));
+    res.json({ user: User.toPublicUser(updated) });
+  } catch (err) {
+    console.error('Set earnings PIN error:', err);
+    res.status(500).json({ error: 'No se pudo guardar el PIN' });
+  }
+});
+
+router.post('/me/earnings-pin/verify', authenticate, requireRole('admin'), async (req, res) => {
+  try {
+    const now = Date.now();
+    let a = pinAttempts.get(req.user.id);
+    if (a && a.resetAt <= now) { pinAttempts.delete(req.user.id); a = null; }
+    if (a && a.count >= PIN_MAX_FAILS) {
+      const mins = Math.ceil((a.resetAt - now) / 60000);
+      return res.status(429).json({ error: `Demasiados intentos. Espera ${mins} min.`, code: 'TOO_MANY_ATTEMPTS' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.earnings_pin_hash) {
+      return res.status(409).json({ error: 'Primero crea tu PIN en Mi cuenta', code: 'NO_PIN' });
+    }
+    const pin = req.body?.pin;
+    if (typeof pin === 'string' && PIN_RE.test(pin) && (await User.verifyPassword(pin, user.earnings_pin_hash))) {
+      pinAttempts.delete(req.user.id);
+      return res.json({ ok: true });
+    }
+    const next = a || { count: 0, resetAt: now + PIN_WINDOW_MS };
+    next.count += 1;
+    pinAttempts.set(req.user.id, next);
+    if (next.count === PIN_MAX_FAILS) {
+      await safeLog(() => logActivity(req, {
+        category: 'seguridad', action: 'earnings_pin.locked', entityType: 'user', entityId: user.id,
+        summary: `${PIN_MAX_FAILS} intentos equivocados del PIN de ganancias de ${user.name || user.username}`,
+      }));
+    }
+    res.status(400).json({ error: 'PIN incorrecto', code: 'WRONG_PIN' });
+  } catch (err) {
+    console.error('Verify earnings PIN error:', err);
+    res.status(500).json({ error: 'No se pudo verificar el PIN' });
+  }
+});
+
 router.put('/me/appearance', authenticate, async (req, res) => {
   try {
     const me = await User.findById(req.user.id);
