@@ -113,19 +113,7 @@ app.use(
 );
 
 // CORS Middleware
-const allowedOrigins = [
-  "https://gurusoluciones.netlify.app",
-  "https://guruweb-dashboard-prod.netlify.app",
-  "https://guruweb-development.netlify.app",
-  "https://papaya-kangaroo-b789f3.netlify.app",
-  "https://6ab57be44eee966f948b918d--papaya-kangaroo-b789f3.netlify.app",
-  "https://gurusolucionesrd.com",
-  "https://www.gurusolucionesrd.com",
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://100.87.41.106:5174",
-];
+const allowedOrigins = require("./utils/corsOrigins").allowedOrigins(); // lista fija + ALLOWED_ORIGINS
 
 // Public read-only data for the website (any origin, no cookies): mounted before the CORS allow-list
 app.use("/api/public", require("./routes/publicModels"));
