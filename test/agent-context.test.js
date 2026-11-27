@@ -345,3 +345,12 @@ test('buildContext con cutoff deja fuera los inbound guardados después del cort
   const all = await buildContext({ phone: PHONE, client: ctx.client, now: MONDAY });
   assert.equal(all.messages.length, 6);
 });
+
+test('traducciones (Leandro, 2026-11-27): no pregunta el trámite, agrupa por documento y va a la acción', () => {
+  const g = fs.readFileSync(GUIDE, 'utf8');
+  assert.doesNotMatch(g, /a qué idioma y para qué proceso/);
+  assert.ok(g.includes('No pregunte para qué trámite o proceso es'));
+  assert.ok(g.includes('Varios archivos: agrúpelos por documento'));
+  assert.ok(g.includes('van por separado: no pregunte si van cada uno con su firma'));
+  assert.ok(g.includes('Vaya a la acción y pregunte poco'));
+});
