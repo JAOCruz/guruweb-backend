@@ -64,7 +64,7 @@ async function getRates({ fresh = false } = {}) {
 }
 
 // Precio de una traducción del tipo `tipo` con `paginas` páginas (con las tarifas cargadas).
-// volumen: páginas de traducción de todo el pedido (la rebaja es por factura, no por documento; Leandro, 2026-11-27).
+// volumen: páginas de traducción del pedido de este mismo tipo (la rebaja es por factura, no por documento; Leandro, 2026-11-27).
 // El tramo sale del mayor entre las páginas del documento y el volumen; el total, de las páginas del documento.
 function traduccionPrecio(tipo, paginas, volumen = null) {
   const t = current.traduccion.tipos.find((x) => x.key === tipo);

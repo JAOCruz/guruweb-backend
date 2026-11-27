@@ -59,8 +59,8 @@ const TOOLS = [
         fojas: { type: 'integer', description: 'Cuántas fojas (caras impresas) tiene el documento, si el servicio va por foja y el cliente lo dijo. ' +
           'En una traducción, cuántas páginas tiene el documento a traducir.' },
         duplicados: { type: 'integer', description: 'Originales adicionales o duplicados que pide el cliente.' },
-        paginas_del_pedido: { type: 'integer', description: 'Solo traducciones: total de páginas de TODAS las traducciones del pedido ' +
-          '(sumando todos los documentos). La rebaja por página es por volumen del pedido, no por documento; páselo en cada documento.' },
+        paginas_del_pedido: { type: 'integer', description: 'Solo traducciones: total de páginas de las traducciones del pedido que son ' +
+          'de este MISMO tipo (sumando esos documentos; los de otro tipo no cuentan). Páselo en cada documento de ese tipo.' },
       },
       required: ['servicio_id'],
     },

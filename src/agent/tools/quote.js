@@ -27,13 +27,19 @@ async function preparar_cotizacion(args, ctx) {
   if (!client?.id) return { error: 'cliente no encontrado' };
 
   await pricingRates.refreshRates();
-  // Rebaja por volumen de la factura: el tramo de cada traducción sale de las páginas de todas las traducciones del pedido.
+  // Rebaja por volumen de la factura: el tramo de cada traducción sale de las páginas de todas las traducciones del
+  // pedido del MISMO tipo; los tipos distintos no se suman (Leandro, 2026-11-27: la rebaja es una gracia, no se anuncia).
   const ids = partidas.map((p) => Number(p && p.servicio_id)).filter(Number.isInteger);
   const tipos = ids.length
     ? new Map((await pool.query('SELECT * FROM service_catalog WHERE id = ANY($1)', [ids])).rows.map((r) => [r.id, r.traduccion_tipo]))
     : new Map();
-  const paginasPedido = partidas.reduce((a, p) => (tipos.get(Number(p && p.servicio_id))
-    ? a + (validFojas(p.fojas) ?? 1) * Math.max(1, Math.floor(Number(p.cantidad) || 1)) : a), 0);
+  const paginasPorTipo = new Map();
+  for (const p of partidas) {
+    const tipo = tipos.get(Number(p && p.servicio_id));
+    if (!tipo) continue;
+    const n = (validFojas(p.fojas) ?? 1) * Math.max(1, Math.floor(Number(p.cantidad) || 1));
+    paginasPorTipo.set(tipo, (paginasPorTipo.get(tipo) || 0) + n);
+  }
   const items = [];
   const noExiste = [];
   const faltaValor = []; // partidas por tramos sin valor_del_bien
@@ -51,7 +57,7 @@ async function preparar_cotizacion(args, ctx) {
       assetValue: p.valor_del_bien == null ? null : Number(p.valor_del_bien),
       includeNotarization: p.con_notarizacion !== false,
     };
-    const unit = calculatePrice(s, { ...opts, quantity: 1, fojas: p.fojas, paginasPedido }); // los duplicados van en su propia línea
+    const unit = calculatePrice(s, { ...opts, quantity: 1, fojas: p.fojas, paginasPedido: paginasPorTipo.get(s.traduccion_tipo) ?? null }); // los duplicados van en su propia línea
     if (unit.falta === 'valor_del_bien') { faltaValor.push(s.name); continue; }
     let desc = s.name;
     if (unit.tramo) desc += ` (tramo ${unit.tramo})`;

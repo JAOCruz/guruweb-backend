@@ -148,6 +148,19 @@ test('cotización con varias traducciones: el tramo sale de las páginas de todo
   assert.deepEqual(r.por_confirmar.map((x) => x.precio_sugerido), [1400, 1400]);
 });
 
+test('traducciones de tipos distintos no se suman: cada tipo cuenta sus propias páginas', async () => {
+  await pool.query('ALTER TABLE service_catalog ADD COLUMN IF NOT EXISTS traduccion_tipo TEXT');
+  const legal = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, traduccion_tipo, price_tiers)
+    VALUES ('Traducción - Legal extensivo o denso', 1, 800, 'legal_denso', '[]') RETURNING id`)).rows[0].id;
+  const carta = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, traduccion_tipo, price_tiers)
+    VALUES ('Traducción - Carta extensivo o denso', 1, 1000, 'carta_denso', '[]') RETURNING id`)).rows[0].id;
+  await preparar_cotizacion({ partidas: [{ servicio_id: legal, fojas: 2 }, { servicio_id: carta, fojas: 2 }] }, ctx);
+  const items = (await pool.query('SELECT items FROM invoices')).rows[0].items;
+  // 2 + 2 de tipos distintos: cada uno se queda en su tramo de 1–2 páginas
+  assert.match(items[0].desc, /2 páginas × 800/);
+  assert.match(items[1].desc, /2 páginas × 1000/);
+});
+
 test('modificación de 3 fojas queda como rango por confirmar; de 2 fojas tiene precio', async () => {
   const x = await extraServices();
   await preparar_cotizacion({ partidas: [{ servicio_id: x.modif, fojas: 3 }, { servicio_id: x.modif, fojas: 2 }] }, ctx);
