@@ -411,11 +411,19 @@ router.get('/clients/unassigned', requireRole('admin'), async (req, res) => {
 router.post('/run-migrations', requireRole('admin'), async (req, res) => {
   try {
     const result = await runMigrations();
+    // The legal library (laws + topics) loads with the migrations; only what changed is reloaded
+    let legal = null;
+    try {
+      legal = await require('../legal/library').loadLegalLibrary();
+    } catch (err) {
+      console.error('Legal library load error:', err.code || err.message);
+    }
     res.json({
       ok: true,
       message: `${result.ran.length} migration(s) applied`,
       ran: result.ran.map((r) => r.filename),
       skipped: result.skipped,
+      ...(legal && { leyes: legal.loaded, temas: legal.topics }),
     });
   } catch (err) {
     console.error('Run migrations error:', err);

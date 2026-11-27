@@ -10,6 +10,7 @@ const { ver_modelo, preparar_documento } = require('./documents');
 const { avisar_pago } = require('./payment');
 const { estimar_tasa } = require('./tasas');
 const { registrar_envio } = require('./delivery');
+const { buscar_ley } = require('./legal');
 const { withTimeout } = require('../provider');
 
 // Tope por herramienta (leer_documento llama al modelo de visión sin tope propio): pasado, { error } y ok=false.
@@ -245,6 +246,22 @@ const TOOLS = [
     },
   },
   {
+    name: 'buscar_ley',
+    description: 'Busca en la biblioteca legal del negocio: artículos de leyes dominicanas (Código Civil, Notariado, Registro ' +
+      'Inmobiliario, Alquileres, Estado Civil, Niños y Adolescentes, Migración, Seguridad Social, Lavado de Activos), los temas que ' +
+      'explicó el equipo y las instituciones con su enlace. Úsela antes de explicar por qué se pide un requisito, qué dice la ley o ' +
+      'dónde se hace un trámite. Escriba la consulta con las palabras de la ley (ej. "presunción de ausencia", "reajuste del precio ' +
+      'de alquiler", "duplicado del certificado de título"); si lo que trae no responde, pruebe otra vez con otras palabras. Cite ' +
+      'solo leyes y artículos que vengan en el resultado.',
+    parameters: {
+      type: 'object',
+      properties: {
+        consulta: { type: 'string', description: 'Lo que busca, con palabras de la ley o el nombre del trámite. Puede incluir "artículo N de la ley X".' },
+      },
+      required: ['consulta'],
+    },
+  },
+  {
     name: 'estimar_tasa',
     description: 'Estima una tasa oficial (marbete, matrícula, ayuntamiento, legalización, impuesto de transferencia…). El monto es ' +
       'aproximado: dígalo siempre como aproximado y que lo confirma la institución; nunca lo sume al total de la cotización. ' +
@@ -263,7 +280,7 @@ const TOOLS = [
       'espera, que debe enviarse tal cual. Destino "admin": reclamos de precio, temas administrativos o para un superior, pagos, abonos, ' +
       'pagos no realizados, propuestas, proveedores, clientes importantes, descuentos si insiste, devoluciones, clientes groseros o spam. ' +
       'Destino "digitador": errores en contratos, malentendidos, tickets y reclamos del servicio, pagos de un trabajo en curso, estado de ' +
-      'una solicitud o certificación, seguimiento de trámites y procesos para otro documento, asesoría legal, casos en tribunal, cuando ' +
+      'una solicitud o certificación, seguimiento de trámites y procesos para otro documento, asesoría legal a fondo (no lo que dice la ley: eso es buscar_ley), casos en tribunal, cuando ' +
       'pida hablar con una persona o con cualquier cosa que no pueda resolver. Un comprobante de pago va con avisar_pago.',
     parameters: {
       type: 'object',
@@ -280,7 +297,7 @@ const TOOLS = [
 const HANDLERS = {
   buscar_servicio, calcular_precio, ver_tramite, guardar_datos_cliente, leer_documento,
   crear_solicitud, estado_solicitud, preparar_cotizacion, pasar_a_humano, ver_modelo, preparar_documento, avisar_pago, estimar_tasa,
-  registrar_envio,
+  registrar_envio, buscar_ley,
 };
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));
 

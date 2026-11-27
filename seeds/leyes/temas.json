@@ -1,0 +1,29 @@
+[
+ {
+  "seed_key": "tema-duplicado-titulo-entrevista",
+  "kind": "tema",
+  "title": "Duplicado de certificado de título por pérdida: por qué piden una entrevista",
+  "keywords": "perdida titulo duplicado certificado de titulo entrevista virtual videollamada comparecencia registro de titulos propietario",
+  "body": "El duplicado por pérdida está regulado por la Ley 108-05 de Registro Inmobiliario. Como parte de su función de calificar y verificar, el Registrador de Títulos puede pedir que el titular del inmueble comparezca en persona para validar la solicitud y prevenir fraudes. Para agilizar (sobre todo si los propietarios viven lejos o en el exterior), muchos Registros de Títulos hacen esa verificación por entrevista virtual (videollamada). No aplica en todos los casos.",
+  "legal_basis": "Ley 108-05 de Registro Inmobiliario, art. 92; Reglamento General de Registro de Títulos (Res. 788-2022), art. 89; Disposición Técnica DNRT-DT-2025-003",
+  "url": "https://ri.gob.do"
+ },
+ {
+  "seed_key": "tema-ausencia-persona-desaparecida",
+  "kind": "tema",
+  "title": "Persona desaparecida: presunción de ausencia y administrador provisional",
+  "keywords": "desaparecido desaparecida ausencia ausente presuncion de ausencia administrador provisional bienes cobrar salario prestaciones empresa familiar dicrim denuncia",
+  "body": "Cuando una persona desaparece sin certeza de su muerte, la figura legal es la ausencia (Código Civil, arts. 112 al 143). Si la desaparición es reciente (menos de 4 años), la vía más rápida es la presunción de ausencia con designación de un administrador provisional: el juez no la declara muerta, sino que nombra a un familiar para administrar sus bienes y cobrar lo pendiente (por ejemplo, salarios o prestaciones). Se necesita: 1) una instancia en solicitud de designación de administrador provisional por presunción de ausencia, dirigida al Juez Presidente de la Cámara Civil y Comercial del Juzgado de Primera Instancia correspondiente; 2) un acto de notoriedad de presunción de ausencia (lleva 7 testigos); 3) la certificación de la denuncia de desaparición de la Policía Nacional (DICRIM, Departamento de Investigación de Personas Desaparecidas) o del Ministerio Público, que la busca el cliente. Las empresas piden la sentencia porque, sin ella, la persona no está legalmente muerta ni el familiar puede representarla; si pagan sin orden de un juez y la persona aparece, quedan expuestas a una demanda laboral. Precios: cotice la instancia y el acto de notoriedad con calcular_precio.",
+  "legal_basis": "Código Civil, arts. 112 al 143",
+  "url": null
+ },
+ {
+  "seed_key": "tema-monto-danos-perjuicios",
+  "kind": "tema",
+  "title": "Monto de daños y perjuicios o de penalidades en un contrato",
+  "keywords": "monto daños perjuicios penalidad clausula penal cuanto pongo cuanto le pongo contrato alquiler indemnizacion",
+  "body": "No recomendamos montos de daños y perjuicios ni de penalidades: eso lo deciden las partes, y para un monto preciso lo ideal es consultarlo con un abogado especialista en el tema (por ejemplo, en el sector inmobiliario). Sí se puede explicar lo que dice la ley sobre el tipo de contrato, si está en la biblioteca.",
+  "legal_basis": null,
+  "url": null
+ }
+]

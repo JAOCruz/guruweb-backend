@@ -1,0 +1,20 @@
+[
+ {
+  "seed_key": "tema-duplicado-titulo",
+  "kind": "tema",
+  "title": "Duplicado de título por pérdida: entrevista virtual",
+  "keywords": "perdida titulo duplicado entrevista virtual registro de titulos",
+  "body": "El Registrador de Títulos puede pedir la comparecencia del titular para validar la solicitud y prevenir fraudes; muchas veces se hace por videollamada.",
+  "legal_basis": "Ley 108-05, art. 92",
+  "url": null
+ },
+ {
+  "seed_key": "inst-jce",
+  "kind": "institucion",
+  "title": "Junta Central Electoral (JCE)",
+  "keywords": "actas nacimiento matrimonio defuncion cedula registro civil",
+  "body": "Emite actas del estado civil y la cédula de identidad.",
+  "legal_basis": null,
+  "url": "https://jce.gob.do"
+ }
+]

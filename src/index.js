@@ -365,6 +365,11 @@ app.listen(PORT, "0.0.0.0", () => {
   } catch (err) {
     console.error("[seguimiento] no iniciado:", err.message);
   }
+  // Biblioteca legal del bot (seeds/leyes): carga solo lo que cambió. Sin la migración todavía, no hace nada.
+  require("./legal/library")
+    .loadLegalLibrary()
+    .then((r) => r.loaded.length && console.log(`[leyes] cargadas: ${r.loaded.join(", ")}`))
+    .catch((err) => err.code !== "42P01" && console.error("[leyes] no cargadas:", err.code || err.message));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 API: http://localhost:${PORT}`);

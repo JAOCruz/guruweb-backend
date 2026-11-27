@@ -98,8 +98,8 @@ test('la guía trae las reglas de rangos y partidas por confirmar (Leandro)', ()
 
 // ---------- registro de herramientas ----------
 
-test('hay exactamente 14 herramientas con los nombres del spec', () => {
-  assert.deepEqual(TOOLS.map((t) => t.name).sort(), ['avisar_pago', 'buscar_servicio', 'calcular_precio', 'crear_solicitud', 'estado_solicitud', 'estimar_tasa',
+test('hay exactamente 15 herramientas con los nombres del spec', () => {
+  assert.deepEqual(TOOLS.map((t) => t.name).sort(), ['avisar_pago', 'buscar_ley', 'buscar_servicio', 'calcular_precio', 'crear_solicitud', 'estado_solicitud', 'estimar_tasa',
     'guardar_datos_cliente', 'leer_documento', 'pasar_a_humano', 'preparar_cotizacion', 'preparar_documento', 'registrar_envio', 'ver_modelo', 'ver_tramite']);
 });
 
@@ -353,4 +353,13 @@ test('traducciones (Leandro, 2026-11-27): no pregunta el trámite, agrupa por do
   assert.ok(g.includes('Varios archivos: agrúpelos por documento'));
   assert.ok(g.includes('van por separado: no pregunte si van cada uno con su firma'));
   assert.ok(g.includes('Vaya a la acción y pregunte poco'));
+});
+
+test('micro asesorías (Leandro, 2026-11-27): explica con buscar_ley, cita solo lo que trae, no recomienda montos', () => {
+  const g = fs.readFileSync(GUIDE, 'utf8');
+  assert.ok(g.includes('Cite solo leyes y artículos que vengan en el resultado de `buscar_ley`'));
+  assert.ok(g.includes('No podemos recomendarle un monto'));
+  assert.ok(g.includes('Así trabajamos las certificaciones'));
+  assert.ok(g.includes('Política No. 2'));
+  assert.doesNotMatch(g, /Nada de asesoría legal definitiva\n/);
 });

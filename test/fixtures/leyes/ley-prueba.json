@@ -1,0 +1,13 @@
+{
+ "code": "ley-prueba",
+ "title": "Ley núm. 108-05 de Registro Inmobiliario (prueba)",
+ "short": "Ley 108-05 de Registro Inmobiliario",
+ "source_name": "Prueba",
+ "source_url": "https://example.gob.do/108-05.pdf",
+ "fetched_at": "2026-11-27",
+ "articles": [
+  { "num": "1", "ord": 1, "section": "TÍTULO I: DISPOSICIONES GENERALES", "text": "Objeto. La presente ley regula el saneamiento y el registro de todos los inmuebles." },
+  { "num": "92", "ord": 2, "section": "CAPÍTULO III: DEL DUPLICADO", "text": "Duplicado del Certificado de Título. El duplicado del Certificado de Título es una copia fiel del Certificado de Título. En caso de pérdida, el propietario puede solicitar un nuevo duplicado." },
+  { "num": "93", "ord": 3, "section": "CAPÍTULO III: DEL DUPLICADO", "text": "Constancia anotada. La constancia anotada se expide a favor de los copropietarios." }
+ ]
+}

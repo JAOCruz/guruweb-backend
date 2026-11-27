@@ -1,0 +1,66 @@
+[
+  {
+    "code": "ley-140-15",
+    "title": "Ley núm. 140-15 del Notariado (instituye el Colegio Dominicano de Notarios)",
+    "short": "Ley 140-15 del Notariado",
+    "source_name": "Poder Judicial",
+    "source_url": "https://poderjudicial.gob.do/wp-content/uploads/2021/06/LEY_ley_notariado.pdf"
+  },
+  {
+    "code": "ley-108-05",
+    "title": "Ley núm. 108-05 de Registro Inmobiliario",
+    "short": "Ley 108-05 de Registro Inmobiliario",
+    "source_name": "DGII",
+    "source_url": "https://dgii.gov.do/legislacion/leyesTributarias/Documents/Otras%20Leyes%20de%20Inter%C3%A9s/108-05.pdf"
+  },
+  {
+    "code": "ley-85-25",
+    "title": "Ley núm. 85-25 sobre Alquileres de Bienes Inmuebles y Desahucios",
+    "short": "Ley 85-25 de Alquileres",
+    "source_name": "Abogadom (copia del texto publicado en la G. O. 11211)",
+    "source_url": "https://abogadom.net/uploads/legislaciones/leyes/LeyNum85_25.pdf"
+  },
+  {
+    "code": "ley-4-23",
+    "title": "Ley núm. 4-23 Orgánica de los Actos del Estado Civil (deroga la Ley 659)",
+    "short": "Ley 4-23 de Actos del Estado Civil",
+    "source_name": "Poder Judicial",
+    "source_url": "https://poderjudicial.gob.do/wp-content/uploads/2023/08/Ley4-23-Estado-Civil-deroga-la-Ley-659.pdf"
+  },
+  {
+    "code": "ley-136-03",
+    "title": "Ley núm. 136-03, Código para el Sistema de Protección y los Derechos Fundamentales de Niños, Niñas y Adolescentes",
+    "short": "Ley 136-03 (Código de Niños, Niñas y Adolescentes)",
+    "source_name": "Justia República Dominicana",
+    "source_url": "https://docs.republica-dominicana.justia.com/nacionales/leyes/ley-136-03.pdf"
+  },
+  {
+    "code": "ley-285-04",
+    "title": "Ley núm. 285-04 General de Migración",
+    "short": "Ley 285-04 General de Migración",
+    "source_name": "DGII",
+    "source_url": "https://www.dgii.gov.do/sobreTarjetaTurista/Documents/Ley285-04.pdf"
+  },
+  {
+    "code": "ley-155-17",
+    "title": "Ley núm. 155-17 contra el Lavado de Activos y el Financiamiento del Terrorismo",
+    "short": "Ley 155-17 de Lavado de Activos",
+    "source_name": "Superintendencia de Bancos",
+    "source_url": "https://www.sb.gob.do/media/egalpi01/0-reg-comp-ley-155-17-sobre-lavado-de-activos-laft.pdf"
+  },
+  {
+    "code": "ley-87-01",
+    "title": "Ley núm. 87-01 que crea el Sistema Dominicano de Seguridad Social (con sus modificaciones a julio 2020)",
+    "short": "Ley 87-01 de Seguridad Social",
+    "source_name": "Superintendencia de Bancos",
+    "source_url": "https://sb.gob.do/media/qd4piiir/ley_8701_y_sus_modificaciones_actualizado_julio_2020_2.pdf"
+  },
+  {
+    "code": "codigo-civil",
+    "title": "Código Civil de la República Dominicana",
+    "short": "Código Civil",
+    "source_name": "WIPO Lex",
+    "source_url": "https://www.wipo.int/wipolex/es/text/467694",
+    "format": "html"
+  }
+]
