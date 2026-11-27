@@ -1,0 +1,37 @@
+{
+  "nombre": "captura 21b - notarizar arrendamientos y declaraciones juradas: precio y ubicación",
+  "captura": "21b-notarizar-varios-documentos-precio-y-ubicacion.jpeg",
+  "leandro": "Da el precio por documento: contratos de arrendamiento RD$700 y declaraciones juradas RD$700; el precio admite hasta 2 originales o copias por documento. Al pedir la ubicación porque manda a alguien hoy: 'podemos coordinar eso para el día de hoy' y el horario (lunes a viernes).",
+  "turnos": [
+    {
+      "texto": "Necesito notarizar varios documentos. Son 2 contratos de arrendamiento de vehículo y 4 declaraciones juradas. Dos no están firmados, los demás sí."
+    },
+    {
+      "texto": "Estos son los que no están firmados. Necesito que los imprima también. Pero mándeme la ubicación porque voy a mandar a otra gente hoy.",
+      "media": [
+        {
+          "id": 301,
+          "media_type": "document",
+          "analysis": "PDF: contrato de arrendamiento de un vehículo (camión de volteo) entre dos personas, 2 páginas, sin firmas."
+        },
+        {
+          "id": 302,
+          "media_type": "document",
+          "analysis": "PDF: contrato de arrendamiento de un vehículo entre una empresa y una persona, 2 páginas, sin firmas."
+        }
+      ]
+    }
+  ],
+  "espera": {
+    "herramientas_incluye": [
+      "calcular_precio"
+    ],
+    "texto_coincide": "original|copia",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true,
+    "revela_notario": true
+  }
+}
