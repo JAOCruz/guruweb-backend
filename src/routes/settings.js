@@ -59,6 +59,46 @@ router.put('/bot', requireRole('admin'), async (req, res) => {
   }
 });
 
+// ── Seguimiento de cotizaciones: interruptor general (src/agent/followup.js) ──
+// Anyone signed in can read it; only the admin changes it. The saved hours are kept as they are.
+const FOLLOWUP_KEY = 'seguimiento_cotizaciones';
+async function readFollowup() {
+  const { rows } = await pool.query('SELECT valor FROM business_info WHERE clave = $1', [FOLLOWUP_KEY]);
+  const v = rows[0]?.valor || {};
+  return { activo: v.activo === true, horas: Number(v.horas) > 0 ? Number(v.horas) : 22 };
+}
+
+router.get('/seguimiento', async (req, res) => {
+  try {
+    res.json(await readFollowup());
+  } catch (err) {
+    console.error('[settings] seguimiento read error:', err.code || err.message);
+    res.status(500).json({ error: 'No se pudo leer el seguimiento' });
+  }
+});
+
+router.put('/seguimiento', requireRole('admin'), async (req, res) => {
+  const activo = (req.body || {}).activo;
+  if (typeof activo !== 'boolean') return res.status(400).json({ error: 'activo debe ser true o false', code: 'INVALID_VALUE' });
+  try {
+    const value = { ...(await readFollowup()), activo };
+    await pool.query(
+      `INSERT INTO business_info (clave, valor, updated_at) VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (clave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = NOW()`,
+      [FOLLOWUP_KEY, JSON.stringify(value)]);
+    clearCache();
+    await safeLog(() => logActivity(req, {
+      category: 'configuracion', action: 'configuracion.seguimiento', entityType: 'configuracion', entityId: FOLLOWUP_KEY,
+      summary: activo ? 'Encendió el seguimiento automático de cotizaciones' : 'Apagó el seguimiento automático de cotizaciones',
+      details: value,
+    }));
+    res.json(value);
+  } catch (err) {
+    console.error('[settings] seguimiento update error:', err.code || err.message);
+    res.status(500).json({ error: 'No se pudo guardar el seguimiento' });
+  }
+});
+
 // Delete a setting (admin only)
 router.delete('/:id', requireRole('admin'), settingsController.deleteSetting);
 

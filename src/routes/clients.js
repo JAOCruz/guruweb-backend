@@ -129,6 +129,37 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Seguimiento automático de cotizaciones para este cliente (src/agent/followup.js). Lo cambia cualquiera del equipo.
+router.get('/:id/followup', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT followup_off FROM clients WHERE id = $1', [Number(req.params.id) || 0]);
+    if (!rows[0]) return res.status(404).json({ error: 'Client not found' });
+    res.json({ followup_off: rows[0].followup_off === true });
+  } catch (err) {
+    console.error('Client followup read error:', err.code || err.message);
+    res.status(500).json({ error: 'No se pudo leer el seguimiento' });
+  }
+});
+
+router.put('/:id/followup', async (req, res) => {
+  const off = (req.body || {}).followup_off;
+  if (typeof off !== 'boolean') return res.status(400).json({ error: 'followup_off debe ser true o false' });
+  try {
+    const { rows } = await pool.query(
+      'UPDATE clients SET followup_off = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, phone, followup_off',
+      [off, Number(req.params.id) || 0]);
+    if (!rows[0]) return res.status(404).json({ error: 'Client not found' });
+    await safeLog(() => logActivity(req, {
+      category: 'clientes', action: 'client.followup', entityType: 'client', entityId: rows[0].id,
+      summary: `${off ? 'Apagó' : 'Encendió'} el seguimiento automático de ${rows[0].name || 'un cliente'}`,
+    }));
+    res.json({ followup_off: rows[0].followup_off });
+  } catch (err) {
+    console.error('Client followup update error:', err.code || err.message);
+    res.status(500).json({ error: 'No se pudo guardar el seguimiento' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   try {
     const { name, phone, email, address, notes } = req.body;
