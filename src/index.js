@@ -211,6 +211,7 @@ const safeRoutes = [
   { path: "/api/clients", module: "./routes/clients" },
   { path: "/api/cases", module: "./routes/cases" },
   { path: "/api/deliveries", module: "./routes/deliveries" },
+  { path: "/api/legal", module: "./routes/legal" },
   { path: "/api/dashboard", module: "./routes/dashboard" },
   { path: "/api/media", module: "./routes/media" },
   { path: "/api/invoices", module: "./routes/invoices" },
