@@ -101,7 +101,7 @@ async function calcular_precio(args = {}, ctx) {
   const opts = {
     quantity: args.cantidad ?? 1,
     includeNotarization: args.con_notarizacion !== false,
-    fojas: args.fojas, duplicados: args.duplicados,
+    fojas: args.fojas, duplicados: args.duplicados, paginasPedido: args.paginas_del_pedido,
   };
   const p = calculatePrice(s, { ...opts, assetValue: args.valor_del_bien ?? null });
   // Sin el valor del bien: el total de cada tramo, para dar la lista de precios como Leandro (captura 03) en un solo paso
@@ -119,7 +119,8 @@ async function calcular_precio(args = {}, ctx) {
   return {
     servicio: s.name, total: p.total, desglose: p.breakdown, por_confirmar: p.porConfirmar, rango: p.rango, tramo: p.tramo,
     fojas: p.fojas, tarifa_por_foja: p.tarifaPorFoja, fojas_estimadas: p.fojasEstimadas,
-    ...(s.traduccion_tipo ? { tarifa_por_pagina: p.tarifaPorPagina ?? null, paginas: p.paginas ?? null, paginas_estimadas: p.paginasEstimadas ?? false } : {}),
+    ...(s.traduccion_tipo ? { tarifa_por_pagina: p.tarifaPorPagina ?? null, paginas: p.paginas ?? null, paginas_estimadas: p.paginasEstimadas ?? false,
+      ...(validFojas(args.paginas_del_pedido) ? { paginas_del_pedido: validFojas(args.paginas_del_pedido) } : {}) } : {}),
     falta: p.falta, // 'valor_del_bien' cuando el precio depende del bien y no se pasó el valor
     ...(tramos ? { tramos } : {}),
     ...(dup ? { duplicados: { total: dup } } : {}),

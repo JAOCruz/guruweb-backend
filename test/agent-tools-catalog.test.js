@@ -241,6 +241,18 @@ test('buscar_servicio de una traducción trae sus tramos por página', async () 
   assert.equal(t.nombre, 'Traducción - Carta extensivo o denso');
   assert.deepEqual(t.por_pagina.tramos, [{ desde: 1, precio: 1000 }, { desde: 3, precio: 800 }, { desde: 10, precio: 700 }]);
 });
+test('rebaja por volumen del pedido: 2 actas de 2 páginas = 4 páginas del pedido, cada una a 800', async () => {
+  const id = await traduccionDensa();
+  const r = await calcular_precio({ servicio_id: id, fojas: 2, paginas_del_pedido: 4 });
+  assert.equal(r.tarifa_por_pagina, 800);
+  assert.equal(r.paginas, 2);
+  assert.equal(r.total, 1600);
+  assert.equal(r.paginas_del_pedido, 4);
+  // sin el volumen del pedido, el documento solo va a su propio tramo
+  assert.equal((await calcular_precio({ servicio_id: id, fojas: 2 })).total, 2000);
+  // un volumen menor que las páginas del documento no lo encarece
+  assert.equal((await calcular_precio({ servicio_id: id, fojas: 3, paginas_del_pedido: 1 })).total, 2400);
+});
 test('calcular_precio de 3 páginas densas: 3 × 800 = 2400, y el bot puede decir 800 y 2400', async () => {
   const id = await traduccionDensa();
   const r = await calcular_precio({ servicio_id: id, fojas: 3 });

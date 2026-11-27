@@ -64,13 +64,16 @@ async function getRates({ fresh = false } = {}) {
 }
 
 // Precio de una traducción del tipo `tipo` con `paginas` páginas (con las tarifas cargadas).
-function traduccionPrecio(tipo, paginas) {
+// volumen: páginas de traducción de todo el pedido (la rebaja es por factura, no por documento; Leandro, 2026-11-27).
+// El tramo sale del mayor entre las páginas del documento y el volumen; el total, de las páginas del documento.
+function traduccionPrecio(tipo, paginas, volumen = null) {
   const t = current.traduccion.tipos.find((x) => x.key === tipo);
   if (!t || !t.tramos.length) return null;
   const n = Math.max(1, Math.floor(Number(paginas) || 1));
+  const v = Math.max(n, Math.floor(Number(volumen) || 0));
   const tramos = [...t.tramos].sort((a, b) => a.desde - b.desde);
   let tramo = tramos[0];
-  for (const x of tramos) if (n >= x.desde) tramo = x;
+  for (const x of tramos) if (v >= x.desde) tramo = x;
   const idx = tramos.indexOf(tramo);
   const hasta = tramos[idx + 1] ? tramos[idx + 1].desde - 1 : null;
   return { porPagina: tramo.precio, total: tramo.precio * n, paginas: n, tramo: { desde: tramo.desde, hasta }, label: t.label };

@@ -136,6 +136,18 @@ test('una traducción por tipo va por confirmar con el total de sus páginas com
   assert.equal(r.por_confirmar[0].precio_sugerido, 2800);
 });
 
+test('cotización con varias traducciones: el tramo sale de las páginas de todo el pedido', async () => {
+  await pool.query('ALTER TABLE service_catalog ADD COLUMN IF NOT EXISTS traduccion_tipo TEXT');
+  const id = (await pool.query(`INSERT INTO service_catalog (name, category_id, digitacion_price, traduccion_tipo, price_tiers)
+    VALUES ('Traducción - Legal extensivo o denso', 1, 800, 'legal_denso', '[]') RETURNING id`)).rows[0].id;
+  // 2 actas de 2 páginas: 4 páginas en el pedido, todas al precio de 3 o más (en esta base, 800 → 700)
+  const r = await preparar_cotizacion({ partidas: [{ servicio_id: id, fojas: 2 }, { servicio_id: id, fojas: 2 }] }, ctx);
+  const items = (await pool.query('SELECT items FROM invoices')).rows[0].items;
+  assert.deepEqual(items.map((i) => i.precio_sugerido), [1400, 1400]);
+  assert.match(items[0].desc, /2 páginas × 700/);
+  assert.deepEqual(r.por_confirmar.map((x) => x.precio_sugerido), [1400, 1400]);
+});
+
 test('modificación de 3 fojas queda como rango por confirmar; de 2 fojas tiene precio', async () => {
   const x = await extraServices();
   await preparar_cotizacion({ partidas: [{ servicio_id: x.modif, fojas: 3 }, { servicio_id: x.modif, fojas: 2 }] }, ctx);

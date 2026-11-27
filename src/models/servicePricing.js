@@ -35,10 +35,11 @@ function calculatePrice(service, opts = {}) {
 
 // Traducción con tipo (pricing_rates.traduccion): precio por página según el tramo de páginas; las páginas llegan en
 // `fojas`. total = precio del tramo × páginas × cantidad. Sin páginas se asume 1 y paginasEstimadas es true.
-function evaluateTraduccion(service, { quantity = 1, fojas = null } = {}) {
+// paginasPedido: páginas de traducción de todo el pedido; con ellas se elige el tramo (rebaja por volumen de la factura).
+function evaluateTraduccion(service, { quantity = 1, fojas = null, paginasPedido = null } = {}) {
   const qty = Number(quantity) || 1;
   const dadas = validFojas(fojas);
-  const t = traduccionPrecio(service.traduccion_tipo, dadas ?? 1);
+  const t = traduccionPrecio(service.traduccion_tipo, dadas ?? 1, validFojas(paginasPedido));
   if (!t) return null;
   return {
     total: t.total * qty, breakdown: { digitacion: t.total * qty, notarizacion: 0 }, porConfirmar: false, rango: null,
