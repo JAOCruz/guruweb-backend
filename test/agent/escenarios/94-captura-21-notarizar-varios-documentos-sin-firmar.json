@@ -1,0 +1,18 @@
+{
+  "nombre": "captura 21 - notarizar varios documentos, algunos sin firmar",
+  "captura": "21-notarizar-varios-documentos-sin-firmar.jpeg",
+  "leandro": "Saluda, dice que tienen una selección de abogados notarios públicos y que por lo general no importa si el documento está firmado o no. Pide foto de cada documento para una cotización de calidad y pregunta: si los datos (cédulas, números de identidad, direcciones) están correctos y confirmados, si alguno es una venta de un bien por encima de 1 millón de pesos, y cuántos juegos u originales tiene de cada uno. No da precio todavía.",
+  "turnos": [
+    { "texto": "Hola" },
+    { "texto": "Me pasó su contacto un colega. Necesito notarizar varios documentos. Hay dos de ellos que no están firmados, los demás sí. Serían 6 en total: son 2 contratos y 4 declaraciones juradas." }
+  ],
+  "espera": {
+    "texto_coincide": "foto|imagen|env[ií]e",
+    "termina_sin_traspaso": true
+  },
+  "prohibido": {
+    "montos_fuera_de_herramientas": true,
+    "entrega": true,
+    "revela_notario": true
+  }
+}
