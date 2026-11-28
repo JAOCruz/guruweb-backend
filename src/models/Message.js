@@ -1,19 +1,46 @@
 const pool = require('../db/pool');
 
 const Message = {
-  async create({ waMessageId, phone, clientId, caseId, direction, content, mediaUrl, status = 'sent', waJid = null, pushName = null }) {
+  async create({ waMessageId, phone, clientId, caseId, direction, content, mediaUrl, status = 'sent', waJid = null, pushName = null, replyTo = null }) {
     // ON CONFLICT with the partial unique index on wa_message_id: Baileys re-delivers
     // the same message several times (reconnects/media retries), so we skip reinserting.
     // NULL wa_message_id rows never conflict and always insert.
-    const { rows } = await pool.query(
-      `INSERT INTO messages (wa_message_id, phone, client_id, case_id, direction, content, media_url, status, wa_jid, push_name, read)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    const cols = ['wa_message_id', 'phone', 'client_id', 'case_id', 'direction', 'content', 'media_url', 'status', 'wa_jid', 'push_name', 'read'];
+    const vals = [waMessageId || null, phone || null, clientId, caseId || null, direction, content, mediaUrl || null, status, waJid, pushName,
+      direction === 'outbound']; // outbound counts as already-read; inbound stays unread (drives the badge)
+    const insert = (c, v) => pool.query(
+      `INSERT INTO messages (${c.join(', ')})
+       VALUES (${v.map((_, i) => `$${i + 1}`).join(', ')})
        ON CONFLICT (wa_message_id) WHERE wa_message_id IS NOT NULL DO NOTHING
        RETURNING *`,
-      [waMessageId || null, phone || null, clientId, caseId || null, direction, content, mediaUrl || null, status, waJid, pushName,
-       direction === 'outbound'] // outbound counts as already-read; inbound stays unread (drives the badge)
+      v
     );
-    return rows[0] || null; // null when it was a duplicate delivery
+    let result;
+    if (replyTo) {
+      try {
+        result = await insert([...cols, 'reply_to_wa_message_id'], [...vals, replyTo]);
+      } catch (err) {
+        if (err.code !== '42703') throw err; // column missing (migration not run yet): save the message anyway
+        result = await insert(cols, vals);
+      }
+    } else {
+      result = await insert(cols, vals);
+    }
+    return result.rows[0] || null; // null when it was a duplicate delivery
+  },
+
+  // Adds reply_to to each message that answers another one: {id, direction, content, media_url} of the quoted
+  // message, or {id: null} when it is not in the panel. The chat shows it like WhatsApp's quoted preview.
+  async attachReplies(messages) {
+    const ids = [...new Set(messages.map((m) => m.reply_to_wa_message_id).filter(Boolean))];
+    if (!ids.length) return messages;
+    const { rows } = await pool.query(
+      'SELECT id, wa_message_id, direction, content, media_url FROM messages WHERE wa_message_id = ANY($1)', [ids]);
+    const byWa = new Map(rows.map((r) => [r.wa_message_id, { id: r.id, direction: r.direction, content: r.content, media_url: r.media_url }]));
+    for (const m of messages) {
+      if (m.reply_to_wa_message_id) m.reply_to = byWa.get(m.reply_to_wa_message_id) || { id: null };
+    }
+    return messages;
   },
 
   // Returns the id if a message with this WhatsApp id already exists (dedupe check).

@@ -325,6 +325,7 @@ async function processEcho(echo, value) {
         || contentForChat(text, normalized, savedMedia, echo.type),
       mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
       waJid: `${phone}@s.whatsapp.net`,
+      replyTo: echo.context?.id || null,
     });
   } finally {
     processingIds.delete(echo.id);
@@ -377,8 +378,10 @@ async function processSingleMessage(message, value) {
 
     const mediaInfo = mediaInfoOf(normalized);
     const savedMedia = await storeMedia(normalized, message.id, phone, client);
-    const logContent = (!finalText && !savedMedia && await specialContent(message))
-      || contentForChat(finalText, normalized, savedMedia, message.type);
+    // The chat keeps the client's own words; the quoted message goes in reply_to (shown as a preview).
+    // The bot still gets finalText with the "↩️ Resp. a" line.
+    const logContent = (!text && !savedMedia && await specialContent(message))
+      || contentForChat(text, normalized, savedMedia, message.type);
 
     try {
       await Message.create({
@@ -390,6 +393,7 @@ async function processSingleMessage(message, value) {
         mediaUrl: savedMedia ? `/api/media/${savedMedia.id}/download` : null,
         waJid: remoteJid,
         pushName,
+        replyTo: quotedId || null,
         status: msgTs > 0 && Date.now() - msgTs > 23 * 3600 * 1000 ? 'old' : 'sent', // the delay apology skips it
       });
       console.log(`[WA Cloud] ✅ Mensaje guardado en BD: inbound | phone=${phone} | jid=${remoteJid}`);

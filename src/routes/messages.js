@@ -159,6 +159,11 @@ router.get('/phone/:phone', async (req, res) => {
       console.error('List messages: could not attach bot tools:', err.code || err.name || 'error');
       for (const m of messages) if (m.direction === 'outbound') m.tools = [];
     }
+    try {
+      await Message.attachReplies(messages);
+    } catch (err) {
+      console.error('List messages: could not attach replies:', err.code || err.name || 'error');
+    }
     res.json({ messages });
   } catch (err) {
     console.error('List messages by phone error:', err);
